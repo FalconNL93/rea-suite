@@ -18,6 +18,8 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+from .components import env_file_value
+
 _api_exhausted = False
 
 
@@ -28,7 +30,8 @@ def _open(url: str, headers: dict[str, str] | None = None, timeout: int = 60):
 
 def _api(path: str) -> dict:
     headers = {"Accept": "application/vnd.github+json"}
-    if token := os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN"):
+    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    if token := token or env_file_value("GITHUB_TOKEN"):
         headers["Authorization"] = f"Bearer {token}"
     with _open(f"https://api.github.com/{path}", headers, timeout=30) as resp:
         return json.load(resp)

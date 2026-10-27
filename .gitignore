@@ -64,6 +64,7 @@ core.[0-9]*
 .envrc.local
 .env
 .env.*
+!.env.example
 *.pem
 *.key
 .direnv/

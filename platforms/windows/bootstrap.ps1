@@ -2,22 +2,23 @@
 .SYNOPSIS
     First-time installer for rea-suite on Windows. Safe to re-run.
 .DESCRIPTION
-    1. system packages via winget (only what needs a driver or system install:
-       Git, Wireshark/Npcap, LLVM, Sysinternals, System Informer, 7-Zip)
-    2. runtimes into .runtime\: uv, fnm (+ Node), Temurin JDK, .NET SDK;
+    1. runtimes into .runtime\: uv, fnm (+ Node), Temurin JDK, .NET SDK;
        downloads are checksum-verified where upstream publishes checksums
-    3. rea-suite.ps1 setup: Python env, npm, tools.yml
+    2. optional components: a menu on the first run (stored in .env; see
+       .env.example to preselect)
+    3. system packages via winget (only what needs a driver or system install)
+    4. rea-suite.ps1 setup: Python env, npm, tools.yml
     Not tested on Windows yet.
 .PARAMETER NoWinget
-    Skip winget (step 1).
+    Skip winget (step 3).
+.PARAMETER Select
+    Show the component menu again.
 .PARAMETER Update
     Also upgrade runtimes (and winget packages) that are already installed.
 .PARAMETER RuntimesOnly
-    Stop after step 2 (used by rea-suite.ps1 update).
-.PARAMETER Angr
-    Include angr in the Python environment.
+    Stop after step 1 (used by rea-suite.ps1 update).
 #>
-param([switch]$NoWinget, [switch]$Update, [switch]$RuntimesOnly, [switch]$Angr)
+param([switch]$NoWinget, [switch]$Update, [switch]$RuntimesOnly, [switch]$Select)
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue' # Invoke-WebRequest is very slow with progress
 $Root = (Resolve-Path "$PSScriptRoot\..\..").Path
@@ -50,16 +51,7 @@ function Wanted($name, $have, $latest) {
     Note "$name $have is installed"; return $false
 }
 
-# --- 1. winget ---------------------------------------------------------------
-if (-not $NoWinget) {
-    Step 'winget packages'
-    $a = @('import', '--import-file', "$PSScriptRoot\winget.json", '--accept-package-agreements', '--accept-source-agreements')
-    if (-not $Update) { $a += '--no-upgrade' }
-    winget @a
-    $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User') + ';' + $env:Path
-}
-
-# --- 2. runtimes -------------------------------------------------------------
+# --- 1. runtimes -------------------------------------------------------------
 Step 'uv'
 $have = if (Test-Path "$Runtime\bin\uv.exe") { (& "$Runtime\bin\uv.exe" --version).Split(' ')[1] }
 $tag = Latest-Tag 'astral-sh/uv'
@@ -120,5 +112,18 @@ if ((Test-Path .venv\pyvenv.cfg) -and -not (Select-String -Quiet -SimpleMatch "h
 
 if ($RuntimesOnly) { return }
 . "$PSScriptRoot\env.ps1"
-$setup = @('setup'); if ($Angr) { $setup += '-Angr' }
-& "$PSScriptRoot\rea-suite.ps1" @setup
+
+# --- 2. optional components -------------------------------------------------------
+Step 'optional components'
+if ($Select) { uv run --quiet common\rea_suite\components.py select }
+else { uv run --quiet common\rea_suite\components.py select --if-unset }
+uv run --quiet common\rea_suite\components.py list
+
+# --- 3. winget ------------------------------------------------------------------
+if (-not $NoWinget) {
+    Step 'winget packages'
+    & "$PSScriptRoot\rea-suite.ps1" winget
+}
+
+# --- 4. setup ---------------------------------------------------------------------
+& "$PSScriptRoot\rea-suite.ps1" setup

@@ -1,27 +1,34 @@
 # rea-suite
 
 Personal reverse engineering workbench: [REA](https://github.com/morluto/rea)
-(CLI + MCP server) plus the analysis tools around it, installed so that
-everything stays updatable from one place.
+(CLI + MCP server) plus the analysis tools around it, installed from one checkout
+on Linux/WSL and Windows so that everything stays updatable from one place.
+Rules for contributors and agents: `CLAUDE.md`.
 
 ## Layout
 
 ```
 activate, activate.ps1  load the environment without direnv
-.envrc                  direnv entry point -> common/env.sh
+.envrc                  direnv entry point -> common/env.sh (+ .env)
+.env.example            copy to .env: component selection, GITHUB_TOKEN
 .node-version           Node for fnm (rea-agents has a strict engines range)
 .python-version         Python for uv
 pyproject.toml/uv.lock  Python tools & libraries (uv)
 package.json            rea-agents (npm)
-bin/rea-suite           setup / update / doctor / reinstall / status (Linux)
-bin/rea                 rea wrapper with the suite environment (used for MCP)
+bin/rea-suite           setup / select / update / doctor / reinstall / status (Linux)
+bin/rea                 REA with the suite environment (used for MCP)
+bin/rea-ghidra          headless Ghidra: analyze once, decompile, xrefs, function list
 common/
   env.sh                shared environment (runtimes, PATH, GHIDRA_INSTALL_DIR, REA_*)
-  tools.yml             tools fetched from GitHub releases / dotnet tool
-  rea_suite/            `rea-tools` (tools.yml installer) and `diec`
+  tools.yml             tools from GitHub releases, direct URLs and dotnet tools
+  components.yml        optional components (build, angr, steam, vm)
+  uv-tools.txt          CLI tools in their own uv environments
+  rea_suite/            `rea-tools` (tools.yml installer), components, `diec`
+  ghidra_scripts/       headless Ghidra scripts used by rea-ghidra
 platforms/
   linux/                bootstrap.sh, apt package list
   windows/              bootstrap.ps1, rea-suite.ps1, env.ps1, winget list
+.claude/skills/         process skills for agents working on this repository
 .devcontainer/          Ubuntu 26.04 container running the Linux bootstrap
 .runtime/               (ignored) uv, fnm + Node, Python, JDK, .NET SDK and caches
 tools/                  (ignored) downloaded tools; launchers in tools/bin
@@ -34,47 +41,68 @@ Everything that can live inside the checkout does: runtimes and their caches in
 `.runtime/` (uv, fnm/Node, uv-managed Python, Temurin JDK, .NET SDK, npm/NuGet/Gradle
 caches), Python packages in `.venv/`, CLI tools whose dependencies clash with the
 main environment in `.runtime/uv-tools/` (`common/uv-tools.txt`), npm packages in
-`node_modules/`, analysis tools in `tools/`. Deleting those directories removes the installation; nothing in `~`
-or `/usr` is required.
+`node_modules/`, analysis tools in `tools/`. Deleting those directories removes the
+installation; nothing in `~` or `/usr` is required.
 
 What stays system-wide, because it needs root, drivers or a shell hook:
 
-- Linux: `platforms/linux/apt-packages.txt` (compilers and build tools, LLDB + Python
-  bindings, Wireshark/tshark with capture permissions, qemu-user, binwalk, innoextract,
-  adb, xxd, Qt runtime library, base utilities).
-- Windows: `platforms/windows/winget.json` (Git, Wireshark + Npcap, LLVM/LLDB,
-  MinGW-w64, NASM, innoextract, Sysinternals, System Informer, 7-Zip, Android
-  platform tools).
+- Linux: `platforms/linux/apt-packages.txt` and the apt packages of the selected
+  components (compilers, LLDB + Python bindings, Wireshark/tshark with capture
+  permissions, qemu, binwalk, innoextract, adb, xxd, Qt runtime library, base utilities).
+- Windows: `platforms/windows/winget.json` and the winget packages of the selected
+  components (Git, Wireshark + Npcap, LLVM/LLDB, MinGW-w64, NASM, VirtualBox,
+  innoextract, Sysinternals, System Informer, 7-Zip, Android platform tools).
 - [direnv](https://direnv.net/) with its shell hook (optional; `source ./activate` works too).
 - Agent registration (`rea-suite agents` writes to the agent's own config) and
-  per-user tool settings such as `~/.config/ghidra` and `~/.mitmproxy`.
+  per-user tool settings such as `~/.config/ghidra`, `~/.mitmproxy` and SteamCMD's `~/.steam`.
 
 ## Setup
 
 Linux / WSL (Debian/Ubuntu, x86_64):
 
 ```sh
-platforms/linux/bootstrap.sh           # base packages, .runtime/, then `rea-suite setup`
-platforms/linux/bootstrap.sh --angr    # ... including angr (kept on later runs)
-platforms/linux/bootstrap.sh --no-apt  # never use sudo; `doctor` lists what is missing
-direnv allow                           # or: source ./activate
+cp .env.example .env                    # optional: preselect components, add GITHUB_TOKEN
+platforms/linux/bootstrap.sh            # base packages, .runtime/, component menu, setup
+platforms/linux/bootstrap.sh --no-apt   # never use sudo; `doctor` lists what is missing
+direnv allow                            # or: source ./activate
 rea-suite doctor
-rea-suite agents                       # register rea (MCP via bin/rea) + REA skill
+rea-suite agents                        # register REA (MCP via bin/rea) + REA skill
 ```
 
 Windows (PowerShell; untested so far):
 
 ```powershell
-.\platforms\windowsootstrap.ps1      # winget packages, .runtime\, then setup
-. .ctivate.ps1
-.\platforms\windows
-ea-suite.ps1 doctor
+Copy-Item .env.example .env             # optional, as above
+.\platforms\windows\bootstrap.ps1       # .runtime\, component menu, winget, setup
+. .\activate.ps1
+.\platforms\windows\rea-suite.ps1 doctor
 ```
+
+## Optional components
+
+`common/components.yml` lists the optional parts; the rest is always installed.
+The bootstrap shows a menu on the first run and stores the choice in `.env`:
+
+```
+REA_SUITE_COMPONENTS="build steam"
+```
+
+| Component | Default | Brings |
+| --- | --- | --- |
+| `build` | yes | compilers and build tools, foreign-architecture binutils/gdb/qemu-user ([Build toolchains](#build-toolchains)) |
+| `angr` | no | the angr framework (~1 GB) |
+| `steam` | no | SteamCMD and Steamless (Windows) |
+| `vm` | no | QEMU + OVMF (Linux) or VirtualBox (Windows); UTM on macOS |
+
+Change it with `rea-suite select` (menu, then setup), by editing `.env`, or per run
+with `REA_SUITE_COMPONENTS="..." rea-suite setup`. Deselecting stops installing and
+checking a component; `uv sync` drops its Python group, `rea-tools remove <tool>`
+removes its tools, apt/winget packages stay.
 
 ## Updating and repairing
 
 ```sh
-rea-suite update               # runtimes, apt, uv.lock, rea-agents@latest, tools.yml, REA skill
+rea-suite update               # runtimes, apt, uv.lock, uv tools, rea-agents@latest, tools.yml, REA skill
 rea-suite update --no-apt      # same without sudo
 rea-suite doctor               # check everything; exit 1 on problems
 rea-suite status               # versions and available updates
@@ -86,14 +114,108 @@ Windows: the same commands through `platforms\windows\rea-suite.ps1`.
 
 `update` rewrites `uv.lock`, `package.json` and `package-lock.json`; commit them to
 record the versions. Pin a tool by setting `version:` in `common/tools.yml` to a
-release tag. `jadx-headless-mcp` and `kuna` are pinned to the versions REA verifies.
+release tag. `jadx-headless-mcp`, `kuna` and `pwndbg` are pinned to the versions REA verifies.
 
 tools.yml lookups use the GitHub API (60 requests/hour anonymously) and fall back
-to the github.com release pages once that is exhausted. Put `export GITHUB_TOKEN=...`
-in `.envrc.local` (ignored by git) to avoid the fallback; a fine-grained token
-without any permissions is enough.
+to the github.com release pages once that is exhausted. `GITHUB_TOKEN` in `.env`
+avoids the fallback; a fine-grained token without any permissions is enough.
+
+## Tools by task
+
+### Agent front door
+
+| Tool | What it is for | Source |
+| --- | --- | --- |
+| REA (`rea`) | One CLI and MCP server that lets an agent drive the tools below (Ghidra, Kuna, JADX, ILSpy, tshark, mitmproxy, pwndbg, ...) and report evidence | npm `rea-agents` |
+
+### Static analysis: disassemble, decompile, inspect
+
+| Tool | What it is for | Source |
+| --- | --- | --- |
+| Ghidra (`ghidra`, `analyzeHeadless`, `pyghidraRun`) | Main disassembler/decompiler for native code of most architectures; scriptable in Java/Python | tools.yml (+ extensions, below) |
+| `rea-ghidra` | Headless Ghidra from the shell: analyze a binary once, then decompile addresses, find functions by string, list functions | this repo |
+| ghidriff | Diff two versions of a binary (what a patch changed), on top of Ghidra | pip |
+| Kuna | Agent-oriented decompiler ported from Ghidra; REA uses it as an engine | tools.yml |
+| Rizin (`rizin`, `rz-bin`, `rz-asm`, ...) | Fast command-line disassembly, binary info, patching and scripting | tools.yml |
+| Cutter | Rizin's GUI, with the Ghidra decompiler (rz-ghidra) built in | tools.yml |
+| ImHex | Hex editor with a pattern language for decoding file formats and structures | tools.yml |
+| Detect It Easy (`die`, `diec`) | Identify file type, compiler, packer and protector before you start | tools.yml, pip `die-python` |
+| FLOSS | Extract strings, including obfuscated and stack strings, from executables | pip |
+| capa | Name what an executable can do (network, crypto, persistence, ...) from its code | pip |
+| YARA-X (`yr`) | Match binaries against YARA rules (signatures, families, your own patterns) | tools.yml, pip `yara_x` |
+| LIEF, pefile | Parse and modify ELF/PE/Mach-O/DEX (LIEF) and PE (pefile) from Python | pip |
+| capstone, unicorn, keystone | Disassembler, CPU emulator and assembler engines for your own scripts | pip |
+| angr | Symbolic execution and CFG recovery: solve inputs, explore paths (component `angr`) | pip group |
+| ripgrep (`rg`) | Fast search through extracted trees, dumps and decompiler output | tools.yml |
+| xxd | Quick hex dumps and reverse hex-to-binary | apt (Git for Windows) |
+
+### Managed code: .NET, Java/Android, JavaScript, WebAssembly
+
+| Tool | What it is for | Source |
+| --- | --- | --- |
+| ILSpy (`ilspy`, `ilspycmd`) | Decompile .NET assemblies to C# (GUI and command line; REA uses `ilspycmd`) | tools.yml, dotnet tool |
+| dnSpyEx (`dnspy`) | Debug and edit .NET assemblies while they run (Windows) | tools.yml |
+| JADX (`jadx`, `jadx-gui`) | Decompile Android APK/DEX to Java | tools.yml |
+| jadx-headless-mcp | JADX engine REA drives for Android analysis | tools.yml |
+| Apktool | Decode APK resources/smali and rebuild modified APKs | tools.yml |
+| wakaru | Unpack and decompile bundled/minified JavaScript (webpack, Electron apps) | tools.yml |
+| WABT (`wasm2wat`, `wasm-objdump`, ...) | Read and disassemble WebAssembly modules | tools.yml |
+
+### Dynamic analysis: debug, instrument, emulate
+
+| Tool | What it is for | Source |
+| --- | --- | --- |
+| Frida (`frida`, `frida-trace`, `frida-ps`, ...) | Hook and trace functions in running processes (desktop and mobile) | pip |
+| objection | Frida-based mobile toolkit: SSL pinning bypass, runtime exploration | pip |
+| gdb, pwndbg | Debug Linux processes and core dumps; pwndbg adds memory/heap views (REA uses it for core contexts) | tools.yml (pwndbg portable) |
+| LLDB | Debugger for Linux/macOS/Windows, scriptable in Python | apt / winget LLVM |
+| x64dbg (`x64dbg`, `x32dbg`) + ScyllaHide | Windows user-mode debugger; ScyllaHide hides it from anti-debug checks | tools.yml (Windows) |
+| pwntools | Script interactions with binaries and exploits; REA uses its Python | pip (Linux) |
+| qemu-user, gdb-multiarch, binutils-multiarch | Run, debug and disassemble ARM/MIPS/... userland binaries on x86 (component `build`) | apt |
+| QEMU + OVMF / VirtualBox | Virtual machines to run untrusted samples away from your system (component `vm`) | apt / winget |
+| Sysinternals, System Informer | Watch processes, handles, registry and file activity of a running program (Windows) | winget |
+
+### Network
+
+| Tool | What it is for | Source |
+| --- | --- | --- |
+| mitmproxy (`mitmproxy`, `mitmdump`, `mitmweb`) | Intercept and modify HTTP(S) traffic of an app; REA reads its captures | pip |
+| Wireshark, tshark | Capture and dissect any network traffic; REA analyzes captures with tshark | apt / winget |
+
+### Firmware, installers, containers, secrets
+
+| Tool | What it is for | Source |
+| --- | --- | --- |
+| binwalk | Find and carve embedded files and file systems in firmware images | apt |
+| unblob | Recursively extract firmware and containers (more formats than binwalk) | uv tool (Linux) |
+| innoextract | Unpack Inno Setup installers without running them | apt / winget |
+| gitleaks | Find keys, tokens and passwords in extracted apps, bundles and firmware trees | tools.yml |
+| PE-bear | Inspect and fix PE headers, sections and imports (Windows) | tools.yml |
+| adb | Talk to Android devices: install, pull APKs, push frida-server | apt / winget |
+
+### Games
+
+| Tool | What it is for | Source |
+| --- | --- | --- |
+| SteamCMD | Download game builds and specific depots/versions from Steam (component `steam`) | Valve download |
+| Steamless | Strip SteamStub DRM from executables before analysis (Windows; component `steam`) | tools.yml |
+
+radare2 is deliberately left out: Rizin is its fork with the same feature set,
+and REA integrates Rizin (`REA_RIZIN_COMMAND`, Cutter bridge).
+
+`common/env.sh` exports the absolute paths REA expects (`REA_KUNA_COMMAND`,
+`REA_JADX_MCP_JAR`, `REA_PWNDBG_*`, `REA_GHIDRA_NATIVEAOT_JAR`, ...) for every
+tool it finds, so `rea doctor` picks them up through `bin/rea`.
 
 ## Ghidra and its extensions
+
+| Extension | What it is for | Source |
+| --- | --- | --- |
+| FindCrypt | Label crypto constants (AES S-boxes, hash IVs, ...) during analysis | prebuilt per Ghidra version |
+| Kaiju (CERT/CC) | Function hashing across binaries, OOAnalyzer C++ class recovery | prebuilt only (native build) |
+| XEXLoaderWV | Load Xbox 360 XEX executables | prebuilt or built |
+| ghidra-firmware-utils | Load UEFI images, PCI option ROMs and other firmware formats | prebuilt or built |
+| ghidra-nativeaot | Recover .NET Native AOT binaries; REA loads its jar | prebuilt or built |
 
 Ghidra extensions only load in the exact Ghidra version they were built for, so
 `rea-tools` resolves them again for every Ghidra install (`ghidra-extensions` in
@@ -117,68 +239,28 @@ REA_TOOLS_NO_BUILD=1 rea-suite update           # only prebuilt extensions, no s
 
 Projects opened in a newer Ghidra are upgraded and no longer open in older ones.
 
-| Extension | Purpose | Source |
-| --- | --- | --- |
-| FindCrypt | crypto constants | prebuilt per Ghidra version |
-| Kaiju (CERT/CC) | function hashing, OOAnalyzer C++ classes | prebuilt only (native build) |
-| XEXLoaderWV | Xbox 360 XEX loader | prebuilt or built |
-| ghidra-firmware-utils | UEFI, option ROMs, firmware images | prebuilt or built |
-| ghidra-nativeaot | .NET Native AOT; REA loads its jar | prebuilt or built |
+### Headless Ghidra from the shell
 
-## Tools
+```sh
+rea-ghidra analyze   work/target.exe                # import + analysis, once (--force redoes it)
+rea-ghidra functions work/target.exe > funcs.tsv    # entry, size, name, thunk, callers
+rea-ghidra decomp    work/target.exe 0x401000 0x4020a0 > out.c
+rea-ghidra xrefs     work/target.exe "license" "serial" > out.c
+```
 
-| Tool | Source | Commands |
-| --- | --- | --- |
-| REA | npm `rea-agents` | `rea` |
-| Ghidra (+ extensions) | tools.yml | `ghidra`, `analyzeHeadless`, `pyghidraRun` |
-| ghidriff | pip (diffing via pyghidra) | `ghidriff` |
-| Kuna | tools.yml (REA decompiler engine) | `kuna` |
-| Rizin, Cutter | tools.yml (static CLI; Cutter bundles rz-ghidra) | `rizin`, `rz-bin`, ..., `cutter` |
-| JADX, jadx-headless-mcp | tools.yml (REA's JADX provider uses the MCP jar) | `jadx`, `jadx-gui` |
-| Apktool | tools.yml | `apktool` |
-| wakaru | tools.yml (JavaScript bundle decompiler) | `wakaru` |
-| WABT | tools.yml (WebAssembly) | `wasm2wat`, `wasm-objdump`, ... |
-| ImHex | tools.yml (AppImage / portable zip) | `imhex` |
-| YARA-X | tools.yml (CLI), pip (`yara_x`) | `yr` |
-| ILSpy | dotnet tool `ilspycmd`; GUI from tools.yml | `ilspycmd`, `ilspy` |
-| Detect It Easy | tools.yml (AppImage / portable zip), pip `die-python` for `diec` on Linux | `diec`, `die` |
-| Frida, objection | pip `frida-tools`, `objection` (+ npm `frida` via rea) | `frida`, `frida-trace`, `objection`, ... |
-| FLOSS, capa | pip `flare-floss`, `flare-capa` | `floss`, `capa` |
-| mitmproxy | pip | `mitmproxy`, `mitmdump`, `mitmweb` |
-| unblob | `uv tool` (own environment; clashes with angr), Linux | `unblob` |
-| innoextract | apt / winget (Inno Setup installers) | `innoextract` |
-| gitleaks | tools.yml (secrets in extracted apps/firmware) | `gitleaks` |
-| capstone, unicorn, keystone | pip (disassembler / emulator / assembler engines) | Python libraries |
-| pwntools | pip, Linux | `pwn`, Python library |
-| LIEF, pefile | pip | Python libraries |
-| angr | pip (optional group) | Python library |
-| gdb, pwndbg | tools.yml pwndbg portable (GDB 17; pinned to REA's version) | `gdb`, `pwndbg` |
-| LLDB | apt `lldb` / winget `LLVM.LLVM` | `lldb` |
-| Wireshark | apt `tshark` + `wireshark` / winget | `tshark`, `wireshark` |
-| binwalk, adb | apt; adb via winget on Windows | `binwalk`, `adb` |
-| ripgrep | tools.yml | `rg` |
-| xxd | apt (ships with Git for Windows) | `xxd` |
-
-Windows only: x64dbg + ScyllaHide, dnSpyEx and PE-bear (tools.yml, portable), and
-via winget Sysinternals Suite and System Informer.
-
-radare2 is deliberately left out: Rizin is its fork with the same feature set,
-and REA integrates Rizin (`REA_RIZIN_COMMAND`, Cutter bridge).
-
-`common/env.sh` exports the absolute paths REA expects (`REA_KUNA_COMMAND`,
-`REA_JADX_MCP_JAR`, `REA_PWNDBG_*`, `REA_GHIDRA_NATIVEAOT_JAR`, ...) for every
-tool it finds, so `rea doctor` picks them up through `bin/rea`.
+Projects live in `work/ghidra/<binary name>/`, logs in its `logs/`. The scripts are in
+`common/ghidra_scripts/` (taken over from the rogue-spear port).
 
 ## Build toolchains
 
-For building targets, patches, loaders and plugins:
+Component `build` (on by default), for building targets, patches, loaders and plugins:
 
 | | Linux (apt) | Windows |
 | --- | --- | --- |
 | C/C++ | build-essential, gcc/g++-multilib (32-bit), clang, lld, llvm | MSVC (Visual Studio / Build Tools, not managed here), LLVM (winget) |
 | Windows targets | mingw-w64 (`x86_64-w64-mingw32-gcc`, i686) | WinLibs MinGW-w64 GCC (winget) |
 | Assembler | nasm | NASM (winget) |
-| Build systems | cmake, ninja, meson from uv (`.venv`); autoconf, automake, libtool, bison, flex, pkgconf, ccache from apt | cmake, ninja, meson from uv |
+| Build systems | cmake, ninja, meson from uv (`.venv`, always); autoconf, automake, libtool, bison, flex, pkgconf, ccache from apt | cmake, ninja, meson from uv |
 | Other architectures | binutils-multiarch, gdb-multiarch, qemu-user + binfmt (run ARM/MIPS/... userland binaries directly) | – |
 
 MSVC is checked, not installed: it needs the Visual Studio installer with the
@@ -193,9 +275,9 @@ hold platform-specific binaries. Put the Linux checkout on the WSL filesystem
 
 | Task | Where |
 | --- | --- |
-| pwndbg/gdb, unblob, pwntools, REA NativeAOT and pwndbg core contexts, binwalk | Linux/WSL only |
-| x64dbg + ScyllaHide, dnSpyEx, PE-bear, Sysinternals, System Informer, debugging Windows processes | Windows only |
-| Ghidra, Rizin/Cutter, ImHex, JADX, ILSpy, DIE, Frida, FLOSS, capa, YARA-X, mitmproxy, REA | both |
+| pwndbg/gdb, unblob, pwntools, REA NativeAOT and pwndbg core contexts, binwalk, qemu-user | Linux/WSL only |
+| x64dbg + ScyllaHide, dnSpyEx, PE-bear, Steamless, Sysinternals, System Informer, debugging Windows processes | Windows only |
+| Ghidra, Rizin/Cutter, ImHex, JADX, ILSpy, DIE, Frida, FLOSS, capa, YARA-X, mitmproxy, SteamCMD, REA | both |
 
 From Windows into WSL (paths relative to your WSL home):
 

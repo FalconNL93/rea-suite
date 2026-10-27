@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 # First-time installer for rea-suite on Debian/Ubuntu (incl. WSL). Safe to re-run.
 #
-#   platforms/linux/bootstrap.sh [--no-apt] [--angr] [--update] [--runtimes-only]
+#   platforms/linux/bootstrap.sh [--no-apt] [--select] [--update] [--runtimes-only]
 #
 # 1. base system packages needed to bootstrap (curl, git, python3, ...)
 # 2. runtimes into .runtime/: uv, fnm (+ Node), Temurin JDK, .NET SDK;
 #    downloads are checksum-verified where upstream publishes checksums
-# 3. `bin/rea-suite setup`: apt tool packages, Python env, npm, tools.yml
+# 3. optional components: a menu on the first run (stored in .env; see
+#    .env.example to preselect), then `bin/rea-suite setup`
 #
 #   --no-apt          never call apt/sudo (prints what is missing instead)
-#   --angr            include angr in the Python environment
+#   --select          show the component menu again
 #   --update          also upgrade runtimes that are already installed
 #   --runtimes-only   stop after step 2 (used by `rea-suite update`)
 set -euo pipefail
@@ -20,15 +21,15 @@ cd "$ROOT"
 JDK_MAJOR=21        # Ghidra 12 requires JDK 21+
 DOTNET_CHANNEL=10.0 # LTS; ilspycmd
 
-APT=1 UPDATE=0 RUNTIMES_ONLY=0
+APT=1 UPDATE=0 RUNTIMES_ONLY=0 SELECT=0
 pass=()
 for arg in "$@"; do
   case "$arg" in
     --no-apt) APT=0; pass+=("$arg") ;;
-    --angr) pass+=("$arg") ;;
+    --select) SELECT=1 ;;
     --update) UPDATE=1 ;;
     --runtimes-only) RUNTIMES_ONLY=1 ;;
-    -h | --help) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h | --help) sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "unknown option: $arg" >&2; exit 2 ;;
   esac
 done
@@ -159,4 +160,12 @@ if [[ -f .venv/pyvenv.cfg ]] && ! grep -q "^home = $REA_RUNTIME/python" .venv/py
 fi
 
 ((RUNTIMES_ONLY)) && exit 0
+
+step "optional components"
+if ((SELECT)); then
+  "$REA_RUNTIME/bin/uv" run --quiet common/rea_suite/components.py select
+else
+  "$REA_RUNTIME/bin/uv" run --quiet common/rea_suite/components.py select --if-unset
+  "$REA_RUNTIME/bin/uv" run --quiet common/rea_suite/components.py list | sed 's/^/    /'
+fi
 exec bin/rea-suite setup "${pass[@]}"

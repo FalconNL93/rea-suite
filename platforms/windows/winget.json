@@ -31,12 +31,6 @@
           "PackageIdentifier": "Google.PlatformTools"
         },
         {
-          "PackageIdentifier": "BrechtSanders.WinLibs.POSIX.UCRT"
-        },
-        {
-          "PackageIdentifier": "NASM.NASM"
-        },
-        {
           "PackageIdentifier": "dscharrer.innoextract"
         }
       ]

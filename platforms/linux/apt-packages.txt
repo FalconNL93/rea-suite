@@ -1,4 +1,5 @@
-# System packages, installed by `rea-suite setup` (sudo). Only what cannot live in
+# System packages, installed by `rea-suite setup` (sudo); optional ones are in
+# common/components.yml. Only what cannot live in
 # .runtime/ or tools/: system libraries, capture permissions, Python bindings.
 # One package per line.
 
@@ -19,31 +20,6 @@ adb
 
 # GUI runtime for the Qt AppImages (Cutter, ImHex) under WSLg
 libxcb-cursor0
-
-# Build toolchains (cmake, ninja and meson come from uv, see pyproject.toml)
-build-essential
-gcc-multilib
-g++-multilib
-clang
-lld
-llvm
-mingw-w64
-gcc-mingw-w64
-g++-mingw-w64
-nasm
-autoconf
-automake
-libtool
-bison
-flex
-pkgconf
-ccache
-
-# Foreign architectures: disassemble, debug and run firmware/userland binaries
-binutils-multiarch
-gdb-multiarch
-qemu-user
-qemu-user-binfmt
 
 # Basics
 xxd

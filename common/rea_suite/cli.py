@@ -17,7 +17,7 @@ from pathlib import Path
 
 import yaml
 
-from . import ghidra, github
+from . import components, ghidra, github
 from .archive import extract
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -34,6 +34,7 @@ class Tool:
     version: str = "latest"
     github: str | None = None
     dotnet_tool: str | None = None
+    url: dict[str, str] = field(default_factory=dict)
     assets: dict[str, str] = field(default_factory=dict)
     strip: int = 0
     bin: dict[str, dict] = field(default_factory=dict)
@@ -47,6 +48,7 @@ class Tool:
             version=str(spec.get("version", "latest")),
             github=spec.get("github"),
             dotnet_tool=spec.get("dotnet-tool"),
+            url=spec.get("url") or {},
             assets=spec.get("assets", {}),
             strip=int(spec.get("strip", 0)),
             bin=spec.get("bin", {}),
@@ -56,7 +58,7 @@ class Tool:
 
     @property
     def supported(self) -> bool:
-        return self.dotnet_tool is not None or PLATFORM in self.assets
+        return self.dotnet_tool is not None or PLATFORM in self.assets or PLATFORM in self.url
 
 
 def load_tools() -> dict[str, Tool]:
@@ -121,6 +123,34 @@ def install_github(tool: Tool, state: dict[str, str], force_latest: bool) -> Non
             f"  previous version kept at {tool_dir / previous} "
             f"(`rea-tools use {tool.name} {previous}` rolls back, `rea-tools prune` removes it)"
         )
+
+
+# --- direct downloads (self-updating tools such as steamcmd) --------------------
+
+
+def install_url(tool: Tool, state: dict[str, str], force: bool) -> None:
+    dest = TOOLS_DIR / tool.name / tool.version
+    if dest.is_dir() and not force:
+        print(f"{tool.name}: {tool.version} installed")
+        activate(tool, dest)
+        return
+    if dest.is_dir():
+        print(
+            f"{tool.name}: {tool.version} updates itself; `rea-tools reinstall {tool.name}` refetches"
+        )
+        activate(tool, dest)
+        return
+    url = tool.url[PLATFORM]
+    print(f"{tool.name}: installing from {url}")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=dest.parent) as tmp:
+        archive = Path(tmp) / url.rsplit("/", 1)[1]
+        github.download(url, archive)
+        extract(archive, Path(tmp) / "x", tool.strip)
+        (Path(tmp) / "x").rename(dest)
+    state[tool.name] = tool.version
+    save_state(state)
+    activate(tool, dest)
 
 
 # --- dotnet tools ------------------------------------------------------------
@@ -247,7 +277,11 @@ def select(tools: dict[str, Tool], names: list[str]) -> list[Tool]:
     unknown = [n for n in names if n not in tools]
     if unknown:
         raise SystemExit(f"unknown tool(s): {', '.join(unknown)}; see {MANIFEST}")
-    chosen = [tools[n] for n in names] if names else list(tools.values())
+    if names:
+        chosen = [tools[n] for n in names]  # explicitly named: regardless of components
+    else:
+        skip = components.optional_tools() - components.selected_tools()
+        chosen = [t for t in tools.values() if t.name not in skip]
     for tool in chosen:
         if names and not tool.supported:
             print(f"{tool.name}: not available on {PLATFORM}")
@@ -260,6 +294,8 @@ def cmd_install(args: argparse.Namespace, force_latest: bool = False) -> None:
     for tool in select(tools, args.tools):
         if tool.dotnet_tool:
             install_dotnet(tool, state, force_latest)
+        elif tool.url:
+            install_url(tool, state, force_latest)
         elif force_latest or not (TOOLS_DIR / tool.name / state.get(tool.name, "?")).is_dir():
             install_github(tool, state, force_latest)
         else:
@@ -338,7 +374,9 @@ def cmd_use(args: argparse.Namespace) -> None:
     print(f"{tool.name}: now using {args.version} (pin `version:` in tools.yml to keep it)")
 
 
-def cmd_reinstall(args: argparse.Namespace) -> None:
+def cmd_remove(args: argparse.Namespace) -> None:
+    if not args.tools:
+        raise SystemExit("name the tool(s) to remove")
     state = load_state()
     for tool in select(load_tools(), args.tools):
         for name in tool.bin.get(PLATFORM, {}) or [tool.name]:
@@ -349,6 +387,12 @@ def cmd_reinstall(args: argparse.Namespace) -> None:
             shutil.rmtree(TOOLS_DIR / tool.name)
         state.pop(tool.name, None)
     save_state(state)
+
+
+def cmd_reinstall(args: argparse.Namespace) -> None:
+    if not args.tools:
+        args.tools = [t.name for t in select(load_tools(), [])]
+    cmd_remove(args)
     cmd_install(args)
 
 
@@ -380,6 +424,7 @@ def main() -> None:
         ("update", cmd_update, "update tools to the newest (or pinned) release"),
         ("status", cmd_status, "show installed and released versions"),
         ("reinstall", cmd_reinstall, "remove and install again"),
+        ("remove", cmd_remove, "remove tools (e.g. after deselecting a component)"),
         ("prune", cmd_prune, "remove inactive versions"),
         ("check", cmd_check, "offline check of installs, launchers and extensions"),
     ]:
@@ -396,6 +441,9 @@ def main() -> None:
     p.add_argument("version", help="directory name under tools/<tool>/")
     p.add_argument("--no-build", action="store_true", help="never build Ghidra extensions")
     p.set_defaults(func=cmd_use)
+    p = sub.add_parser("components", help="optional components (see components --help)")
+    p.add_argument("rest", nargs=argparse.REMAINDER)
+    p.set_defaults(func=lambda a: components.main(a.rest))
     p = sub.add_parser("asset", help="print tag and URL of the latest matching release asset")
     p.add_argument("repo", help="GitHub owner/repo")
     p.add_argument("pattern", help="regex for the asset name")

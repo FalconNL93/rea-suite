@@ -19,6 +19,11 @@
 #              Paths are globs (`**` allowed); the last match wins. `jar: true`
 #              runs the file with `java -jar`.
 # dotnet-tool: NuGet package installed with `dotnet tool install --tool-path`
+# url:         per-platform direct download instead of `github` (for self-updating
+#              tools); `version` is then just a label
+#
+# Tools listed under a component in common/components.yml are only installed
+# when that component is selected.
 #
 # ghidra-extensions: resolved again for every Ghidra version. `asset` is a regex
 #              in which {ghidra} is the Ghidra version (e.g. 12.1.4); the newest
@@ -294,6 +299,31 @@ tools:
         ilspy: '**/ILSpy'
       windows:
         ilspy: '**/ILSpy.exe'
+
+  # --- component: steam ---
+
+  # Valve's SteamCMD; updates itself in place on first run
+  steamcmd:
+    url:
+      linux: https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz
+      windows: https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip
+    version: rolling
+    bin:
+      linux:
+        steamcmd: steamcmd.sh
+      windows:
+        steamcmd: steamcmd.exe
+
+  # SteamStub DRM unpacker (.NET Framework, Windows)
+  steamless:
+    github: atom0s/Steamless
+    version: latest
+    assets:
+      windows: '^Steamless\..*\.zip$'
+    bin:
+      windows:
+        steamless: '**/Steamless.exe'
+        steamless-cli: '**/Steamless.CLI.exe'
 
   # --- Windows only ---
 

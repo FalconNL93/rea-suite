@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Headless Ghidra for one binary: analyze once, then query the project.
+#
+#   rea-ghidra analyze   <binary>                    import + auto-analysis (once; --force redoes it)
+#   rea-ghidra decomp    <binary> <addr>...          decompile the functions containing the addresses
+#   rea-ghidra xrefs     <binary> <text>...          decompile functions referencing strings with the text
+#   rea-ghidra functions <binary>                    TSV: entry, size, name, thunk, callers
+#
+# The project lives in work/ghidra/<binary name>/ (REA_GHIDRA_PROJECTS overrides
+# work/ghidra); output goes to stdout, Ghidra's log to <project>/logs/. Scripts:
+# common/ghidra_scripts/ (from the rogue-spear port's tools/ghidra).
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+export REA_SUITE_ROOT="$ROOT"
+# shellcheck source=common/env.sh disable=SC1091
+source "$ROOT/common/env.sh"
+
+usage() { sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; }
+die() { echo "rea-ghidra: $*" >&2; exit 1; }
+
+cmd="${1:-}"
+[[ -n "$cmd" && "$cmd" != -h && "$cmd" != --help ]] || { usage; exit 0; }
+shift
+force=0
+if [[ "${1:-}" == --force ]]; then force=1; shift; fi
+binary="${1:-}"
+[[ -n "$binary" ]] || die "missing <binary>"
+shift
+[[ -f "$binary" ]] || die "no such file: $binary"
+[[ -x "$GHIDRA_INSTALL_DIR/support/analyzeHeadless" ]] || die "Ghidra missing; run rea-suite setup"
+
+name="$(basename "$binary")"
+project="${REA_GHIDRA_PROJECTS:-$ROOT/work/ghidra}/$name"
+mkdir -p "$project/logs"
+headless=("$GHIDRA_INSTALL_DIR/support/analyzeHeadless" "$project" "$name")
+
+analyze() {
+  if [[ -d "$project/$name.rep" ]] && ((force == 0)); then return; fi
+  echo "rea-ghidra: analyzing $name (once; log: $project/logs/analyze.log)" >&2
+  "${headless[@]}" -import "$(readlink -f "$binary")" -overwrite >"$project/logs/analyze.log" 2>&1 ||
+    die "analysis failed; see $project/logs/analyze.log"
+}
+
+run_script() { # script.java args...
+  local script="$1" out
+  shift
+  analyze
+  out="$(mktemp)"
+  "${headless[@]}" -process "$name" -noanalysis -readOnly \
+    -scriptPath "$ROOT/common/ghidra_scripts" -postScript "$script" "$out" "$@" \
+    >"$project/logs/${script%.java}.log" 2>&1 || die "$script failed; see $project/logs/${script%.java}.log"
+  cat "$out"
+  rm -f "$out"
+}
+
+case "$cmd" in
+  analyze) analyze ;;
+  decomp) (($#)) || die "decomp needs addresses"; run_script DecompileAt.java "$@" ;;
+  xrefs) (($#)) || die "xrefs needs texts"; run_script DecompileXrefs.java "$@" ;;
+  functions) run_script ExportFunctions.java ;;
+  *) usage >&2; exit 2 ;;
+esac

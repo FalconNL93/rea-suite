@@ -1,0 +1,37 @@
+# Optional parts of the suite. Everything not listed here is always installed.
+#
+# Selection, first match wins:
+#   1. REA_SUITE_COMPONENTS in the environment (space separated names)
+#   2. REA_SUITE_COMPONENTS in .env (written by `rea-suite select`; see .env.example)
+#   3. the components marked `default: true`
+#
+# A component can bring:
+#   apt / winget:  system packages (platforms/linux/apt-packages.txt, platforms/windows/winget.json)
+#   uv-groups:     dependency groups from pyproject.toml
+#   tools:         entries from common/tools.yml (installed only when selected)
+#
+# Deselecting stops installing and checking a component; uv groups are removed on
+# the next sync, apt/winget packages and tools are left in place.
+
+components:
+  build:
+    description: Compilers and build tools (gcc/clang/llvm, mingw-w64, nasm, autotools) and foreign-arch tools (binutils/gdb-multiarch, qemu-user)
+    default: true
+    apt: [build-essential, gcc-multilib, g++-multilib, clang, lld, llvm, mingw-w64, gcc-mingw-w64,
+          g++-mingw-w64, nasm, autoconf, automake, libtool, bison, flex, pkgconf, ccache,
+          binutils-multiarch, gdb-multiarch, qemu-user, qemu-user-binfmt]
+    winget: [BrechtSanders.WinLibs.POSIX.UCRT, NASM.NASM]
+
+  angr:
+    description: angr binary analysis framework (symbolic execution, CFG recovery; ~1 GB)
+    uv-groups: [angr]
+
+  steam:
+    description: SteamCMD (download game builds and depots) and Steamless (SteamStub DRM unpacker, Windows)
+    apt: [lib32gcc-s1]
+    tools: [steamcmd, steamless]
+
+  vm:
+    description: Virtual machines for running untrusted samples (QEMU + OVMF on Linux, VirtualBox on Windows; UTM on macOS)
+    apt: [qemu-system-x86, qemu-utils, ovmf]
+    winget: [Oracle.VirtualBox]
