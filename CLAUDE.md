@@ -63,6 +63,8 @@ setup, what each tool is for); `rea-suite doctor` shows the state of an installa
 
 ## Git
 
-* A short imperative subject (72 characters at most), a body only when there is something to explain.
+* Commits read like a person wrote them: a short imperative subject (72 characters at most), a body
+  only when there is something to explain. No references to AI tools, no `Co-Authored-By` or
+  "Generated with" lines, no emoji.
 * One commit per finished change, files staged by name. A red tree is not committed: say what failed.
 * Lockfile changes from `rea-suite update` (`uv.lock`, `package-lock.json`) are committed on their own.
