@@ -1,27 +1,46 @@
-# Dot-source to load the rea-suite environment:  . .\platforms\windows\env.ps1
+# Load the rea-suite environment (counterpart of common/env.sh):
+#   . .\platforms\windows\env.ps1      (or . .\activate.ps1 from the repo root)
+# Runtimes and caches live in .runtime\ (platforms\windows\bootstrap.ps1).
 $Root = (Resolve-Path "$PSScriptRoot\..\..").Path
+$Runtime = "$Root\.runtime"
 $env:REA_SUITE_ROOT = $Root
-$env:VIRTUAL_ENV = "$Root\.venv"
-$env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
+$env:REA_RUNTIME = $Runtime
 
+# --- runtimes in .runtime\ -----------------------------------------------------
+$env:UV_PYTHON_INSTALL_DIR = "$Runtime\python"
+$env:UV_PYTHON_PREFERENCE = 'only-managed'
+$env:UV_CACHE_DIR = "$Runtime\cache\uv"
+$env:UV_TOOL_DIR = "$Runtime\uv-tools"
+$env:FNM_DIR = "$Runtime\fnm"
+$env:npm_config_cache = "$Runtime\cache\npm"
+$env:DOTNET_ROOT = "$Runtime\dotnet"
+$env:DOTNET_CLI_HOME = "$Runtime\dotnet-home"
+$env:NUGET_PACKAGES = "$Runtime\cache\nuget"
+$env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
+$env:DOTNET_NOLOGO = '1'
+$env:GRADLE_USER_HOME = "$Runtime\cache\gradle"
+$jdk = Get-Content "$Runtime\jdk\current.txt" -ErrorAction SilentlyContinue
+if ($jdk -and (Test-Path "$Runtime\jdk\$jdk\bin\java.exe")) { $env:JAVA_HOME = "$Runtime\jdk\$jdk" }
+
+$paths = @("$Root\bin", "$Root\tools\bin", "$Root\.venv\Scripts", "$Root\node_modules\.bin", "$Runtime\bin", $env:DOTNET_ROOT)
+if ($env:JAVA_HOME) { $paths += "$env:JAVA_HOME\bin" }
+if (Test-Path "$Runtime\bin\fnm.exe") {
+    $node = (Get-Content "$Root\.node-version" -Raw).Trim()
+    $nodeDir = & "$Runtime\bin\fnm.exe" exec --using=$node -- node -p 'require("path").dirname(process.execPath)' 2>$null
+    if ($nodeDir) { $paths += $nodeDir }
+}
+$env:Path = (($paths | Where-Object { Test-Path $_ }) + $env:Path) -join ';'
+
+# --- project environment ---------------------------------------------------------
+$env:VIRTUAL_ENV = "$Root\.venv"
 $state = Get-Content "$Root\tools\state.json" -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json
 if ($state.ghidra) { $env:GHIDRA_INSTALL_DIR = "$Root\tools\ghidra\$($state.ghidra)" }
-if (-not $env:JAVA_HOME) {
-    $jdk = Get-ChildItem 'C:\Program Files\Eclipse Adoptium' -Directory -Filter 'jdk-2*' -ErrorAction SilentlyContinue |
-        Sort-Object Name -Descending | Select-Object -First 1
-    if ($jdk) { $env:JAVA_HOME = $jdk.FullName }
-}
-
-$node = (Get-Content "$Root\.node-version" -Raw).Trim()
-fnm env --use-on-cd --shell powershell | Out-String | Invoke-Expression
-fnm use $node --silent-if-unchanged
-
-$env:Path = @("$Root\tools\bin", "$Root\.venv\Scripts", "$Root\node_modules\.bin", $env:Path) -join ';'
 
 # Absolute engine paths for rea-agents
 $jar = Get-ChildItem "$Root\tools\jadx-headless-mcp" -Recurse -Filter '*-all.jar' -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($jar) { $env:REA_JADX_MCP_JAR = $jar.FullName }
 if (Test-Path "$Root\.venv\Scripts\python.exe") { $env:REA_PWNTOOLS_PYTHON = "$Root\.venv\Scripts\python.exe" }
+if ($state.wabt) { $env:REA_WABT_BIN_DIRECTORY = "$Root\tools\wabt\$($state.wabt)\bin" }
 foreach ($pair in @(
         @('REA_RIZIN_COMMAND', 'rizin'), @('REA_KUNA_COMMAND', 'kuna'), @('REA_APKTOOL_COMMAND', 'apktool'),
         @('REA_WAKARU_COMMAND', 'wakaru'), @('REA_ILSPY_CMD_PATH', 'ilspycmd'), @('REA_MITMDUMP_COMMAND', 'mitmdump'),

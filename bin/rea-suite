@@ -1,18 +1,20 @@
 #!/usr/bin/env bash
 # rea-suite: set up, update and repair the whole suite (Debian/Ubuntu/WSL).
 #
-#   rea-suite setup   [--no-apt] [--angr]   first install / repair; safe to re-run
-#   rea-suite update  [--no-apt] [--angr]   update everything: apt packages, Detect It Easy,
+#   rea-suite setup   [--no-apt] [--angr]   install / repair; safe to re-run (runtimes in
+#                                            .runtime/ come from platforms/linux/bootstrap.sh)
+#   rea-suite update  [--no-apt] [--angr]   update everything: runtimes, apt packages,
 #                                            Python (uv.lock), rea-agents, tools.yml tools,
 #                                            REA skill
-#   rea-suite reinstall <what...>           python | node | tools | system | all | <tool>
-#                                            (<tool> = a name from common/tools.yml)
-#   rea-suite status                        versions of everything + `rea doctor` summary
+#   rea-suite reinstall <what...>           runtime | python | node | tools | system | all |
+#                                            <tool> (= a name from common/tools.yml)
+#   rea-suite doctor                        check the installation; exit 1 on problems
+#   rea-suite status                        versions + available updates
 #   rea-suite agents [client...]            register the rea MCP server (via bin/rea) and
 #                                            install/refresh the REA skill; default claude_code
 #   rea-suite tools <args...>               tools.yml manager (= rea-tools)
 #
-#   --no-apt  skip apt and Detect It Easy (no sudo)
+#   --no-apt  skip apt (no sudo)
 #   --angr    include angr; kept automatically once installed
 set -euo pipefail
 
@@ -27,8 +29,9 @@ NODE_VERSION="$(tr -d '[:space:]' <.node-version)"
 
 step() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33mwarning:\033[0m %s\n' "$*" >&2; }
-need() { command -v "$1" >/dev/null || { echo "missing: $1 (install: $2)" >&2; exit 1; }; }
-usage() { sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; }
+need() { command -v "$1" >/dev/null || { echo "missing: $1 (run $2)" >&2; exit 1; }; }
+BOOTSTRAP=platforms/linux/bootstrap.sh
+usage() { sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; }
 
 # --- components --------------------------------------------------------------
 
@@ -40,28 +43,9 @@ apt_packages() { # [--reinstall]
   sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "$@" "${pkgs[@]}"
 }
 
-detect_it_easy() { # [--reinstall]
-  # Official distro .deb (not in the Ubuntu archive); apt resolves its Qt5 deps.
-  step "Detect It Easy"
-  local tag url tmp ID VERSION_ID
-  # shellcheck source=/dev/null
-  . /etc/os-release
-  read -r tag url < <(rea-tools asset horsicq/DIE-engine \
-    "^die_[\\d.]+_${ID^}_${VERSION_ID}_amd64\\.deb\$")
-  if [[ "${1:-}" != --reinstall &&
-    "$(dpkg-query -W -f='${Version}' detectiteasy 2>/dev/null)" == "$tag" ]]; then
-    echo "detectiteasy $tag is up to date"
-    return
-  fi
-  tmp="$(mktemp -d)"
-  curl -fsSL -o "$tmp/detectiteasy_${tag}_amd64.deb" "$url"
-  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "$@" "$tmp/detectiteasy_${tag}_amd64.deb"
-  rm -rf "$tmp"
-}
-
 python_env() { # [--upgrade]
   step "Python (uv)"
-  need uv "curl -LsSf https://astral.sh/uv/install.sh | sh"
+  need uv "$BOOTSTRAP"
   local args=()
   ((ANGR == 0)) || args+=(--group angr)
   [[ "${1:-}" != --upgrade ]] || uv lock --upgrade
@@ -70,7 +54,7 @@ python_env() { # [--upgrade]
 
 node_env() { # [--upgrade]
   step "Node $NODE_VERSION + rea-agents (fnm/npm)"
-  need fnm "curl -fsSL https://fnm.vercel.app/install | bash"
+  need fnm "$BOOTSTRAP"
   fnm install "$NODE_VERSION"
   if [[ "${1:-}" == --upgrade ]]; then
     # rea moves fast and bumps majors; follow latest, the lockfile records it
@@ -96,9 +80,12 @@ rea_skill() { # [client...]
   done
 }
 
-check_java() {
-  java -version 2>&1 | grep -qE 'version "(2[1-9]|[3-9][0-9])' ||
-    warn "no JDK 21+ on PATH; Ghidra, JADX and apktool need one (apt install openjdk-21-jdk)"
+runtimes() { # [--update]
+  local flags=(--runtimes-only "$@")
+  ((APT)) || flags+=(--no-apt)
+  "$ROOT/$BOOTSTRAP" "${flags[@]}"
+  # shellcheck source=common/env.sh disable=SC1091
+  source common/env.sh
 }
 
 # --- commands ----------------------------------------------------------------
@@ -108,39 +95,38 @@ cmd_setup() {
   python_env
   node_env
   suite_tools install
-  ((APT == 0)) || detect_it_easy
-  check_java
   step "done"
-  echo "Next: 'direnv allow' in $ROOT, then 'rea-suite agents' to register REA with your agent."
+  echo "Next: 'direnv allow' (or 'source ./activate'), 'rea-suite doctor', and"
+  echo "'rea-suite agents' to register REA with your agent."
 }
 
 cmd_update() {
+  runtimes --update
   ((APT == 0)) || apt_packages
   python_env --upgrade
   node_env --upgrade
   suite_tools update
-  ((APT == 0)) || detect_it_easy
   if [ -d "$HOME/.claude/skills/reverse-engineer-anything" ]; then
     rea_skill claude_code
   fi
-  check_java
   step "done"
   git -C "$ROOT" status --short -- uv.lock package.json package-lock.json
   echo "Commit the lockfile changes above to record the new versions."
 }
 
 cmd_reinstall() {
-  (($#)) || { echo "reinstall what? python | node | tools | system | all | <tool>" >&2; exit 2; }
+  (($#)) || { echo "reinstall what? runtime | python | node | tools | system | all | <tool>" >&2; exit 2; }
   local what
   for what in "$@"; do
     case "$what" in
+      runtime) rm -rf .runtime && runtimes ;;
       python) rm -rf .venv && python_env ;;
       node) rm -rf node_modules && node_env ;;
       tools) rea-tools reinstall ;;
       system)
-        if ((APT)); then apt_packages --reinstall && detect_it_easy --reinstall; fi
+        if ((APT)); then apt_packages --reinstall; fi
         ;;
-      all) cmd_reinstall system python node tools ;;
+      all) cmd_reinstall system runtime python node tools ;;
       *) rea-tools reinstall "$what" ;;
     esac
   done
@@ -153,12 +139,17 @@ cmd_status() {
     java "$(java -version 2>&1 | head -1)" \
     rea-agents "$(node -p 'require("./node_modules/rea-agents/package.json").version' 2>/dev/null || echo -)" \
     "  (latest)" "$(npm view rea-agents version 2>/dev/null || echo '?')" \
-    detectiteasy "$(dpkg-query -W -f='${Version}' detectiteasy 2>/dev/null || echo -)"
+    dotnet "$(dotnet --version 2>/dev/null || echo -)" \
+    uv "$(uv --version 2>/dev/null || echo -)"
   step "Python packages (direct; newer releases are marked)"
   uv tree --outdated --depth 1 2>/dev/null | tail -n +2 || true
   step "tools.yml"
   rea-tools status
-  step "rea doctor (failing checks)"
+  rea_doctor_summary
+}
+
+rea_doctor_summary() {
+  step "rea doctor (failing checks; Hopper/IDA are optional commercial engines)"
   { "$ROOT/bin/rea" doctor --format json 2>/dev/null || true; } | python3 -c '
 import json, sys
 seen = set()
@@ -172,6 +163,74 @@ def walk(o):
         for v in o: walk(v)
 walk(json.load(sys.stdin))
 print("  (none)" if not seen else "", end="")' || warn "rea doctor failed"
+}
+
+cmd_doctor() {
+  local problems=0 pkg path version
+  ok() { printf '  \033[32mok\033[0m    %-18s %s\n' "$1" "$2"; }
+  bad() { printf '  \033[31mFAIL\033[0m  %-18s %s\n' "$1" "$2"; problems=$((problems + 1)); }
+  info() { printf '  \033[33minfo\033[0m  %-18s %s\n' "$1" "$2"; }
+  local_cmd() { # name command version-cmd...
+    path="$(command -v "$2" 2>/dev/null)" || { bad "$1" "missing; run $BOOTSTRAP"; return; }
+    version="$("${@:3}" 2>&1 | head -1)" || true
+    if [[ "$path" == "$REA_RUNTIME"/* ]]; then ok "$1" "$version"; else
+      bad "$1" "$path is outside .runtime/; run $BOOTSTRAP"
+    fi
+  }
+
+  step "runtimes (.runtime/)"
+  local_cmd uv uv uv --version
+  local_cmd fnm fnm fnm --version
+  local_cmd node node node --version
+  [[ "$(node --version 2>/dev/null)" == "v$NODE_VERSION" ]] ||
+    bad "node version" "want v$NODE_VERSION (.node-version); run $BOOTSTRAP"
+  local_cmd java java java -version
+  java -version 2>&1 | grep -qE 'version "(2[1-9]|[3-9][0-9])' || bad "java version" "need 21+"
+  local_cmd dotnet dotnet dotnet --version
+
+  step "project environments"
+  if [[ -x .venv/bin/python ]] && grep -q "^home = $REA_RUNTIME/python" .venv/pyvenv.cfg; then
+    if uv sync --check --quiet 2>/dev/null; then ok ".venv" "in sync with uv.lock"; else
+      bad ".venv" "out of sync with uv.lock; run rea-suite setup"
+    fi
+  else
+    bad ".venv" "missing or not on .runtime/ Python; run rea-suite reinstall python"
+  fi
+  if npm ls rea-agents --depth=0 >/dev/null 2>&1; then
+    ok "node_modules" "rea-agents $(node -p 'require("./node_modules/rea-agents/package.json").version')"
+  else
+    bad "node_modules" "rea-agents missing or not matching package-lock; run rea-suite setup"
+  fi
+
+  step "tools.yml"
+  rea-tools check || problems=$((problems + 1))
+
+  step "system packages (apt)"
+  local missing=()
+  while read -r pkg; do
+    dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q 'ok installed' || missing+=("$pkg")
+  done < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$APT_LIST")
+  if ((${#missing[@]})); then bad "apt" "missing: ${missing[*]}; run rea-suite setup"
+  else ok "apt" "all packages from $APT_LIST installed"; fi
+
+  step "shell / desktop"
+  if ! command -v direnv >/dev/null; then
+    info "direnv" "not installed; use 'source ./activate' instead"
+  elif [[ "$(direnv status --json 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin)["state"]["foundRC"]["allowed"])' 2>/dev/null)" == 0 ]]; then
+    ok "direnv" ".envrc allowed"
+  else
+    info "direnv" ".envrc not allowed (direnv allow) or direnv hook not active"
+  fi
+  if [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then ok "display" "GUI tools can start"
+  else info "display" "no DISPLAY/WAYLAND_DISPLAY; GUI tools (Ghidra, Cutter, ImHex) won't start"; fi
+
+  rea_doctor_summary
+  echo
+  if ((problems)); then
+    printf '\033[1;31m%d problem(s) found\033[0m\n' "$problems"
+    return 1
+  fi
+  printf '\033[1;32mall checks passed\033[0m\n'
 }
 
 cmd_agents() {
@@ -211,6 +270,7 @@ case "$cmd" in
   update) cmd_update ;;
   reinstall) cmd_reinstall "${args[@]}" ;;
   status) cmd_status ;;
+  doctor) cmd_doctor ;;
   agents) cmd_agents "${args[@]}" ;;
   tools) rea-tools "${args[@]}" ;;
   -h | --help | help | "") usage ;;

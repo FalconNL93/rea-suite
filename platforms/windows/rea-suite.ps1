@@ -1,68 +1,98 @@
 <#
 .SYNOPSIS
-    Set up, update and repair rea-suite on Windows (counterpart of bin/rea-suite).
+    Set up, update, check and repair rea-suite on Windows (counterpart of bin/rea-suite).
 .EXAMPLE
-    .\platforms\windows\rea-suite.ps1 setup
-    .\platforms\windows\rea-suite.ps1 update
-    .\platforms\windows\rea-suite.ps1 reinstall python|node|tools|all|<tool>
+    .\platforms\windows\rea-suite.ps1 setup          # after bootstrap.ps1; safe to re-run
+    .\platforms\windows\rea-suite.ps1 update         # runtimes, winget, uv.lock, rea-agents, tools.yml
+    .\platforms\windows\rea-suite.ps1 doctor         # check the installation
+    .\platforms\windows\rea-suite.ps1 reinstall runtime|python|node|tools|all|<tool>
     .\platforms\windows\rea-suite.ps1 status
     .\platforms\windows\rea-suite.ps1 tools <rea-tools args>
 .NOTES
-    Not tested on Windows yet. Load the environment with . .\platforms\windows\env.ps1
+    Not tested on Windows yet.
 #>
 param(
-    [Parameter(Position = 0)][ValidateSet('setup', 'update', 'reinstall', 'status', 'tools')][string]$Command = 'setup',
+    [Parameter(Position = 0)][ValidateSet('setup', 'update', 'reinstall', 'doctor', 'status', 'tools')][string]$Command = 'setup',
     [Parameter(Position = 1, ValueFromRemainingArguments)][string[]]$Rest = @(),
     [switch]$Angr
 )
 $ErrorActionPreference = 'Stop'
 $Root = (Resolve-Path "$PSScriptRoot\..\..").Path
 Set-Location $Root
+. "$PSScriptRoot\env.ps1"
 $Node = (Get-Content .node-version -Raw).Trim()
 if (Test-Path .venv\Lib\site-packages\angr) { $Angr = $true }
 
 function Step($msg) { Write-Host "`n==> $msg" -ForegroundColor Blue }
 function Invoke-Checked { & $args[0] @($args | Select-Object -Skip 1); if ($LASTEXITCODE) { throw "$($args[0]) failed ($LASTEXITCODE)" } }
+function Need($cmd) { if (-not (Get-Command $cmd -ErrorAction SilentlyContinue)) { throw "$cmd missing; run platforms\windows\bootstrap.ps1" } }
 
-function Winget-Packages([switch]$Upgrade) {
-    Step 'winget packages'
-    # Without --no-upgrade, import also upgrades the listed (and only those) packages.
-    $a = @('import', '--import-file', "$PSScriptRoot\winget.json", '--accept-package-agreements', '--accept-source-agreements')
-    if (-not $Upgrade) { $a += '--no-upgrade' }
-    Invoke-Checked winget @a
-    $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
-}
 function Python-Env([switch]$Upgrade) {
-    Step 'Python (uv)'
+    Step 'Python (uv)'; Need uv
     if ($Upgrade) { Invoke-Checked uv lock --upgrade }
     $a = @('sync'); if ($Angr) { $a += '--group', 'angr' }
     Invoke-Checked uv @a
 }
 function Node-Env([switch]$Upgrade) {
-    Step "Node $Node + rea-agents (fnm/npm)"
+    Step "Node $Node + rea-agents (fnm/npm)"; Need fnm
     Invoke-Checked fnm install $Node
     if ($Upgrade) { Invoke-Checked fnm exec --using=$Node -- npm install rea-agents@latest }
     else { Invoke-Checked fnm exec --using=$Node -- npm ci }
 }
 function Suite-Tools([string]$Action) {
     Step 'tools from common/tools.yml'
-    Invoke-Checked uv run rea-tools $Action @Rest
+    . "$PSScriptRoot\env.ps1"
+    Invoke-Checked uv run rea-tools $Action
+}
+function Doctor {
+    $problems = 0
+    function Ok($n, $m) { Write-Host ('  ok    {0,-18} {1}' -f $n, $m) -ForegroundColor Green }
+    function Bad($n, $m) { Write-Host ('  FAIL  {0,-18} {1}' -f $n, $m) -ForegroundColor Red; $script:problems++ }
+    Step 'runtimes (.runtime\)'
+    foreach ($c in 'uv', 'fnm', 'node', 'java', 'dotnet') {
+        $cmd = Get-Command $c -ErrorAction SilentlyContinue | Select-Object -First 1
+        if (-not $cmd) { Bad $c 'missing; run platforms\windows\bootstrap.ps1' }
+        elseif (-not $cmd.Source.StartsWith($env:REA_RUNTIME)) { Bad $c "$($cmd.Source) is outside .runtime\" }
+        else { Ok $c $cmd.Source }
+    }
+    Step 'project environments'
+    uv sync --check --quiet 2>$null; if ($LASTEXITCODE) { Bad '.venv' 'out of sync; run rea-suite.ps1 setup' } else { Ok '.venv' 'in sync with uv.lock' }
+    npm ls rea-agents --depth=0 *> $null; if ($LASTEXITCODE) { Bad 'node_modules' 'run rea-suite.ps1 setup' } else { Ok 'node_modules' 'rea-agents installed' }
+    Step 'tools.yml'
+    uv run rea-tools check; if ($LASTEXITCODE) { $script:problems++ }
+    Step 'system (winget)'
+    foreach ($p in (Get-Content "$PSScriptRoot\winget.json" -Raw | ConvertFrom-Json).Sources[0].Packages.PackageIdentifier) {
+        winget list --id $p --exact --accept-source-agreements *> $null
+        if ($LASTEXITCODE) { Bad $p 'not installed; run bootstrap.ps1' } else { Ok $p 'installed' }
+    }
+    Step 'rea doctor'
+    rea doctor
+    if ($script:problems) { Write-Host "`n$($script:problems) problem(s) found" -ForegroundColor Red; exit 1 }
+    Write-Host "`nall checks passed" -ForegroundColor Green
 }
 
 switch ($Command) {
-    'setup' { Winget-Packages; Python-Env; Node-Env; Suite-Tools install }
-    'update' { Winget-Packages -Upgrade; Python-Env -Upgrade; Node-Env -Upgrade; Suite-Tools update }
+    'setup' { Python-Env; Node-Env; Suite-Tools install }
+    'update' {
+        & "$PSScriptRoot\bootstrap.ps1" -RuntimesOnly -Update
+        Step 'winget packages'
+        winget import --import-file "$PSScriptRoot\winget.json" --accept-package-agreements --accept-source-agreements
+        . "$PSScriptRoot\env.ps1"
+        Python-Env -Upgrade; Node-Env -Upgrade; Suite-Tools update
+    }
     'reinstall' {
         foreach ($what in $Rest) {
             switch ($what) {
+                'runtime' { Remove-Item -Recurse -Force .runtime -ErrorAction SilentlyContinue; & "$PSScriptRoot\bootstrap.ps1" -RuntimesOnly -NoWinget }
                 'python' { Remove-Item -Recurse -Force .venv -ErrorAction SilentlyContinue; Python-Env }
                 'node' { Remove-Item -Recurse -Force node_modules -ErrorAction SilentlyContinue; Node-Env }
                 'tools' { Invoke-Checked uv run rea-tools reinstall }
-                'all' { Python-Env; Node-Env; Invoke-Checked uv run rea-tools reinstall }
+                'all' { & $PSCommandPath reinstall runtime python node tools }
                 default { Invoke-Checked uv run rea-tools reinstall $what }
             }
         }
     }
+    'doctor' { Doctor }
     'status' {
         Step 'Python packages'; uv tree --outdated --depth 1
         Step 'tools.yml'; Invoke-Checked uv run rea-tools status

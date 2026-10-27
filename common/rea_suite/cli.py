@@ -295,6 +295,33 @@ def cmd_status(args: argparse.Namespace) -> None:
                 print(f"  + {name:16} {text}")
 
 
+def cmd_check(args: argparse.Namespace) -> None:
+    """Offline health check: installed versions, launchers, Ghidra extensions."""
+    state, problems = load_state(), 0
+    for tool in select(load_tools(), args.tools):
+        version = state.get(tool.name)
+        dest = TOOLS_DIR / tool.name / (version or "?")
+        if tool.dotnet_tool:
+            dest = TOOLS_DIR / tool.name
+        if not version or not dest.is_dir():
+            print(f"  FAIL  {tool.name:18} not installed (rea-tools install {tool.name})")
+            problems += 1
+            continue
+        names = list(tool.bin.get(PLATFORM, {})) or ([tool.name] if tool.dotnet_tool else [])
+        suffix = ".cmd" if PLATFORM == "windows" else ""
+        absent = [n for n in names if not (BIN_DIR / f"{n}{suffix}").exists()]
+        if tool.ghidra_extensions:
+            present = ghidra.installed(dest)
+            absent += [f"extension:{n}" for n in tool.ghidra_extensions if n not in present]
+        if absent:
+            print(f"  FAIL  {tool.name:18} {version}; missing {', '.join(absent)}")
+            problems += 1
+        else:
+            print(f"  ok    {tool.name:18} {version}")
+    if problems:
+        sys.exit(1)
+
+
 def cmd_use(args: argparse.Namespace) -> None:
     tools = load_tools()
     tool = select(tools, [args.tool])[0]
@@ -354,6 +381,7 @@ def main() -> None:
         ("status", cmd_status, "show installed and released versions"),
         ("reinstall", cmd_reinstall, "remove and install again"),
         ("prune", cmd_prune, "remove inactive versions"),
+        ("check", cmd_check, "offline check of installs, launchers and extensions"),
     ]:
         p = sub.add_parser(name, help=help_text)
         p.add_argument("tools", nargs="*", help="tool names (default: all)")

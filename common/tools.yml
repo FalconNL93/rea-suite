@@ -85,18 +85,33 @@ tools:
       windows:
         jadx-gui: '**/jadx-gui-*.exe'
 
-  # Detect It Easy GUI on Windows. On Linux the official .deb is installed by
-  # platforms/linux/bootstrap.sh (apt resolves its Qt5 dependencies) and the
-  # die-python bindings come from pyproject.toml.
+  # Detect It Easy. The Linux AppImage has only the GUI; `diec` on Linux comes
+  # from die-python (pyproject.toml), on Windows from the portable zip.
   die:
     github: horsicq/DIE-engine
     version: latest
     assets:
+      linux: '^Detect_It_Easy-[\d.]+-x86_64\.AppImage$'
       windows: '^die_win64_portable_[\d.]+_x64\.zip$'
     bin:
+      linux:
+        die: {path: 'Detect_It_Easy-*.AppImage', env: {APPIMAGE_EXTRACT_AND_RUN: '1'}}
       windows:
         diec: '**/diec.exe'
         die: '**/die.exe'
+
+  ripgrep:
+    github: BurntSushi/ripgrep
+    version: latest
+    assets:
+      linux: '^ripgrep-[\d.]+-x86_64-unknown-linux-musl\.tar\.gz$'
+      windows: '^ripgrep-[\d.]+-x86_64-pc-windows-msvc\.zip$'
+    strip: 1
+    bin:
+      linux:
+        rg: rg
+      windows:
+        rg: rg.exe
 
   # Not packaged for Ubuntu; static build has no runtime dependencies.
   rizin:
@@ -212,8 +227,8 @@ tools:
         wasm-objdump: bin/wasm-objdump.exe
         wasm-validate: bin/wasm-validate.exe
 
-  # GDB with pwndbg, self-contained (REA_PWNDBG_*). rea's core-context bridge
-  # accepts exactly this pwndbg version. Plain gdb comes from apt.
+  # GDB 17 with pwndbg, self-contained (REA_PWNDBG_*); also provides plain `gdb`.
+  # rea's core-context bridge accepts exactly this pwndbg version.
   pwndbg:
     github: pwndbg/pwndbg
     version: 2026.09.15
@@ -223,9 +238,10 @@ tools:
     bin:
       linux:
         pwndbg: bin/pwndbg
+        gdb: bin/gdb
 
   # --- GUI tools ---
-  # Linux AppImages run without FUSE (extract-and-run); Windows uses winget.
+  # Linux AppImages run without FUSE (extract-and-run); Windows uses portable zips.
 
   # Rizin GUI; bundles the rz-ghidra decompiler (the static rizin CLI cannot load plugins)
   cutter:
@@ -233,9 +249,12 @@ tools:
     version: latest
     assets:
       linux: '^Cutter-v[\d.]+-Linux-x86_64\.AppImage$'
+      windows: '^Cutter-v[\d.]+-Windows-x86_64\.zip$'
     bin:
       linux:
         cutter: {path: 'Cutter-*.AppImage', env: {APPIMAGE_EXTRACT_AND_RUN: '1'}}
+      windows:
+        cutter: '**/cutter.exe'
 
   # Hex editor with pattern language
   imhex:
@@ -243,11 +262,47 @@ tools:
     version: latest
     assets:
       linux: '^imhex-[\d.]+-x86_64\.AppImage$'
+      windows: '^imhex-[\d.]+-Windows-Portable-x86_64\.zip$'
     bin:
       linux:
         imhex: {path: 'imhex-*.AppImage', env: {APPIMAGE_EXTRACT_AND_RUN: '1'}}
+      windows:
+        imhex: '**/imhex.exe'
+
+  # ILSpy GUI (.NET decompiler); uses the .NET runtime in .runtime/dotnet
+  ilspy:
+    github: icsharpcode/ILSpy
+    version: latest
+    assets:
+      linux: '^ILSpy_linux-x64_[\d.]+\.zip$'
+      windows: '^ILSpy_windows_selfcontained_[\d.]+-x64\.zip$'
+    bin:
+      linux:
+        ilspy: '**/ILSpy'
+      windows:
+        ilspy: '**/ILSpy.exe'
 
   # --- Windows only ---
+
+  # .NET debugger/decompiler
+  dnspy:
+    github: dnSpyEx/dnSpy
+    version: latest
+    assets:
+      windows: '^dnSpy-net-win64\.zip$'
+    bin:
+      windows:
+        dnspy: '**/dnSpy.exe'
+
+  # PE viewer/editor
+  pe-bear:
+    github: hasherezade/pe-bear
+    version: latest
+    assets:
+      windows: '^PE-bear_[\d.]+_qt6_x64_win_vs22\.zip$'
+    bin:
+      windows:
+        pe-bear: '**/PE-bear.exe'
 
   # Debugger; managed here (not winget) so plugins land in a known directory.
   x64dbg:

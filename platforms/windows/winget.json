@@ -13,34 +13,10 @@
           "PackageIdentifier": "Git.Git"
         },
         {
-          "PackageIdentifier": "astral-sh.uv"
-        },
-        {
-          "PackageIdentifier": "Schniz.fnm"
-        },
-        {
-          "PackageIdentifier": "EclipseAdoptium.Temurin.21.JDK"
-        },
-        {
-          "PackageIdentifier": "Microsoft.DotNet.SDK.10"
-        },
-        {
           "PackageIdentifier": "WiresharkFoundation.Wireshark"
         },
         {
-          "PackageIdentifier": "icsharpcode.ILSpy"
-        },
-        {
           "PackageIdentifier": "LLVM.LLVM"
-        },
-        {
-          "PackageIdentifier": "BurntSushi.ripgrep.MSVC"
-        },
-        {
-          "PackageIdentifier": "dnSpyEx.dnSpy"
-        },
-        {
-          "PackageIdentifier": "hasherezade.PE-bear"
         },
         {
           "PackageIdentifier": "Microsoft.Sysinternals.Suite"
@@ -49,13 +25,10 @@
           "PackageIdentifier": "WinsiderSS.SystemInformer"
         },
         {
-          "PackageIdentifier": "WerWolv.ImHex"
-        },
-        {
-          "PackageIdentifier": "Rizin.Cutter"
-        },
-        {
           "PackageIdentifier": "7zip.7zip"
+        },
+        {
+          "PackageIdentifier": "Google.PlatformTools"
         }
       ]
     }

@@ -1,0 +1,12 @@
+# Load the rea-suite environment into the current shell (alternative to direnv):
+#   source ./activate        (bash or zsh)
+# shellcheck shell=bash disable=SC2296,SC2298,SC2016,SC1091
+if [ -n "${ZSH_VERSION:-}" ]; then
+  export REA_SUITE_ROOT="${${(%):-%x}:A:h}"
+  emulate sh -c '. "$REA_SUITE_ROOT/common/env.sh"'
+else
+  REA_SUITE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  export REA_SUITE_ROOT
+  # shellcheck source=common/env.sh
+  . "$REA_SUITE_ROOT/common/env.sh"
+fi

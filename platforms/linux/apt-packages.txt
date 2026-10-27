@@ -1,7 +1,8 @@
-# Installed by platforms/linux/bootstrap.sh (Debian/Ubuntu). One package per line.
+# System packages, installed by `rea-suite setup` (sudo). Only what cannot live in
+# .runtime/ or tools/: system libraries, capture permissions, Python bindings.
+# One package per line.
 
-# Debugging (pwndbg comes self-contained from tools.yml)
-gdb
+# Debugging (gdb + pwndbg come self-contained from tools.yml)
 lldb
 python3-lldb
 
@@ -20,7 +21,6 @@ libxcb-cursor0
 
 # Basics
 xxd
-ripgrep
 file
 unzip
 xz-utils
