@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "ms-python.python",
+    "charliermarsh.ruff",
+    "mkhl.direnv",
+    "redhat.vscode-yaml",
+    "timonwong.shellcheck",
+    "editorconfig.editorconfig"
+  ]
+}

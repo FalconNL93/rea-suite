@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# rea-agents CLI / MCP server with the suite environment (Ghidra, JDK, tools).
+set -euo pipefail
+REA_SUITE_ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+# shellcheck source=common/env.sh disable=SC1091
+source "$REA_SUITE_ROOT/common/env.sh"
+exec node "$REA_SUITE_ROOT/node_modules/rea-agents/scripts/rea.mjs" "$@"

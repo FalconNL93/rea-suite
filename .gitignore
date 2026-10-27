@@ -1,0 +1,51 @@
+# --- Downloaded tools (managed by `rea-suite`, see common/tools.yml) ---
+/tools/
+
+# --- Dependencies ---
+node_modules/
+.venv/
+__pycache__/
+*.py[cod]
+.ruff_cache/
+*.egg-info/
+/dist/
+/build/
+
+# --- Analysis work: targets, captures and databases never go into git ---
+/work/*
+!/work/.gitkeep
+*.gpr
+*.rep/
+*.lock~
+*.pcap
+*.pcapng
+*.har
+*.flows
+*.idb
+*.i64
+*.id0
+*.id1
+*.id2
+*.nam
+*.til
+*.rzdb
+*.bndb
+
+# --- Local config / secrets ---
+.envrc.local
+.env
+.env.*
+*.pem
+*.key
+.direnv/
+.claude/settings.local.json
+
+# --- Editors / OS ---
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*~
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,3 @@
+# Only platforms/linux/apt-packages.txt is needed by .devcontainer/Dockerfile
+*
+!platforms/linux/apt-packages.txt

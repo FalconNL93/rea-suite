@@ -1,0 +1,26 @@
+# Installed by platforms/linux/bootstrap.sh (Debian/Ubuntu). One package per line.
+
+# Debugging
+lldb
+python3-lldb
+
+# Network analysis (wireshark = GUI, works under WSLg)
+tshark
+wireshark
+
+# Firmware / blobs
+binwalk
+
+# Basics
+xxd
+ripgrep
+file
+unzip
+xz-utils
+7zip
+binutils
+procps
+util-linux
+curl
+ca-certificates
+git

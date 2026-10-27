@@ -1,0 +1,103 @@
+# Tools that have no usable package-manager release on every platform.
+#
+# Managed by `rea-suite` (uv run rea-suite --help):
+#   install [name...]   install missing tools
+#   update  [name...]   move `version: latest` tools to the newest release
+#   status              show installed vs. latest versions
+#
+# Installed into tools/<name>/<version>/ with tools/<name>/current pointing at
+# the active version. Launchers are generated in tools/bin/ (on PATH via .envrc).
+#
+# github:      owner/repo; `version` is `latest` or an exact release tag
+# assets:      per-platform regex matched against release asset names
+# strip:       leading path components to drop when extracting
+# bin:         per-platform launchers; `name: path` (relative to the install dir)
+#              or `name: {path: ..., env: {VAR: value}}`; `{dir}` expands to the install dir.
+#              Paths are globs (`**` allowed); the last match wins.
+# dotnet-tool: NuGet package installed with `dotnet tool install --tool-path`
+
+tools:
+  ghidra:
+    github: NationalSecurityAgency/ghidra
+    version: latest
+    assets:
+      linux: '^ghidra_.*_PUBLIC_\d+\.zip$'
+      windows: '^ghidra_.*_PUBLIC_\d+\.zip$'
+    strip: 1
+    bin:
+      linux:
+        ghidra: ghidraRun
+        analyzeHeadless: support/analyzeHeadless
+        pyghidraRun: support/pyghidraRun
+      windows:
+        ghidra: ghidraRun.bat
+        analyzeHeadless: support/analyzeHeadless.bat
+
+  jadx:
+    github: skylot/jadx
+    version: latest
+    assets:
+      linux: '^jadx-[\d.]+\.zip$'
+      windows: '^jadx-gui-[\d.]+-win\.zip$'
+    bin:
+      linux:
+        jadx: bin/jadx
+        jadx-gui: bin/jadx-gui
+      windows:
+        jadx-gui: '**/jadx-gui-*.exe'
+
+  # Detect It Easy GUI on Windows. On Linux the official .deb is installed by
+  # platforms/linux/bootstrap.sh (apt resolves its Qt5 dependencies) and the
+  # die-python bindings come from pyproject.toml.
+  die:
+    github: horsicq/DIE-engine
+    version: latest
+    assets:
+      windows: '^die_win64_portable_[\d.]+_x64\.zip$'
+    bin:
+      windows:
+        diec: '**/diec.exe'
+        die: '**/die.exe'
+
+  # Not packaged for Ubuntu; static build has no runtime dependencies.
+  rizin:
+    github: rizinorg/rizin
+    version: latest
+    assets:
+      linux: '^rizin-v[\d.]+-static-x86_64\.tar\.xz$'
+      windows: '^rizin-windows-static-v[\d.]+\.zip$'
+    bin:
+      linux:
+        rizin: bin/rizin
+        rz-bin: bin/rz-bin
+        rz-asm: bin/rz-asm
+        rz-diff: bin/rz-diff
+        rz-find: bin/rz-find
+        rz-hash: bin/rz-hash
+        rz-ax: bin/rz-ax
+      windows:
+        rizin: '**/bin/rizin.exe'
+        rz-bin: '**/bin/rz-bin.exe'
+        rz-asm: '**/bin/rz-asm.exe'
+        rz-diff: '**/bin/rz-diff.exe'
+        rz-find: '**/bin/rz-find.exe'
+        rz-hash: '**/bin/rz-hash.exe'
+        rz-ax: '**/bin/rz-ax.exe'
+
+  # YARA-X command line (`yr`); Python bindings come from pyproject.toml.
+  yara-x:
+    github: VirusTotal/yara-x
+    version: latest
+    assets:
+      linux: '^yara-x-v[\d.]+-x86_64-unknown-linux-gnu\.tar\.gz$'
+      windows: '^yara-x-v[\d.]+-x86_64-pc-windows-msvc\.zip$'
+    bin:
+      linux:
+        yr: yr
+      windows:
+        yr: '**/yr.exe'
+
+  # ILSpy command line decompiler for .NET assemblies.
+  ilspycmd:
+    dotnet-tool: ilspycmd
+    version: latest

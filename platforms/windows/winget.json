@@ -1,0 +1,42 @@
+{
+  "$schema": "https://aka.ms/winget-packages.schema.2.0.json",
+  "Sources": [
+    {
+      "SourceDetails": {
+        "Name": "winget",
+        "Argument": "https://cdn.winget.microsoft.com/cache",
+        "Identifier": "Microsoft.Winget.Source_8wekyb3d8bbwe",
+        "Type": "Microsoft.PreIndexed.Package"
+      },
+      "Packages": [
+        {
+          "PackageIdentifier": "Git.Git"
+        },
+        {
+          "PackageIdentifier": "astral-sh.uv"
+        },
+        {
+          "PackageIdentifier": "Schniz.fnm"
+        },
+        {
+          "PackageIdentifier": "EclipseAdoptium.Temurin.21.JDK"
+        },
+        {
+          "PackageIdentifier": "Microsoft.DotNet.SDK.10"
+        },
+        {
+          "PackageIdentifier": "WiresharkFoundation.Wireshark"
+        },
+        {
+          "PackageIdentifier": "icsharpcode.ILSpy"
+        },
+        {
+          "PackageIdentifier": "LLVM.LLVM"
+        },
+        {
+          "PackageIdentifier": "BurntSushi.ripgrep.MSVC"
+        }
+      ]
+    }
+  ]
+}
