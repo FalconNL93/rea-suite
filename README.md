@@ -11,8 +11,8 @@ Rules for contributors and agents: `CLAUDE.md`.
 ```
 activate, activate.ps1  load the environment without direnv
 .envrc                  direnv entry point -> common/env.sh (+ .env)
-.githooks/              gitleaks pre-commit and pre-push hooks (.gitleaks.toml)
-.forgejo/workflows/     server-side gitleaks scan
+.githooks/              pre-commit (lint + gitleaks) and pre-push (gitleaks) hooks, lint.sh
+.forgejo/workflows/     server-side gitleaks scan and lint
 .env.example            copy to .env: component selection, GITHUB_TOKEN
 .node-version           Node for fnm (rea-agents has a strict engines range)
 .python-version         Python for uv
@@ -238,6 +238,17 @@ and REA integrates Rizin (`REA_RIZIN_COMMAND`, Cutter bridge).
 `common/env.sh` exports the absolute paths REA expects (`REA_KUNA_COMMAND`,
 `REA_JADX_MCP_JAR`, `REA_PWNDBG_*`, `REA_GHIDRA_NATIVEAOT_JAR`, ...) for every
 tool it finds, so `rea doctor` picks them up through `bin/rea`.
+
+## Linting the suite's own code
+
+`.githooks/lint.sh` runs ruff (format and lint) on the Python, shellcheck on every shell
+script and, where `pwsh` is installed, a parse check on the PowerShell scripts. Both
+linters come from the `dev` group in `pyproject.toml` (`shellcheck-py` ships the shellcheck
+binary), so `uv.lock` pins them. It runs in three places:
+
+- `.githooks/pre-commit`: on the staged files, before the secret scan.
+- `rea-suite lint [file...]`: by hand, on every tracked file or the ones given.
+- `.forgejo/workflows/lint.yml`: on every push and pull request on the server (no `pwsh` there).
 
 ## Keeping secrets out of the repository
 

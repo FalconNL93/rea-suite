@@ -1,0 +1,38 @@
+name: Lint
+
+# Server-side run of .githooks/lint.sh (also the pre-commit hook and `rea-suite lint`):
+# ruff and shellcheck from the dev group in uv.lock. No pwsh in the image, so the
+# PowerShell parse check only runs locally.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: docker
+    timeout-minutes: 10
+    container:
+      image: catthehacker/ubuntu:act-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv (latest release, checksum-verified)
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag=$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/astral-sh/uv/releases/latest | sed 's|.*/tag/||')
+          asset=uv-x86_64-unknown-linux-gnu.tar.gz
+          url=https://github.com/astral-sh/uv/releases/download/$tag/$asset
+          curl -fsSLO "$url"
+          echo "$(curl -fsSL "$url.sha256" | awk '{print $1}')  $asset" | sha256sum -c -
+          tar -xzf "$asset" --strip-components=1
+          ./uv --version
+
+      - name: Linters from uv.lock (dev group only)
+        shell: bash
+        run: ./uv sync --frozen --only-dev
+
+      - name: Lint
+        shell: bash
+        run: .githooks/lint.sh

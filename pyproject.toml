@@ -48,7 +48,12 @@ diec = "rea_suite.diec:main"
 # angr pins old arpy/unicorn versions; CLI tools that clash with it go in
 # common/uv-tools.txt (isolated environments) instead of here.
 angr = ["angr>=10"]
-dev = ["ruff>=0.8"]
+# Linters for this repository's own code (.githooks/lint.sh, `rea-suite lint`)
+dev = [
+    "ruff>=0.8",
+    # shellcheck binary as a wheel, so it comes from uv like ruff
+    "shellcheck-py>=0.11",
+]
 
 [tool.uv]
 default-groups = ["dev"]

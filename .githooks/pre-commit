@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
-# Refuses a commit whose staged changes contain a secret (gitleaks).
+# Refuses a commit whose staged files fail lint (lint.sh) or contain a secret (gitleaks).
 set -euo pipefail
-exec "$(dirname "$0")/gitleaks.sh" --pre-commit --staged
+hooks="$(dirname "$0")"
+files=()
+while IFS= read -r -d '' f; do files+=("$f"); done < <(git diff --cached --name-only --diff-filter=ACMR -z)
+if ((${#files[@]})); then "$hooks/lint.sh" "${files[@]}"; fi
+exec "$hooks/gitleaks.sh" --pre-commit --staged

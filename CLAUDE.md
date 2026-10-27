@@ -63,7 +63,8 @@ installation.
 
 * Python runs through uv (`uv run`); `ruff check` and `ruff format` are clean.
 * Shell scripts start with `set -euo pipefail` and pass `shellcheck`; PowerShell keeps
-  `$ErrorActionPreference = 'Stop'`.
+  `$ErrorActionPreference = 'Stop'` and parses in `pwsh`.
+* `rea-suite lint` checks all of the above; the pre-commit hook runs it on staged files.
 * Generated files (`tools/bin/*` launchers, `tools/state.json`) are never edited by hand.
 
 ## Reverse engineering with the suite

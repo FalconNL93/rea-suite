@@ -11,11 +11,12 @@
     .\platforms\windows\rea-suite.ps1 status
     .\platforms\windows\rea-suite.ps1 tools <rea-tools args>
     .\platforms\windows\rea-suite.ps1 clean [caches|tools|all]   # no argument: show sizes only
+    .\platforms\windows\rea-suite.ps1 lint [file...]             # ruff, shellcheck, PowerShell parse (Git Bash)
 .NOTES
     Not tested on Windows yet.
 #>
 param(
-    [Parameter(Position = 0)][ValidateSet('setup', 'select', 'winget', 'update', 'reinstall', 'doctor', 'status', 'tools', 'clean')][string]$Command = 'setup',
+    [Parameter(Position = 0)][ValidateSet('setup', 'select', 'winget', 'update', 'reinstall', 'doctor', 'status', 'tools', 'clean', 'lint')][string]$Command = 'setup',
     [Parameter(Position = 1, ValueFromRemainingArguments)][string[]]$Rest = @()
 )
 $ErrorActionPreference = 'Stop'
@@ -137,6 +138,7 @@ switch ($Command) {
         Step 'rea'; fnm exec --using=$Node -- npm outdated rea-agents  # exits 1 when outdated
     }
     'tools' { Invoke-Checked uv run rea-tools @Rest }
+    'lint' { Invoke-Checked bash .githooks/lint.sh @Rest }
     'clean' {
         $caches = 'uv', 'npm', 'nuget', 'gradle' | ForEach-Object { "$env:REA_RUNTIME\cache\$_" }
         if (-not $Rest) {
