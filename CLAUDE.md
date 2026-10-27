@@ -21,6 +21,10 @@ setup, what each tool is for); `rea-suite doctor` shows the state of an installa
 * **Verified by running, or not verified.** Say what ran (command and result) and what did not.
   The Windows scripts are untested until someone runs them on Windows; say so.
 * **Samples, captures and analysis output never go into git.** They live in `work/` (ignored).
+* **Secrets never go into git.** gitleaks checks every commit and push (`.githooks`, enabled by
+  `rea-suite setup`) and every push on the server (`.forgejo/workflows/gitleaks.yml`). Tokens go in
+  `.env`. A false positive gets an allowlist entry with its reason in `.gitleaks.toml`; the hooks
+  are not skipped.
 * **Third-party code is built only when the user runs it or agrees.** Ghidra extension source
   builds run Gradle from other repositories; use `--no-build` / `REA_TOOLS_NO_BUILD=1` otherwise.
 * **Pinned versions say why.** A pin in `tools.yml` (`jadx-headless-mcp`, `kuna`, `pwndbg`) is there

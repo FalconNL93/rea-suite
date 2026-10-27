@@ -10,6 +10,8 @@ Rules for contributors and agents: `CLAUDE.md`.
 ```
 activate, activate.ps1  load the environment without direnv
 .envrc                  direnv entry point -> common/env.sh (+ .env)
+.githooks/              gitleaks pre-commit and pre-push hooks (.gitleaks.toml)
+.forgejo/workflows/     server-side gitleaks scan
 .env.example            copy to .env: component selection, GITHUB_TOKEN
 .node-version           Node for fnm (rea-agents has a strict engines range)
 .python-version         Python for uv
@@ -206,6 +208,18 @@ and REA integrates Rizin (`REA_RIZIN_COMMAND`, Cutter bridge).
 `common/env.sh` exports the absolute paths REA expects (`REA_KUNA_COMMAND`,
 `REA_JADX_MCP_JAR`, `REA_PWNDBG_*`, `REA_GHIDRA_NATIVEAOT_JAR`, ...) for every
 tool it finds, so `rea doctor` picks them up through `bin/rea`.
+
+## Keeping secrets out of the repository
+
+gitleaks (from `tools.yml`) runs in three places with the same config (`.gitleaks.toml`):
+
+- `.githooks/pre-commit`: refuses a commit whose staged changes contain a secret.
+- `.githooks/pre-push`: refuses a push whose new commits contain one (also commits made with `--no-verify`).
+- `.forgejo/workflows/gitleaks.yml`: scans the full history on every push and pull request on the server.
+
+`rea-suite setup` enables the hooks (`git config core.hooksPath .githooks`); `rea-suite doctor`
+checks that they are on. Findings are shown redacted (rule, file, line). Tokens belong in `.env`
+(ignored); a false positive gets an allowlist entry with its reason in `.gitleaks.toml`.
 
 ## Ghidra and its extensions
 

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Refuses a commit whose staged changes contain a secret (gitleaks).
+set -euo pipefail
+exec "$(dirname "$0")/gitleaks.sh" --pre-commit --staged

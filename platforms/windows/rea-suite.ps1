@@ -90,6 +90,9 @@ function Doctor {
         winget list --id $p --exact --accept-source-agreements *> $null
         if ($LASTEXITCODE) { Bad $p 'not installed; run bootstrap.ps1' } else { Ok $p 'installed' }
     }
+    Step 'git'
+    if ((git config core.hooksPath) -eq '.githooks') { Ok 'hooks' 'gitleaks runs on commit and push' }
+    else { Bad 'hooks' 'not enabled; run rea-suite.ps1 setup' }
     Step 'MSVC'
     $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
     $vs = if (Test-Path $vswhere) { & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath }
@@ -101,7 +104,7 @@ function Doctor {
 }
 
 switch ($Command) {
-    'setup' { Python-Env; Uv-Tools; Node-Env; Suite-Tools install }
+    'setup' { Python-Env; Uv-Tools; Node-Env; Suite-Tools install; git config core.hooksPath .githooks }
     'select' { Components select; & $PSCommandPath setup }
     'winget' { Winget-Packages }
     'update' {

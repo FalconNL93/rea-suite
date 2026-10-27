@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Refuses a push whose new commits contain a secret (gitleaks), also those committed with --no-verify.
+set -euo pipefail
+zero=0000000000000000000000000000000000000000
+while read -r _local_ref local_sha _remote_ref remote_sha; do
+  [[ "$local_sha" == "$zero" ]] && continue # deleting a branch
+  if [[ "$remote_sha" == "$zero" ]]; then
+    range="$local_sha --not --remotes"       # new branch: commits no remote has yet
+  else
+    range="$remote_sha..$local_sha"
+  fi
+  "$(dirname "$0")/gitleaks.sh" --log-opts="$range"
+done

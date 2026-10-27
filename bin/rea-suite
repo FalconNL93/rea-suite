@@ -107,12 +107,18 @@ runtimes() { # [--update]
 
 # --- commands ----------------------------------------------------------------
 
+git_hooks() {
+  # gitleaks pre-commit/pre-push hooks (.githooks); harmless outside a git checkout
+  git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1 && git -C "$ROOT" config core.hooksPath .githooks
+}
+
 cmd_setup() {
   ((APT == 0)) || apt_packages
   python_env
   uv_tools
   node_env
   suite_tools install
+  git_hooks
   step "done"
   echo "Next: 'direnv allow' (or 'source ./activate'), 'rea-suite doctor', and"
   echo "'rea-suite agents' to register REA with your agent."
@@ -237,6 +243,13 @@ cmd_doctor() {
 
   step "tools.yml"
   rea-tools check || problems=$((problems + 1))
+
+  step "git"
+  if [[ "$(git config core.hooksPath 2>/dev/null)" == .githooks ]]; then
+    ok "hooks" "gitleaks runs on commit and push"
+  else
+    bad "hooks" "not enabled; run rea-suite setup (git config core.hooksPath .githooks)"
+  fi
 
   step "system packages (apt)"
   local missing=()

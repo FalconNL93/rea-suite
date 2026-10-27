@@ -1,0 +1,12 @@
+# gitleaks configuration: the default rules, plus allowlists for false positives.
+# Used by .githooks (pre-commit, pre-push) and .forgejo/workflows/gitleaks.yml.
+title = "rea-suite"
+
+[extend]
+useDefault = true
+
+# A false positive goes here with a reason, never past the hooks with --no-verify:
+# [[allowlists]]
+# description = "why this is not a secret"
+# paths = ['''path/regex''']
+# regexes = ['''value/regex''']

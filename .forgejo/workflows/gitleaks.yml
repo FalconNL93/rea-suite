@@ -1,0 +1,35 @@
+name: Secret scan
+
+# Server-side net for the local hooks (.githooks): every push and pull request is scanned
+# with the same gitleaks version and config. Findings are redacted in the log.
+on:
+  push:
+  pull_request:
+
+jobs:
+  gitleaks:
+    runs-on: docker
+    timeout-minutes: 10
+    container:
+      image: catthehacker/ubuntu:act-24.04
+    steps:
+      - name: Checkout full Git history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install gitleaks (version from the latest release, checksum-verified)
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag=$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/gitleaks/gitleaks/releases/latest | sed 's|.*/tag/||')
+          version=${tag#v}
+          base=https://github.com/gitleaks/gitleaks/releases/download/$tag
+          curl -fsSLO "$base/gitleaks_${version}_linux_x64.tar.gz"
+          curl -fsSL "$base/gitleaks_${version}_checksums.txt" | grep " gitleaks_${version}_linux_x64.tar.gz\$" | sha256sum -c -
+          tar -xzf "gitleaks_${version}_linux_x64.tar.gz" gitleaks
+          ./gitleaks version
+
+      - name: Scan the full history
+        shell: bash
+        run: ./gitleaks git --config .gitleaks.toml --redact --no-banner --exit-code 1 .
