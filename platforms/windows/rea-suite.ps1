@@ -33,6 +33,15 @@ function Python-Env([switch]$Upgrade) {
     $a = @('sync'); if ($Angr) { $a += '--group', 'angr' }
     Invoke-Checked uv @a
 }
+function Uv-Tools([switch]$Upgrade) {
+    Step 'isolated CLI tools (common/uv-tools.txt)'
+    foreach ($line in Get-Content "$Root\common\uv-tools.txt") {
+        $line = ($line -replace '#.*', '').Trim()
+        if (-not $line -or ($line -match ' @(\w+)$' -and $Matches[1] -ne 'windows')) { continue }
+        $spec = $line -replace ' @\w+$', ''
+        if ($Upgrade) { Invoke-Checked uv tool install --upgrade $spec } else { Invoke-Checked uv tool install $spec }
+    }
+}
 function Node-Env([switch]$Upgrade) {
     Step "Node $Node + rea-agents (fnm/npm)"; Need fnm
     Invoke-Checked fnm install $Node
@@ -65,6 +74,10 @@ function Doctor {
         winget list --id $p --exact --accept-source-agreements *> $null
         if ($LASTEXITCODE) { Bad $p 'not installed; run bootstrap.ps1' } else { Ok $p 'installed' }
     }
+    Step 'MSVC'
+    $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+    $vs = if (Test-Path $vswhere) { & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath }
+    if ($vs) { Ok 'MSVC' $vs } else { Write-Host '  info  MSVC               not found; Visual Studio installer -> "Desktop development with C++" workload' -ForegroundColor Yellow }
     Step 'rea doctor'
     rea doctor
     if ($script:problems) { Write-Host "`n$($script:problems) problem(s) found" -ForegroundColor Red; exit 1 }
@@ -72,13 +85,13 @@ function Doctor {
 }
 
 switch ($Command) {
-    'setup' { Python-Env; Node-Env; Suite-Tools install }
+    'setup' { Python-Env; Uv-Tools; Node-Env; Suite-Tools install }
     'update' {
         & "$PSScriptRoot\bootstrap.ps1" -RuntimesOnly -Update
         Step 'winget packages'
         winget import --import-file "$PSScriptRoot\winget.json" --accept-package-agreements --accept-source-agreements
         . "$PSScriptRoot\env.ps1"
-        Python-Env -Upgrade; Node-Env -Upgrade; Suite-Tools update
+        Python-Env -Upgrade; Uv-Tools -Upgrade; Node-Env -Upgrade; Suite-Tools update
     }
     'reinstall' {
         foreach ($what in $Rest) {

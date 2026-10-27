@@ -32,16 +32,19 @@ work/                   (ignored) targets, captures, Ghidra projects
 
 Everything that can live inside the checkout does: runtimes and their caches in
 `.runtime/` (uv, fnm/Node, uv-managed Python, Temurin JDK, .NET SDK, npm/NuGet/Gradle
-caches), Python packages in `.venv/`, npm packages in `node_modules/`, analysis tools
-in `tools/`. Deleting those directories removes the installation; nothing in `~`
+caches), Python packages in `.venv/`, CLI tools whose dependencies clash with the
+main environment in `.runtime/uv-tools/` (`common/uv-tools.txt`), npm packages in
+`node_modules/`, analysis tools in `tools/`. Deleting those directories removes the installation; nothing in `~`
 or `/usr` is required.
 
 What stays system-wide, because it needs root, drivers or a shell hook:
 
-- Linux: `platforms/linux/apt-packages.txt` (LLDB + Python bindings, Wireshark/tshark
-  with capture permissions, binwalk, adb, xxd, Qt runtime library, base utilities).
+- Linux: `platforms/linux/apt-packages.txt` (compilers and build tools, LLDB + Python
+  bindings, Wireshark/tshark with capture permissions, qemu-user, binwalk, innoextract,
+  adb, xxd, Qt runtime library, base utilities).
 - Windows: `platforms/windows/winget.json` (Git, Wireshark + Npcap, LLVM/LLDB,
-  Sysinternals, System Informer, 7-Zip, Android platform tools).
+  MinGW-w64, NASM, innoextract, Sysinternals, System Informer, 7-Zip, Android
+  platform tools).
 - [direnv](https://direnv.net/) with its shell hook (optional; `source ./activate` works too).
 - Agent registration (`rea-suite agents` writes to the agent's own config) and
   per-user tool settings such as `~/.config/ghidra` and `~/.mitmproxy`.
@@ -142,7 +145,10 @@ Projects opened in a newer Ghidra are upgraded and no longer open in older ones.
 | Frida, objection | pip `frida-tools`, `objection` (+ npm `frida` via rea) | `frida`, `frida-trace`, `objection`, ... |
 | FLOSS, capa | pip `flare-floss`, `flare-capa` | `floss`, `capa` |
 | mitmproxy | pip | `mitmproxy`, `mitmdump`, `mitmweb` |
-| unblob | pip, Linux (recursive extraction, next to binwalk) | `unblob` |
+| unblob | `uv tool` (own environment; clashes with angr), Linux | `unblob` |
+| innoextract | apt / winget (Inno Setup installers) | `innoextract` |
+| gitleaks | tools.yml (secrets in extracted apps/firmware) | `gitleaks` |
+| capstone, unicorn, keystone | pip (disassembler / emulator / assembler engines) | Python libraries |
 | pwntools | pip, Linux | `pwn`, Python library |
 | LIEF, pefile | pip | Python libraries |
 | angr | pip (optional group) | Python library |
@@ -162,6 +168,21 @@ and REA integrates Rizin (`REA_RIZIN_COMMAND`, Cutter bridge).
 `common/env.sh` exports the absolute paths REA expects (`REA_KUNA_COMMAND`,
 `REA_JADX_MCP_JAR`, `REA_PWNDBG_*`, `REA_GHIDRA_NATIVEAOT_JAR`, ...) for every
 tool it finds, so `rea doctor` picks them up through `bin/rea`.
+
+## Build toolchains
+
+For building targets, patches, loaders and plugins:
+
+| | Linux (apt) | Windows |
+| --- | --- | --- |
+| C/C++ | build-essential, gcc/g++-multilib (32-bit), clang, lld, llvm | MSVC (Visual Studio / Build Tools, not managed here), LLVM (winget) |
+| Windows targets | mingw-w64 (`x86_64-w64-mingw32-gcc`, i686) | WinLibs MinGW-w64 GCC (winget) |
+| Assembler | nasm | NASM (winget) |
+| Build systems | cmake, ninja, meson from uv (`.venv`); autoconf, automake, libtool, bison, flex, pkgconf, ccache from apt | cmake, ninja, meson from uv |
+| Other architectures | binutils-multiarch, gdb-multiarch, qemu-user + binfmt (run ARM/MIPS/... userland binaries directly) | – |
+
+MSVC is checked, not installed: it needs the Visual Studio installer with the
+"Desktop development with C++" workload.
 
 ## Windows and WSL together
 

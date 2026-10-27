@@ -113,6 +113,19 @@ tools:
       windows:
         rg: rg.exe
 
+  # Secret scanning for extracted apps, bundles and firmware trees
+  gitleaks:
+    github: gitleaks/gitleaks
+    version: latest
+    assets:
+      linux: '^gitleaks_[\d.]+_linux_x64\.tar\.gz$'
+      windows: '^gitleaks_[\d.]+_windows_x64\.zip$'
+    bin:
+      linux:
+        gitleaks: gitleaks
+      windows:
+        gitleaks: gitleaks.exe
+
   # Not packaged for Ubuntu; static build has no runtime dependencies.
   rizin:
     github: rizinorg/rizin

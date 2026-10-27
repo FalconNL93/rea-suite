@@ -10,14 +10,40 @@ python3-lldb
 tshark
 wireshark
 
-# Firmware / blobs
+# Firmware / installers / blobs
 binwalk
+innoextract
 
 # Android (rea: REA_ADB_PATH; frida-server push)
 adb
 
 # GUI runtime for the Qt AppImages (Cutter, ImHex) under WSLg
 libxcb-cursor0
+
+# Build toolchains (cmake, ninja and meson come from uv, see pyproject.toml)
+build-essential
+gcc-multilib
+g++-multilib
+clang
+lld
+llvm
+mingw-w64
+gcc-mingw-w64
+g++-mingw-w64
+nasm
+autoconf
+automake
+libtool
+bison
+flex
+pkgconf
+ccache
+
+# Foreign architectures: disassemble, debug and run firmware/userland binaries
+binutils-multiarch
+gdb-multiarch
+qemu-user
+qemu-user-binfmt
 
 # Basics
 xxd

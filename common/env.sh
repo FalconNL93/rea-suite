@@ -21,6 +21,7 @@ export UV_PYTHON_INSTALL_DIR="$REA_RUNTIME/python"
 export UV_PYTHON_PREFERENCE=only-managed
 export UV_CACHE_DIR="$REA_RUNTIME/cache/uv"
 export UV_TOOL_DIR="$REA_RUNTIME/uv-tools"
+export UV_TOOL_BIN_DIR="$REA_RUNTIME/uv-tools/bin"
 export FNM_DIR="$REA_RUNTIME/fnm"
 export npm_config_cache="$REA_RUNTIME/cache/npm"
 export DOTNET_ROOT="$REA_RUNTIME/dotnet"
@@ -32,6 +33,7 @@ if [ -x "$REA_RUNTIME/jdk/current/bin/java" ]; then
   export JAVA_HOME="$REA_RUNTIME/jdk/current"
 fi
 
+_rea_path_prepend "$UV_TOOL_BIN_DIR"
 _rea_path_prepend "$REA_RUNTIME/bin"
 _rea_path_prepend "$DOTNET_ROOT"
 [ -z "${JAVA_HOME:-}" ] || _rea_path_prepend "$JAVA_HOME/bin"

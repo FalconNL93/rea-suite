@@ -11,6 +11,7 @@ $env:UV_PYTHON_INSTALL_DIR = "$Runtime\python"
 $env:UV_PYTHON_PREFERENCE = 'only-managed'
 $env:UV_CACHE_DIR = "$Runtime\cache\uv"
 $env:UV_TOOL_DIR = "$Runtime\uv-tools"
+$env:UV_TOOL_BIN_DIR = "$Runtime\uv-tools\bin"
 $env:FNM_DIR = "$Runtime\fnm"
 $env:npm_config_cache = "$Runtime\cache\npm"
 $env:DOTNET_ROOT = "$Runtime\dotnet"
@@ -22,7 +23,7 @@ $env:GRADLE_USER_HOME = "$Runtime\cache\gradle"
 $jdk = Get-Content "$Runtime\jdk\current.txt" -ErrorAction SilentlyContinue
 if ($jdk -and (Test-Path "$Runtime\jdk\$jdk\bin\java.exe")) { $env:JAVA_HOME = "$Runtime\jdk\$jdk" }
 
-$paths = @("$Root\bin", "$Root\tools\bin", "$Root\.venv\Scripts", "$Root\node_modules\.bin", "$Runtime\bin", $env:DOTNET_ROOT)
+$paths = @("$Root\bin", "$Root\tools\bin", "$Root\.venv\Scripts", "$Root\node_modules\.bin", "$Runtime\bin", $env:UV_TOOL_BIN_DIR, $env:DOTNET_ROOT)
 if ($env:JAVA_HOME) { $paths += "$env:JAVA_HOME\bin" }
 if (Test-Path "$Runtime\bin\fnm.exe") {
     $node = (Get-Content "$Root\.node-version" -Raw).Trim()

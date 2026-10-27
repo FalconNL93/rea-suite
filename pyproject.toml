@@ -24,12 +24,18 @@ dependencies = [
     "flare-capa>=9",
     # Exploit/CTF toolkit; rea uses it via REA_PWNTOOLS_PYTHON
     "pwntools>=4.14; sys_platform != 'win32'",
-    # Recursive firmware/container extraction, complements binwalk (CLI: unblob)
-    "unblob>=25; sys_platform != 'win32'",
     # Frida-based mobile runtime exploration (CLI: objection)
     "objection>=1.12",
     # Binary diffing on top of Ghidra/pyghidra (CLI: ghidriff)
     "ghidriff>=1",
+    # Disassembler / CPU emulator / assembler engines
+    "capstone>=5",
+    "unicorn>=2.1",
+    "keystone-engine>=0.9.2",
+    # Build systems as self-contained wheels (compilers come from apt/winget)
+    "cmake>=3.30",
+    "ninja>=1.11",
+    "meson>=1.5",
 ]
 
 [project.scripts]
@@ -37,8 +43,10 @@ rea-tools = "rea_suite.cli:main"
 diec = "rea_suite.diec:main"
 
 [dependency-groups]
-# angr is large and pins many native deps; install with `uv sync --group angr`
-angr = ["angr>=9.2"]
+# angr is large; install with `uv sync --group angr` (rea-suite keeps it once installed)
+# angr pins old arpy/unicorn versions; CLI tools that clash with it go in
+# common/uv-tools.txt (isolated environments) instead of here.
+angr = ["angr>=10"]
 dev = ["ruff>=0.8"]
 
 [tool.uv]

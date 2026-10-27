@@ -52,6 +52,21 @@ python_env() { # [--upgrade]
   uv sync "${args[@]}"
 }
 
+uv_tools() { # [--upgrade]
+  step "isolated CLI tools (common/uv-tools.txt)"
+  local line spec platform
+  while read -r line; do
+    spec="${line%% @*}"
+    platform="${line##* @}"
+    [[ "$line" != *" @"* || "$platform" == linux ]] || continue
+    if [[ "${1:-}" == --upgrade ]]; then
+      uv tool install --upgrade "$spec"
+    else
+      uv tool install "$spec"
+    fi
+  done < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' -e 's/[[:space:]]*$//' common/uv-tools.txt)
+}
+
 node_env() { # [--upgrade]
   step "Node $NODE_VERSION + rea-agents (fnm/npm)"
   need fnm "$BOOTSTRAP"
@@ -93,6 +108,7 @@ runtimes() { # [--update]
 cmd_setup() {
   ((APT == 0)) || apt_packages
   python_env
+  uv_tools
   node_env
   suite_tools install
   step "done"
@@ -104,6 +120,7 @@ cmd_update() {
   runtimes --update
   ((APT == 0)) || apt_packages
   python_env --upgrade
+  uv_tools --upgrade
   node_env --upgrade
   suite_tools update
   if [ -d "$HOME/.claude/skills/reverse-engineer-anything" ]; then
@@ -120,7 +137,7 @@ cmd_reinstall() {
   for what in "$@"; do
     case "$what" in
       runtime) rm -rf .runtime && runtimes ;;
-      python) rm -rf .venv && python_env ;;
+      python) rm -rf .venv .runtime/uv-tools && python_env && uv_tools ;;
       node) rm -rf node_modules && node_env ;;
       tools) rea-tools reinstall ;;
       system)
@@ -201,6 +218,15 @@ cmd_doctor() {
   else
     bad "node_modules" "rea-agents missing or not matching package-lock; run rea-suite setup"
   fi
+
+  local tool
+  while read -r tool; do
+    [[ "$tool" != *" @"* || "${tool##* @}" == linux ]] || continue
+    tool="${tool%% @*}"
+    if [[ -d "$UV_TOOL_DIR/$tool" ]]; then ok "uv tool" "$tool"; else
+      bad "uv tool" "$tool missing; run rea-suite setup"
+    fi
+  done < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' -e 's/[[:space:]]*$//' common/uv-tools.txt)
 
   step "tools.yml"
   rea-tools check || problems=$((problems + 1))
