@@ -30,7 +30,7 @@ fi
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)"
 cd "$ROOT"
 
-JDK_MAJOR=21        # Ghidra 12 requires JDK 21+
+JDK_MAJOR=21        # REA verifies Ghidra 12.1 on JDK 21 (rea-tools rea-pins)
 DOTNET_CHANNEL=10.0 # LTS; ilspycmd
 
 BREW=1 UPDATE=0 RUNTIMES_ONLY=0 SELECT=0

@@ -18,7 +18,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)"
 cd "$ROOT"
 
-JDK_MAJOR=21        # Ghidra 12 requires JDK 21+
+JDK_MAJOR=21        # REA verifies Ghidra 12.1 on JDK 21 (rea-tools rea-pins)
 DOTNET_CHANNEL=10.0 # LTS; ilspycmd
 
 APT=1 UPDATE=0 RUNTIMES_ONLY=0 SELECT=0
@@ -121,7 +121,7 @@ p = a["binary"]["package"]
 print(a["release_name"], p["link"], p["checksum"])' <<<"$meta")
   if [[ -x "$REA_RUNTIME/jdk/$name/bin/java" ]]; then
     note "$name is installed"
-  elif [[ -e "$REA_RUNTIME/jdk/current" ]] && ((UPDATE == 0)); then
+  elif [[ "$(readlink "$REA_RUNTIME/jdk/current" 2>/dev/null)" == "jdk-$JDK_MAJOR"[.+]* ]] && ((UPDATE == 0)); then
     note "$(readlink "$REA_RUNTIME/jdk/current") is installed ($name available; use --update)"
     return 0
   else

@@ -138,7 +138,9 @@ Windows: the same commands through `platforms\windows\rea-suite.ps1`.
 
 `update` rewrites `uv.lock`, `package.json` and `package-lock.json`; commit them to
 record the versions. Pin a tool by setting `version:` in `common/tools.yml` to a
-release tag. `jadx-headless-mcp`, `kuna` and `pwndbg` are pinned to the versions REA verifies.
+release tag. `ghidra`, `jadx-headless-mcp`, `kuna` and `pwndbg` are pinned to the versions
+REA verifies. For Ghidra and its JDK, `update` and `doctor` compare the pin and the installed
+JDK with what the installed rea-agents verifies (`rea-tools rea-pins`) and say what to change.
 
 tools.yml lookups use the GitHub API (60 requests/hour anonymously) and fall back
 to the github.com release pages once that is exhausted. `GITHUB_TOKEN` in `.env`

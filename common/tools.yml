@@ -35,9 +35,11 @@
 #              `copy: {<glob in archive>: <dir in install>}`.
 
 tools:
+  # Pinned to the build REA verifies (SUPPORTED_GHIDRA_VERSION in rea-agents'
+  # GhidraReleasePolicy.js); `rea-tools rea-pins` checks it on update and doctor.
   ghidra:
     github: NationalSecurityAgency/ghidra
-    version: latest
+    version: Ghidra_12.1.4_build
     assets:
       linux: '^ghidra_.*_PUBLIC_\d+\.zip$'
       macos: '^ghidra_.*_PUBLIC_\d+\.zip$'

@@ -409,6 +409,54 @@ def cmd_prune(args: argparse.Namespace) -> None:
             shutil.rmtree(entry)
 
 
+REA_GHIDRA_POLICY = (
+    ROOT / "node_modules" / "rea-agents" / "dist" / "ghidra" / "GhidraReleasePolicy.js"
+)
+
+
+def cmd_rea_pins(args: argparse.Namespace) -> None:
+    """Compare the Ghidra pin and the JDK with the versions the installed REA verifies."""
+    if not REA_GHIDRA_POLICY.exists():
+        raise SystemExit(f"  FAIL  rea pins           {REA_GHIDRA_POLICY} missing; run setup")
+    policy = REA_GHIDRA_POLICY.read_text()
+    ghidra = re.search(r'SUPPORTED_GHIDRA_VERSION = "([^"]+)"', policy)
+    java = re.search(r"SUPPORTED_GHIDRA_JAVA_MAJOR = (\d+)", policy)
+    if not (ghidra and java):
+        raise SystemExit(
+            f"  FAIL  rea pins           versions not found in {REA_GHIDRA_POLICY.name}"
+        )
+    problems = 0
+
+    want = f"Ghidra_{ghidra[1]}_build"
+    pinned = load_tools()["ghidra"].version
+    if pinned == want:
+        print(f"  ok    ghidra pin         {pinned} (REA verifies {ghidra[1]})")
+    else:
+        print(
+            f"  FAIL  ghidra pin         {pinned}; REA verifies {ghidra[1]}: set `version: {want}`"
+        )
+        print(
+            "                           for ghidra in common/tools.yml, then rea-tools update ghidra"
+        )
+        problems += 1
+
+    release = Path(os.environ.get("JAVA_HOME", "")) / "release"
+    found = (
+        re.search(r'^JAVA_VERSION="(\d+)', release.read_text(), re.MULTILINE)
+        if release.is_file()
+        else None
+    )
+    if found and found[1] == java[1]:
+        print(f"  ok    jdk                {found[1]} (REA verifies {java[1]})")
+    else:
+        have = found[1] if found else "none"
+        print(f"  FAIL  jdk                {have}; REA verifies {java[1]}: set the JDK major in")
+        print("                           platforms/*/bootstrap*, then bootstrap --update")
+        problems += 1
+    if problems:
+        sys.exit(1)
+
+
 def cmd_asset(args: argparse.Namespace) -> None:
     """Print `<tag> <url>` of the latest release asset matching a regex (for shell scripts)."""
     tool = Tool(name=args.repo, github=args.repo, assets={PLATFORM: args.pattern})
@@ -444,6 +492,8 @@ def main() -> None:
     p = sub.add_parser("components", help="optional components (see components --help)")
     p.add_argument("rest", nargs=argparse.REMAINDER)
     p.set_defaults(func=lambda a: components.main(a.rest))
+    p = sub.add_parser("rea-pins", help="check Ghidra pin and JDK against what REA verifies")
+    p.set_defaults(func=cmd_rea_pins)
     p = sub.add_parser("asset", help="print tag and URL of the latest matching release asset")
     p.add_argument("repo", help="GitHub owner/repo")
     p.add_argument("pattern", help="regex for the asset name")

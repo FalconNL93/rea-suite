@@ -169,6 +169,8 @@ cmd_update() {
   uv_tools --upgrade
   node_env --upgrade
   suite_tools update
+  step "versions REA verifies (Ghidra pin, JDK)"
+  rea-tools rea-pins || warn "the new rea-agents verifies other versions; follow the hints above"
   if [ -d "$HOME/.claude/skills/reverse-engineer-anything" ]; then
     rea_skill claude_code
   fi
@@ -281,6 +283,7 @@ cmd_doctor() {
 
   step "tools.yml"
   rea-tools check || problems=$((problems + 1))
+  rea-tools rea-pins || problems=$((problems + 1))
 
   step "git"
   if [[ "$(git config core.hooksPath 2>/dev/null)" == .githooks ]]; then

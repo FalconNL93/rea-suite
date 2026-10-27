@@ -85,6 +85,7 @@ function Doctor {
     npm ls rea-agents --depth=0 *> $null; if ($LASTEXITCODE) { Bad 'node_modules' 'run rea-suite.ps1 setup' } else { Ok 'node_modules' 'rea-agents installed' }
     Step 'tools.yml'
     uv run rea-tools check; if ($LASTEXITCODE) { $script:problems++ }
+    uv run rea-tools rea-pins; if ($LASTEXITCODE) { $script:problems++ }
     Step 'system (winget)'
     foreach ($p in Winget-Ids) {
         winget list --id $p --exact --accept-source-agreements *> $null
@@ -112,6 +113,9 @@ switch ($Command) {
         Winget-Packages -Upgrade
         . "$PSScriptRoot\env.ps1"
         Python-Env -Upgrade; Uv-Tools -Upgrade; Node-Env -Upgrade; Suite-Tools update
+        Step 'versions REA verifies (Ghidra pin, JDK)'
+        uv run rea-tools rea-pins
+        if ($LASTEXITCODE) { Write-Warning 'the new rea-agents verifies other versions; follow the hints above' }
     }
     'reinstall' {
         foreach ($what in $Rest) {

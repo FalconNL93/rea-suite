@@ -24,7 +24,7 @@ $ProgressPreference = 'SilentlyContinue' # Invoke-WebRequest is very slow with p
 $Root = (Resolve-Path "$PSScriptRoot\..\..").Path
 Set-Location $Root
 
-$JdkMajor = 21          # Ghidra 12 requires JDK 21+
+$JdkMajor = 21          # REA verifies Ghidra 12.1 on JDK 21 (rea-tools rea-pins)
 $DotnetChannel = '10.0' # LTS; ilspycmd
 $Runtime = "$Root\.runtime"
 New-Item -ItemType Directory -Force "$Runtime\bin", "$Runtime\cache" | Out-Null
@@ -80,7 +80,7 @@ $name = $meta.release_name
 $current = Get-Content "$Runtime\jdk\current.txt" -ErrorAction SilentlyContinue
 if ($current -eq $name -and (Test-Path "$Runtime\jdk\$name\bin\java.exe")) {
     Note "$name is installed"
-} elseif ($current -and -not $Update) {
+} elseif ($current -match "^jdk-$JdkMajor[.+]" -and -not $Update) {
     Note "$current is installed ($name available; use -Update)"
 } else {
     Fetch $meta.binary.package.link "$Runtime\cache\jdk.zip" $meta.binary.package.checksum
