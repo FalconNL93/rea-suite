@@ -31,7 +31,8 @@ installation.
   `.env`. A false positive gets an allowlist entry with its reason in `.gitleaks.toml`; the hooks
   are not skipped.
 * **Third-party code is built only when the user runs it or agrees.** Ghidra extension source
-  builds run Gradle from other repositories; use `--no-build` / `REA_TOOLS_NO_BUILD=1` otherwise.
+  builds and the macOS Ghidra natives (`buildNatives`) run Gradle on code from other
+  repositories; use `--no-build` / `REA_TOOLS_NO_BUILD=1` otherwise.
 * **Pinned versions say why.** A pin in `tools.yml` (`ghidra`, `jadx-headless-mcp`, `kuna`,
   `pwndbg`) is there because REA verifies that version; the comment names it. The Ghidra pin and
   the JDK major in the bootstraps follow rea-agents' `GhidraReleasePolicy.js`; `rea-tools rea-pins`

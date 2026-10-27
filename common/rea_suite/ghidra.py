@@ -40,6 +40,35 @@ def installed(install: Path) -> dict[str, dict]:
     return result
 
 
+def native_decompiler(install: Path, platform: str = "mac_arm_64") -> Path | None:
+    """The decompiler binary for a platform, shipped (os/) or built (build/os/)."""
+    feature = install / "Ghidra" / "Features" / "Decompiler"
+    for path in (feature / "os" / platform, feature / "build" / "os" / platform):
+        if (path / "decompile").is_file():
+            return path / "decompile"
+    return None
+
+
+def build_natives(install: Path) -> bool:
+    """Build the macOS natives (decompiler, demanglers) in place; the release zip has none."""
+    if native_decompiler(install):
+        print("  ghidra natives: mac_arm_64 present")
+        return True
+    if os.environ.get("REA_TOOLS_NO_BUILD"):
+        print("  warning: ghidra natives: none for mac_arm_64 and source builds are off")
+        return False
+    print("  ghidra natives: building for mac_arm_64 (gradlew buildNatives)")
+    gradlew = install / "support" / "gradle" / "gradlew"
+    try:
+        subprocess.run(
+            [str(gradlew), "--no-daemon", "--quiet", "buildNatives"], cwd=gradlew.parent, check=True
+        )
+    except (OSError, subprocess.CalledProcessError) as exc:
+        print(f"  warning: ghidra natives: build FAILED ({exc})")
+        return False
+    return True
+
+
 def sync(install: Path, specs: dict[str, dict], force: bool = False) -> list[str]:
     """Install/update the configured extensions; returns names that failed."""
     version = ghidra_version(install)

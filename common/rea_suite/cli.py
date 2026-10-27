@@ -198,6 +198,8 @@ def activate(tool: Tool, dest: Path, force_extensions: bool = False) -> None:
             continue
         target = base / Path(matches[-1]).relative_to(dest)
         write_launcher(name, target, spec.get("env", {}), base, jar=spec.get("jar", False))
+    if tool.name == "ghidra" and PLATFORM == "macos":
+        ghidra.build_natives(dest)
     if tool.ghidra_extensions:
         failed = ghidra.sync(dest, tool.ghidra_extensions, force=force_extensions)
         if failed:
@@ -349,6 +351,8 @@ def cmd_check(args: argparse.Namespace) -> None:
         if tool.ghidra_extensions:
             present = ghidra.installed(dest)
             absent += [f"extension:{n}" for n in tool.ghidra_extensions if n not in present]
+        if tool.name == "ghidra" and PLATFORM == "macos" and not ghidra.native_decompiler(dest):
+            absent.append("natives (rea-tools reinstall ghidra)")
         if absent:
             print(f"  FAIL  {tool.name:18} {version}; missing {', '.join(absent)}")
             problems += 1
@@ -484,7 +488,7 @@ def main() -> None:
         p.add_argument(
             "--no-build",
             action="store_true",
-            help="never build Ghidra extensions from source (also: REA_TOOLS_NO_BUILD=1)",
+            help="never build Ghidra extensions or macOS natives (also: REA_TOOLS_NO_BUILD=1)",
         )
         if name == "prune":
             p.add_argument("--dry-run", action="store_true", help="only list what would go")

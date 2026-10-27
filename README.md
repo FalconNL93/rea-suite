@@ -315,9 +315,10 @@ MSVC is checked, not installed: it needs the Visual Studio installer with the
 Same commands as on Linux (`bin/rea-suite`, `bin/rea`, `rea-ghidra`); system packages
 come from `platforms/macos/Brewfile` instead of apt. Differences:
 
-- Ghidra's release zip has no macOS natives, so the decompiler is missing until they
-  are built in the install: `cd tools/ghidra/current/support/gradle && ./gradlew buildNatives`
-  (Xcode CLT and the JDK Ghidra asks for). `rea doctor` reports it as `native_decompiler`.
+- Ghidra's release zip has no macOS natives (decompiler, demanglers), so `rea-tools`
+  builds them in every new Ghidra install with Ghidra's own `gradlew buildNatives`
+  (Xcode CLT, ~15 s). With `--no-build` / `REA_TOOLS_NO_BUILD=1` they are skipped and
+  `rea-tools check` reports them missing.
 - Not available: Detect It Easy (only a .pkg installer for Apple Silicon, no die-python
   wheel), unblob, qemu-user, gdb-multiarch, x86 multilib.
 - gdb (pwndbg) cannot debug native macOS processes; it works on core files and remote
