@@ -11,6 +11,9 @@ wireshark
 # Firmware / blobs
 binwalk
 
+# Android (rea: REA_ADB_PATH; frida-server push)
+adb
+
 # Basics
 xxd
 ripgrep

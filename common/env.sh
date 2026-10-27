@@ -54,5 +54,18 @@ _rea_tool REA_RIZIN_COMMAND rizin
 _rea_tool REA_MITMDUMP_COMMAND mitmdump
 _rea_tool REA_ILSPY_CMD_PATH ilspycmd
 _rea_tool REA_OBJDUMP_COMMAND objdump
+_rea_tool REA_KUNA_COMMAND kuna
+_rea_tool REA_APKTOOL_COMMAND apktool
+_rea_tool REA_WAKARU_COMMAND wakaru
+_rea_tool REA_ADB_PATH adb
+
+for _f in "$REA_SUITE_ROOT"/tools/jadx-headless-mcp/current/*-all.jar; do
+  [ -f "$_f" ] && export REA_JADX_MCP_JAR="$_f"
+done
+[ ! -d "$REA_SUITE_ROOT/tools/wabt/current/bin" ] ||
+  export REA_WABT_BIN_DIRECTORY="$REA_SUITE_ROOT/tools/wabt/current/bin"
+[ ! -x "$REA_SUITE_ROOT/.venv/bin/python" ] ||
+  export REA_PWNTOOLS_PYTHON="$REA_SUITE_ROOT/.venv/bin/python"
+unset _f
 
 unset -f _rea_path_prepend _rea_node_dir _rea_tool

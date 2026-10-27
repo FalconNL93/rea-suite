@@ -11,6 +11,6 @@
     "rea-agents": "^6.8.0"
   },
   "allowScripts": {
-    "frida@17.23.2": true
+    "frida": true
   }
 }

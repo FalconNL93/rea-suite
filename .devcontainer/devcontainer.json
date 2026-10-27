@@ -14,7 +14,7 @@
   // ptrace for frida/lldb against processes inside the container
   "runArgs": ["--cap-add=SYS_PTRACE", "--security-opt", "seccomp=unconfined"],
   "remoteUser": "dev",
-  "postCreateCommand": "sudo chown dev: .venv node_modules tools && platforms/linux/bootstrap.sh --no-apt && direnv allow .",
+  "postCreateCommand": "sudo chown dev: .venv node_modules tools && bin/rea-suite setup --no-apt && direnv allow .",
   "customizations": {
     "vscode": {
       "extensions": [

@@ -1,7 +1,8 @@
 # Tools that have no usable package-manager release on every platform.
 #
-# Managed by `rea-suite` (uv run rea-suite --help):
+# Managed by `rea-suite` (rea-tools --help, or `rea-suite tools ...`):
 #   install [name...]   install missing tools
+#   reinstall [name...] remove and install again
 #   update  [name...]   move `version: latest` tools to the newest release
 #   status              show installed vs. latest versions
 #
@@ -13,7 +14,8 @@
 # strip:       leading path components to drop when extracting
 # bin:         per-platform launchers; `name: path` (relative to the install dir)
 #              or `name: {path: ..., env: {VAR: value}}`; `{dir}` expands to the install dir.
-#              Paths are globs (`**` allowed); the last match wins.
+#              Paths are globs (`**` allowed); the last match wins. `jar: true`
+#              runs the file with `java -jar`.
 # dotnet-tool: NuGet package installed with `dotnet tool install --tool-path`
 
 tools:
@@ -101,3 +103,74 @@ tools:
   ilspycmd:
     dotnet-tool: ilspycmd
     version: latest
+
+  # --- Engines that rea drives directly (see `rea doctor`) ---
+
+  # rea's JADX provider (REA_JADX_MCP_JAR). Pinned to the version rea verifies.
+  jadx-headless-mcp:
+    github: 1013503897/jadx-headless-mcp
+    version: v0.7.1
+    assets:
+      linux: '^jadx-headless-mcp-[\d.]+-all\.jar$'
+      windows: '^jadx-headless-mcp-[\d.]+-all\.jar$'
+
+  # Agent-first decompiler ported from Ghidra (REA_KUNA_COMMAND).
+  # Pinned to the version rea verifies; newer releases may work.
+  kuna:
+    github: Noelo-Lab/kuna
+    version: v1.833
+    assets:
+      linux: '^kuna-v[\d.]+-linux-x86_64\.tar\.gz$'
+      windows: '^kuna-v[\d.]+-windows-x86_64\.zip$'
+    strip: 1
+    bin:
+      linux:
+        kuna: kuna
+      windows:
+        kuna: '**/kuna.exe'
+
+  # APK decoding/rebuilding (REA_APKTOOL_COMMAND).
+  apktool:
+    github: iBotPeaches/Apktool
+    version: latest
+    assets:
+      linux: '^apktool_[\d.]+\.jar$'
+      windows: '^apktool_[\d.]+\.jar$'
+    bin:
+      linux:
+        apktool: {path: 'apktool_*.jar', jar: true}
+      windows:
+        apktool: {path: 'apktool_*.jar', jar: true}
+
+  # JavaScript bundle unpacker/decompiler (REA_WAKARU_COMMAND).
+  wakaru:
+    github: pionxzh/wakaru
+    version: latest
+    assets:
+      linux: '^wakaru-linux-x64\.tar\.gz$'
+      windows: '^wakaru-win32-x64\.zip$'
+    bin:
+      linux:
+        wakaru: '**/wakaru'
+      windows:
+        wakaru: '**/wakaru.exe'
+
+  # WebAssembly toolkit: wasm2wat, wasm-objdump, wasm-validate, ... (REA_WABT_BIN_DIRECTORY)
+  wabt:
+    github: WebAssembly/wabt
+    version: latest
+    assets:
+      linux: '^wabt-[\d.]+-linux-x64\.tar\.gz$'
+      windows: '^wabt-[\d.]+-windows-x64\.tar\.gz$'
+    strip: 1
+    bin:
+      linux:
+        wasm2wat: bin/wasm2wat
+        wat2wasm: bin/wat2wasm
+        wasm-objdump: bin/wasm-objdump
+        wasm-validate: bin/wasm-validate
+      windows:
+        wasm2wat: bin/wasm2wat.exe
+        wat2wasm: bin/wat2wasm.exe
+        wasm-objdump: bin/wasm-objdump.exe
+        wasm-validate: bin/wasm-validate.exe

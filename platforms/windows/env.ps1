@@ -17,3 +17,15 @@ fnm env --use-on-cd --shell powershell | Out-String | Invoke-Expression
 fnm use $node --silent-if-unchanged
 
 $env:Path = @("$Root\tools\bin", "$Root\.venv\Scripts", "$Root\node_modules\.bin", $env:Path) -join ';'
+
+# Absolute engine paths for rea-agents
+$jar = Get-ChildItem "$Root\tools\jadx-headless-mcp" -Recurse -Filter '*-all.jar' -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($jar) { $env:REA_JADX_MCP_JAR = $jar.FullName }
+if (Test-Path "$Root\.venv\Scripts\python.exe") { $env:REA_PWNTOOLS_PYTHON = "$Root\.venv\Scripts\python.exe" }
+foreach ($pair in @(
+        @('REA_RIZIN_COMMAND', 'rizin'), @('REA_KUNA_COMMAND', 'kuna'), @('REA_APKTOOL_COMMAND', 'apktool'),
+        @('REA_WAKARU_COMMAND', 'wakaru'), @('REA_ILSPY_CMD_PATH', 'ilspycmd'), @('REA_MITMDUMP_COMMAND', 'mitmdump'),
+        @('REA_TSHARK_COMMAND', 'tshark'), @('REA_ADB_PATH', 'adb'))) {
+    $cmd = Get-Command $pair[1] -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($cmd) { Set-Item "env:$($pair[0])" $cmd.Source }
+}

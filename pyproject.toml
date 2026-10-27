@@ -18,11 +18,18 @@ dependencies = [
     "mitmproxy>=12",
     # YARA-X Python bindings (the `yr` CLI comes from common/tools.yml)
     "yara-x>=1",
+    # Detect It Easy bindings (the GUI/diec come from the official .deb / tools.yml)
     "die-python>=0.5",
+    # Capability detection, companion to FLOSS (CLI: capa)
+    "flare-capa>=9",
+    # Exploit/CTF toolkit; rea uses it via REA_PWNTOOLS_PYTHON
+    "pwntools>=4.14",
+    # Recursive firmware/container extraction, complements binwalk (CLI: unblob)
+    "unblob>=25",
 ]
 
 [project.scripts]
-rea-suite = "rea_suite.cli:main"
+rea-tools = "rea_suite.cli:main"
 
 [dependency-groups]
 # angr is large and pins many native deps; install with `uv sync --group angr`
