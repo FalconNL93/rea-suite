@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import functools
 import glob
 import json
 import os
@@ -12,15 +11,14 @@ import shutil
 import stat
 import subprocess
 import sys
-import tarfile
 import tempfile
-import urllib.error
-import urllib.request
-import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml
+
+from . import ghidra, github
+from .archive import extract
 
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "common" / "tools.yml"
@@ -28,7 +26,6 @@ TOOLS_DIR = ROOT / "tools"
 BIN_DIR = TOOLS_DIR / "bin"
 STATE_FILE = TOOLS_DIR / "state.json"
 PLATFORM = "windows" if os.name == "nt" else "linux"
-ARCHIVE_SUFFIXES = (".zip", ".tar", ".tar.gz", ".tgz", ".tar.xz", ".txz", ".tar.bz2")
 
 
 @dataclass
@@ -40,6 +37,8 @@ class Tool:
     assets: dict[str, str] = field(default_factory=dict)
     strip: int = 0
     bin: dict[str, dict] = field(default_factory=dict)
+    ghidra_extensions: dict[str, dict] = field(default_factory=dict)
+    plugins: dict[str, dict] = field(default_factory=dict)
 
     @classmethod
     def from_manifest(cls, name: str, spec: dict) -> Tool:
@@ -51,6 +50,8 @@ class Tool:
             assets=spec.get("assets", {}),
             strip=int(spec.get("strip", 0)),
             bin=spec.get("bin", {}),
+            ghidra_extensions=spec.get("ghidra-extensions") or {},
+            plugins=spec.get("plugins") or {},
         )
 
     @property
@@ -72,32 +73,7 @@ def save_state(state: dict[str, str]) -> None:
     STATE_FILE.write_text(json.dumps(state, indent=2, sort_keys=True) + "\n")
 
 
-# --- GitHub releases ---------------------------------------------------------
-
-
-@functools.cache
-def github_api(path: str) -> dict:
-    req = urllib.request.Request(f"https://api.github.com/{path}")
-    req.add_header("Accept", "application/vnd.github+json")
-    if token := os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN"):
-        req.add_header("Authorization", f"Bearer {token}")
-    try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            return json.load(resp)
-    except urllib.error.HTTPError as exc:
-        if exc.code in (403, 429) and exc.headers.get("X-RateLimit-Remaining") == "0":
-            raise SystemExit(
-                "GitHub API rate limit reached (60 requests/hour without a token). "
-                "Put `export GITHUB_TOKEN=...` (a fine-grained token without permissions "
-                "is enough) in .envrc.local, or wait for the reset."
-            ) from exc
-        raise
-
-
-def github_release(tool: Tool) -> dict:
-    if tool.version == "latest":
-        return github_api(f"repos/{tool.github}/releases/latest")
-    return github_api(f"repos/{tool.github}/releases/tags/{tool.version}")
+# --- GitHub release tools ----------------------------------------------------
 
 
 def pick_asset(tool: Tool, release: dict) -> dict:
@@ -112,62 +88,16 @@ def pick_asset(tool: Tool, release: dict) -> dict:
     return matches[0]
 
 
-def download(url: str, dest: Path) -> None:
-    print(f"  downloading {url}")
-    with urllib.request.urlopen(url, timeout=60) as resp, dest.open("wb") as out:
-        shutil.copyfileobj(resp, out, length=1 << 20)
-
-
-def _stripped(name: str, strip: int) -> str | None:
-    parts = [p for p in name.replace("\\", "/").split("/") if p not in ("", ".")]
-    if len(parts) <= strip or ".." in parts:
-        return None
-    return "/".join(parts[strip:])
-
-
-def extract(archive: Path, dest: Path, strip: int) -> None:
-    dest.mkdir(parents=True)
-    if not archive.name.endswith(ARCHIVE_SUFFIXES):
-        shutil.copy2(archive, dest / archive.name)  # single file, e.g. a .jar
-    elif archive.name.endswith(".zip"):
-        with zipfile.ZipFile(archive) as zf:
-            for info in zf.infolist():
-                rel = _stripped(info.filename, strip)
-                if rel is None:
-                    continue
-                target = dest / rel
-                if info.is_dir():
-                    target.mkdir(parents=True, exist_ok=True)
-                    continue
-                target.parent.mkdir(parents=True, exist_ok=True)
-                with zf.open(info) as src, target.open("wb") as out:
-                    shutil.copyfileobj(src, out)
-                # zipfile drops Unix permissions; restore them (executables!)
-                mode = info.external_attr >> 16
-                if mode & 0o777:
-                    target.chmod(mode & 0o777)
-    else:
-        with tarfile.open(archive) as tf:
-            members = []
-            for member in tf.getmembers():
-                rel = _stripped(member.name, strip)
-                if rel is None:
-                    continue
-                member.name = rel
-                members.append(member)
-            tf.extractall(dest, members=members, filter="tar")
-
-
 def install_github(tool: Tool, state: dict[str, str], force_latest: bool) -> None:
     if force_latest and tool.version != "latest":
         print(f"{tool.name}: pinned to {tool.version}")
-    release = github_release(tool)
+    release = github.release(tool.github, tool.version)
     tag = release["tag_name"]
     tool_dir = TOOLS_DIR / tool.name
     dest = tool_dir / tag
     if state.get(tool.name) == tag and dest.exists():
         print(f"{tool.name}: {tag} is up to date")
-        link_tool(tool, dest)
+        activate(tool, dest)
         return
 
     asset = pick_asset(tool, release)
@@ -175,7 +105,7 @@ def install_github(tool: Tool, state: dict[str, str], force_latest: bool) -> Non
     tool_dir.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=tool_dir) as tmp:
         archive = Path(tmp) / asset["name"]
-        download(asset["browser_download_url"], archive)
+        github.download(asset["browser_download_url"], archive)
         staging = Path(tmp) / "extract"
         extract(archive, staging, tool.strip)
         if dest.exists():
@@ -185,9 +115,12 @@ def install_github(tool: Tool, state: dict[str, str], force_latest: bool) -> Non
     previous = state.get(tool.name)
     state[tool.name] = tag
     save_state(state)
-    link_tool(tool, dest)
+    activate(tool, dest)
     if previous and previous != tag and (tool_dir / previous).exists():
-        print(f"  previous version kept at {tool_dir / previous} (rea-tools prune removes it)")
+        print(
+            f"  previous version kept at {tool_dir / previous} "
+            f"(`rea-tools use {tool.name} {previous}` rolls back, `rea-tools prune` removes it)"
+        )
 
 
 # --- dotnet tools ------------------------------------------------------------
@@ -214,10 +147,10 @@ def install_dotnet(tool: Tool, state: dict[str, str], force_latest: bool) -> Non
     write_launcher(tool.name, tool_path / exe, {}, tool_path)
 
 
-# --- launchers ---------------------------------------------------------------
+# --- activation: current link, launchers, Ghidra extensions -------------------
 
 
-def link_tool(tool: Tool, dest: Path) -> None:
+def activate(tool: Tool, dest: Path, force_extensions: bool = False) -> None:
     current = TOOLS_DIR / tool.name / "current"
     try:
         if current.is_symlink() or current.exists():
@@ -235,6 +168,44 @@ def link_tool(tool: Tool, dest: Path) -> None:
             continue
         target = base / Path(matches[-1]).relative_to(dest)
         write_launcher(name, target, spec.get("env", {}), base, jar=spec.get("jar", False))
+    if tool.ghidra_extensions:
+        failed = ghidra.sync(dest, tool.ghidra_extensions, force=force_extensions)
+        if failed:
+            print(f"  warning: Ghidra extension(s) not installed: {', '.join(failed)}")
+    if tool.plugins:
+        sync_plugins(dest, tool.plugins)
+
+
+def sync_plugins(dest: Path, specs: dict[str, dict]) -> None:
+    """Copy files from plugin releases into a tool's install dir (e.g. x64dbg plugins)."""
+    marker_file = dest / ".rea-suite-plugins.json"
+    markers = json.loads(marker_file.read_text()) if marker_file.exists() else {}
+    for name, spec in specs.items():
+        release = github.release(spec["github"], str(spec.get("version", "latest")))
+        tag = release["tag_name"]
+        if markers.get(name) == tag:
+            print(f"  plugin {name}: {tag} is up to date")
+            continue
+        pattern = re.compile(spec["asset"])
+        asset = next((a for a in release["assets"] if pattern.search(a["name"])), None)
+        if asset is None:
+            print(f"  warning: plugin {name}: no asset matching {spec['asset']!r} in {tag}")
+            continue
+        print(f"  plugin {name}: installing {tag}")
+        with tempfile.TemporaryDirectory(dir=dest) as tmp:
+            archive = Path(tmp) / asset["name"]
+            github.download(asset["browser_download_url"], archive)
+            extract(archive, Path(tmp) / "x", 0)
+            for source_glob, target in spec["copy"].items():
+                files = glob.glob(str(Path(tmp) / "x" / source_glob), recursive=True)
+                if not files:
+                    print(f"  warning: plugin {name}: {source_glob} matched nothing")
+                (dest / target).mkdir(parents=True, exist_ok=True)
+                for f in files:
+                    if Path(f).is_file():
+                        shutil.copy2(f, dest / target / Path(f).name)
+        markers[name] = tag
+        marker_file.write_text(json.dumps(markers, indent=2) + "\n")
 
 
 def write_launcher(
@@ -247,7 +218,9 @@ def write_launcher(
     if PLATFORM == "windows":
         here = "%~dp0"
         lines = ["@echo off", "setlocal"]
-        lines += [f'set "{k}={v.replace("{dir}", here + rel_dir)};%{k}%"' for k, v in env.items()]
+        for k, v in env.items():
+            value = v.replace("{dir}", here + rel_dir)
+            lines.append(f'set "{k}={value};%{k}%"' if k.endswith("PATH") else f'set "{k}={value}"')
         prefix = "java -jar " if jar else "call "
         lines.append(f'{prefix}"{here}{rel_target}" %*')
         (BIN_DIR / f"{name}.cmd").write_text("\r\n".join(lines) + "\r\n")
@@ -258,7 +231,8 @@ def write_launcher(
     lines = ["#!/bin/sh", "# generated by rea-suite; do not edit"]
     for k, v in env.items():
         value = v.replace("{dir}", f"{here}/{rel_dir}")
-        lines.append(f'export {k}="{value}${{{k}:+:${k}}}"')
+        suffix = f"${{{k}:+:${k}}}" if k.endswith("PATH") else ""  # prepend to *PATH lists
+        lines.append(f'export {k}="{value}{suffix}"')
     prefix = "java -jar " if jar else ""
     lines.append(f'exec {prefix}"{here}/{rel_target}" "$@"')
     launcher = BIN_DIR / name
@@ -290,7 +264,7 @@ def cmd_install(args: argparse.Namespace, force_latest: bool = False) -> None:
             install_github(tool, state, force_latest)
         else:
             print(f"{tool.name}: {state[tool.name]} installed (use `update` for newer releases)")
-            link_tool(tool, TOOLS_DIR / tool.name / state[tool.name])
+            activate(tool, TOOLS_DIR / tool.name / state[tool.name])
 
 
 def cmd_update(args: argparse.Namespace) -> None:
@@ -304,7 +278,7 @@ def cmd_status(args: argparse.Namespace) -> None:
         latest = "-"
         if tool.github:
             try:
-                latest = github_api(f"repos/{tool.github}/releases/latest")["tag_name"]
+                latest = github.release(tool.github)["tag_name"]
             except OSError as exc:
                 latest = f"? ({exc})"
         if tool.version != "latest":
@@ -312,6 +286,29 @@ def cmd_status(args: argparse.Namespace) -> None:
         else:
             marker = "" if latest in ("-", installed) else "  <- update available"
         print(f"{tool.name:18} installed={installed:22} release={latest}{marker}")
+        dest = TOOLS_DIR / tool.name / installed
+        if tool.ghidra_extensions and dest.is_dir():
+            present = ghidra.installed(dest)
+            for name in tool.ghidra_extensions:
+                info = present.get(name)
+                text = f"{info['tag']} ({info['source']})" if info else "MISSING"
+                print(f"  + {name:16} {text}")
+
+
+def cmd_use(args: argparse.Namespace) -> None:
+    tools = load_tools()
+    tool = select(tools, [args.tool])[0]
+    dest = TOOLS_DIR / tool.name / args.version
+    if not dest.is_dir():
+        available = sorted(
+            p.name for p in (TOOLS_DIR / tool.name).iterdir() if p.is_dir() and not p.is_symlink()
+        )
+        raise SystemExit(f"{tool.name}: {args.version} not installed; have: {', '.join(available)}")
+    state = load_state()
+    state[tool.name] = args.version
+    save_state(state)
+    activate(tool, dest)
+    print(f"{tool.name}: now using {args.version} (pin `version:` in tools.yml to keep it)")
 
 
 def cmd_reinstall(args: argparse.Namespace) -> None:
@@ -344,7 +341,7 @@ def cmd_prune(args: argparse.Namespace) -> None:
 def cmd_asset(args: argparse.Namespace) -> None:
     """Print `<tag> <url>` of the latest release asset matching a regex (for shell scripts)."""
     tool = Tool(name=args.repo, github=args.repo, assets={PLATFORM: args.pattern})
-    release = github_release(tool)
+    release = github.release(args.repo)
     print(release["tag_name"], pick_asset(tool, release)["browser_download_url"])
 
 
@@ -352,7 +349,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(prog="rea-tools", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
     for name, func, help_text in [
-        ("install", cmd_install, "install missing tools"),
+        ("install", cmd_install, "install missing tools (and Ghidra extensions)"),
         ("update", cmd_update, "update tools to the newest (or pinned) release"),
         ("status", cmd_status, "show installed and released versions"),
         ("reinstall", cmd_reinstall, "remove and install again"),
@@ -360,13 +357,25 @@ def main() -> None:
     ]:
         p = sub.add_parser(name, help=help_text)
         p.add_argument("tools", nargs="*", help="tool names (default: all)")
+        p.add_argument(
+            "--no-build",
+            action="store_true",
+            help="never build Ghidra extensions from source (also: REA_TOOLS_NO_BUILD=1)",
+        )
         p.set_defaults(func=func)
+    p = sub.add_parser("use", help="switch a tool to another installed version (rollback)")
+    p.add_argument("tool")
+    p.add_argument("version", help="directory name under tools/<tool>/")
+    p.add_argument("--no-build", action="store_true", help="never build Ghidra extensions")
+    p.set_defaults(func=cmd_use)
     p = sub.add_parser("asset", help="print tag and URL of the latest matching release asset")
     p.add_argument("repo", help="GitHub owner/repo")
     p.add_argument("pattern", help="regex for the asset name")
     p.set_defaults(func=cmd_asset)
     sys.stdout.reconfigure(line_buffering=True)
     args = parser.parse_args()
+    if getattr(args, "no_build", False):
+        os.environ["REA_TOOLS_NO_BUILD"] = "1"
     try:
         args.func(args)
     except subprocess.CalledProcessError as exc:

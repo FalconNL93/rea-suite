@@ -35,6 +35,27 @@
         },
         {
           "PackageIdentifier": "BurntSushi.ripgrep.MSVC"
+        },
+        {
+          "PackageIdentifier": "dnSpyEx.dnSpy"
+        },
+        {
+          "PackageIdentifier": "hasherezade.PE-bear"
+        },
+        {
+          "PackageIdentifier": "Microsoft.Sysinternals.Suite"
+        },
+        {
+          "PackageIdentifier": "WinsiderSS.SystemInformer"
+        },
+        {
+          "PackageIdentifier": "WerWolv.ImHex"
+        },
+        {
+          "PackageIdentifier": "Rizin.Cutter"
+        },
+        {
+          "PackageIdentifier": "7zip.7zip"
         }
       ]
     }

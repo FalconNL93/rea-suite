@@ -4,7 +4,9 @@
 #   install [name...]   install missing tools
 #   reinstall [name...] remove and install again
 #   update  [name...]   move `version: latest` tools to the newest release
-#   status              show installed vs. latest versions
+#   status              show installed vs. latest versions (and Ghidra extensions)
+#   use <tool> <ver>    switch back to another installed version (rollback)
+#   prune               remove inactive versions
 #
 # Installed into tools/<name>/<version>/ with tools/<name>/current pointing at
 # the active version. Launchers are generated in tools/bin/ (on PATH via .envrc).
@@ -17,6 +19,14 @@
 #              Paths are globs (`**` allowed); the last match wins. `jar: true`
 #              runs the file with `java -jar`.
 # dotnet-tool: NuGet package installed with `dotnet tool install --tool-path`
+#
+# ghidra-extensions: resolved again for every Ghidra version. `asset` is a regex
+#              in which {ghidra} is the Ghidra version (e.g. 12.1.4); the newest
+#              release with such a build is used. With `build: true` and no
+#              matching build, the newest release's source (`subdir` if nested)
+#              is built with Ghidra's own Gradle wrapper.
+# plugins:     files from another release copied into the install dir:
+#              `copy: {<glob in archive>: <dir in install>}`.
 
 tools:
   ghidra:
@@ -34,6 +44,33 @@ tools:
       windows:
         ghidra: ghidraRun.bat
         analyzeHeadless: support/analyzeHeadless.bat
+        pyghidraRun: support/pyghidraRun.bat
+    ghidra-extensions:
+      # crypto constants / signatures
+      findcrypt:
+        github: antoniovazquezblanco/GhidraFindcrypt
+        asset: '^ghidra_{ghidra}_PUBLIC_\d+_GhidraFindcrypt\.zip$'
+        build: true
+      # function hashing, OOAnalyzer C++ class recovery (native build: prebuilt only)
+      kaiju:
+        github: CERTCC/kaiju
+        asset: '^ghidra_{ghidra}_PUBLIC_\d+_kaiju\.zip$'
+      # Xbox 360 XEX loader
+      xexloaderwv:
+        github: zeroKilo/XEXLoaderWV
+        asset: '^ghidra_{ghidra}_PUBLIC_\d+_XEXLoaderWV\.zip$'
+        build: true
+        subdir: XEXLoaderWV
+      # UEFI, PCI option ROM and other firmware loaders
+      firmware-utils:
+        github: al3xtjames/ghidra-firmware-utils
+        asset: '^ghidra_{ghidra}_PUBLIC_\d+_ghidra-firmware-utils\.zip$'
+        build: true
+      # .NET Native AOT analysis; rea uses its jar (REA_GHIDRA_NATIVEAOT_JAR)
+      nativeaot:
+        github: Washi1337/ghidra-nativeaot
+        asset: '^ghidra_{ghidra}_PUBLIC_\d+_ghidra-nativeaot\.zip$'
+        build: true
 
   jadx:
     github: skylot/jadx
@@ -174,3 +211,61 @@ tools:
         wat2wasm: bin/wat2wasm.exe
         wasm-objdump: bin/wasm-objdump.exe
         wasm-validate: bin/wasm-validate.exe
+
+  # GDB with pwndbg, self-contained (REA_PWNDBG_*). rea's core-context bridge
+  # accepts exactly this pwndbg version. Plain gdb comes from apt.
+  pwndbg:
+    github: pwndbg/pwndbg
+    version: 2026.09.15
+    assets:
+      linux: '^pwndbg_[\d.]+_x86_64-portable\.tar\.xz$'
+    strip: 1
+    bin:
+      linux:
+        pwndbg: bin/pwndbg
+
+  # --- GUI tools ---
+  # Linux AppImages run without FUSE (extract-and-run); Windows uses winget.
+
+  # Rizin GUI; bundles the rz-ghidra decompiler (the static rizin CLI cannot load plugins)
+  cutter:
+    github: rizinorg/cutter
+    version: latest
+    assets:
+      linux: '^Cutter-v[\d.]+-Linux-x86_64\.AppImage$'
+    bin:
+      linux:
+        cutter: {path: 'Cutter-*.AppImage', env: {APPIMAGE_EXTRACT_AND_RUN: '1'}}
+
+  # Hex editor with pattern language
+  imhex:
+    github: WerWolv/ImHex
+    version: latest
+    assets:
+      linux: '^imhex-[\d.]+-x86_64\.AppImage$'
+    bin:
+      linux:
+        imhex: {path: 'imhex-*.AppImage', env: {APPIMAGE_EXTRACT_AND_RUN: '1'}}
+
+  # --- Windows only ---
+
+  # Debugger; managed here (not winget) so plugins land in a known directory.
+  x64dbg:
+    github: x64dbg/x64dbg
+    version: latest
+    assets:
+      windows: '^snapshot_[\d_-]+\.zip$'
+    strip: 1
+    bin:
+      windows:
+        x64dbg: x64/x64dbg.exe
+        x32dbg: x32/x32dbg.exe
+        x96dbg: x96dbg.exe
+    plugins:
+      # anti-anti-debug
+      scyllahide:
+        github: x64dbg/ScyllaHide
+        asset: '^ScyllaHide_.*\.zip$'
+        copy:
+          'x64dbg/x64/plugins/*': x64/plugins
+          'x64dbg/x32/plugins/*': x32/plugins

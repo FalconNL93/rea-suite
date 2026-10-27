@@ -66,6 +66,16 @@ done
   export REA_WABT_BIN_DIRECTORY="$REA_SUITE_ROOT/tools/wabt/current/bin"
 [ ! -x "$REA_SUITE_ROOT/.venv/bin/python" ] ||
   export REA_PWNTOOLS_PYTHON="$REA_SUITE_ROOT/.venv/bin/python"
-unset _f
+for _f in "$GHIDRA_INSTALL_DIR"/Ghidra/Extensions/nativeaot/lib/*.jar; do
+  [ -f "$_f" ] && export REA_GHIDRA_NATIVEAOT_JAR="$_f"
+done
+_pwndbg="$REA_SUITE_ROOT/tools/pwndbg/current"
+if [ -x "$_pwndbg/bin/gdb" ]; then
+  export REA_PWNDBG_GDB="$_pwndbg/bin/gdb" REA_PWNDBG_VENV_PATH="$_pwndbg"
+  for _f in "$_pwndbg"/lib/python3*/site-packages/pwndbginit/gdbinit.py; do
+    [ -f "$_f" ] && export REA_PWNDBG_GDBINIT="$_f"
+  done
+fi
+unset _f _pwndbg
 
 unset -f _rea_path_prepend _rea_node_dir _rea_tool

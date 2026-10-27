@@ -7,6 +7,8 @@ node_modules/
 __pycache__/
 *.py[cod]
 .ruff_cache/
+.pytest_cache/
+.gradle/
 *.egg-info/
 /dist/
 /build/
@@ -30,6 +32,32 @@ __pycache__/
 *.til
 *.rzdb
 *.bndb
+*.gzf
+*.dmp
+*.core
+core
+core.[0-9]*
+.gdb_history
+*.log
+
+# --- Safety net: samples belong in work/, never in git ---
+*.exe
+*.dll
+*.sys
+*.so
+*.so.*
+*.dylib
+*.apk
+*.aab
+*.ipa
+*.dex
+*.xex
+*.elf
+*.msi
+*.zip
+*.7z
+*.rar
+*.jar
 
 # --- Local config / secrets ---
 .envrc.local

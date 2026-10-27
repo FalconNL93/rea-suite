@@ -23,9 +23,13 @@ dependencies = [
     # Capability detection, companion to FLOSS (CLI: capa)
     "flare-capa>=9",
     # Exploit/CTF toolkit; rea uses it via REA_PWNTOOLS_PYTHON
-    "pwntools>=4.14",
+    "pwntools>=4.14; sys_platform != 'win32'",
     # Recursive firmware/container extraction, complements binwalk (CLI: unblob)
-    "unblob>=25",
+    "unblob>=25; sys_platform != 'win32'",
+    # Frida-based mobile runtime exploration (CLI: objection)
+    "objection>=1.12",
+    # Binary diffing on top of Ghidra/pyghidra (CLI: ghidriff)
+    "ghidriff>=1",
 ]
 
 [project.scripts]

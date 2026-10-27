@@ -1,6 +1,7 @@
 # Installed by platforms/linux/bootstrap.sh (Debian/Ubuntu). One package per line.
 
-# Debugging
+# Debugging (pwndbg comes self-contained from tools.yml)
+gdb
 lldb
 python3-lldb
 
@@ -13,6 +14,9 @@ binwalk
 
 # Android (rea: REA_ADB_PATH; frida-server push)
 adb
+
+# GUI runtime for the Qt AppImages (Cutter, ImHex) under WSLg
+libxcb-cursor0
 
 # Basics
 xxd
