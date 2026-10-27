@@ -12,7 +12,8 @@
 # the active version. Launchers are generated in tools/bin/ (on PATH via .envrc).
 #
 # github:      owner/repo; `version` is `latest` or an exact release tag
-# assets:      per-platform regex matched against release asset names
+# assets:      per-platform regex (linux, macos, windows) matched against release asset
+#              names; macOS means Apple Silicon. A .dmg is unpacked to its .app bundles.
 # strip:       leading path components to drop when extracting
 # bin:         per-platform launchers; `name: path` (relative to the install dir)
 #              or `name: {path: ..., env: {VAR: value}}`; `{dir}` expands to the install dir.
@@ -39,13 +40,15 @@ tools:
     version: latest
     assets:
       linux: '^ghidra_.*_PUBLIC_\d+\.zip$'
+      macos: '^ghidra_.*_PUBLIC_\d+\.zip$'
       windows: '^ghidra_.*_PUBLIC_\d+\.zip$'
     strip: 1
     bin:
-      linux:
+      linux: &ghidra-unix
         ghidra: ghidraRun
         analyzeHeadless: support/analyzeHeadless
         pyghidraRun: support/pyghidraRun
+      macos: *ghidra-unix
       windows:
         ghidra: ghidraRun.bat
         analyzeHeadless: support/analyzeHeadless.bat
@@ -82,16 +85,19 @@ tools:
     version: latest
     assets:
       linux: '^jadx-[\d.]+\.zip$'
+      macos: '^jadx-[\d.]+\.zip$'
       windows: '^jadx-gui-[\d.]+-win\.zip$'
     bin:
-      linux:
+      linux: &jadx-unix
         jadx: bin/jadx
         jadx-gui: bin/jadx-gui
+      macos: *jadx-unix
       windows:
         jadx-gui: '**/jadx-gui-*.exe'
 
   # Detect It Easy. The Linux AppImage has only the GUI; `diec` on Linux comes
-  # from die-python (pyproject.toml), on Windows from the portable zip.
+  # from die-python (pyproject.toml), on Windows from the portable zip. macOS on
+  # Apple Silicon has only a .pkg installer and no die-python wheel, so no DIE there.
   die:
     github: horsicq/DIE-engine
     version: latest
@@ -110,10 +116,13 @@ tools:
     version: latest
     assets:
       linux: '^ripgrep-[\d.]+-x86_64-unknown-linux-musl\.tar\.gz$'
+      macos: '^ripgrep-[\d.]+-aarch64-apple-darwin\.tar\.gz$'
       windows: '^ripgrep-[\d.]+-x86_64-pc-windows-msvc\.zip$'
     strip: 1
     bin:
       linux:
+        rg: rg
+      macos:
         rg: rg
       windows:
         rg: rg.exe
@@ -124,14 +133,18 @@ tools:
     version: latest
     assets:
       linux: '^gitleaks_[\d.]+_linux_x64\.tar\.gz$'
+      macos: '^gitleaks_[\d.]+_darwin_arm64\.tar\.gz$'
       windows: '^gitleaks_[\d.]+_windows_x64\.zip$'
     bin:
       linux:
+        gitleaks: gitleaks
+      macos:
         gitleaks: gitleaks
       windows:
         gitleaks: gitleaks.exe
 
   # Not packaged for Ubuntu; static build has no runtime dependencies.
+  # macOS gets rizin from Homebrew (platforms/macos/Brewfile): upstream ships only a .pkg.
   rizin:
     github: rizinorg/rizin
     version: latest
@@ -162,9 +175,12 @@ tools:
     version: latest
     assets:
       linux: '^yara-x-v[\d.]+-x86_64-unknown-linux-gnu\.tar\.gz$'
+      macos: '^yara-x-v[\d.]+-aarch64-apple-darwin\.tar\.gz$'
       windows: '^yara-x-v[\d.]+-x86_64-pc-windows-msvc\.zip$'
     bin:
       linux:
+        yr: yr
+      macos:
         yr: yr
       windows:
         yr: '**/yr.exe'
@@ -182,6 +198,7 @@ tools:
     version: v0.7.1
     assets:
       linux: '^jadx-headless-mcp-[\d.]+-all\.jar$'
+      macos: '^jadx-headless-mcp-[\d.]+-all\.jar$'
       windows: '^jadx-headless-mcp-[\d.]+-all\.jar$'
 
   # Agent-first decompiler ported from Ghidra (REA_KUNA_COMMAND).
@@ -191,10 +208,13 @@ tools:
     version: v1.833
     assets:
       linux: '^kuna-v[\d.]+-linux-x86_64\.tar\.gz$'
+      macos: '^kuna-v[\d.]+-macos-arm64\.tar\.gz$'
       windows: '^kuna-v[\d.]+-windows-x86_64\.zip$'
     strip: 1
     bin:
       linux:
+        kuna: kuna
+      macos:
         kuna: kuna
       windows:
         kuna: '**/kuna.exe'
@@ -205,9 +225,12 @@ tools:
     version: latest
     assets:
       linux: '^apktool_[\d.]+\.jar$'
+      macos: '^apktool_[\d.]+\.jar$'
       windows: '^apktool_[\d.]+\.jar$'
     bin:
       linux:
+        apktool: {path: 'apktool_*.jar', jar: true}
+      macos:
         apktool: {path: 'apktool_*.jar', jar: true}
       windows:
         apktool: {path: 'apktool_*.jar', jar: true}
@@ -218,9 +241,12 @@ tools:
     version: latest
     assets:
       linux: '^wakaru-linux-x64\.tar\.gz$'
+      macos: '^wakaru-darwin-arm64\.tar\.gz$'
       windows: '^wakaru-win32-x64\.zip$'
     bin:
       linux:
+        wakaru: '**/wakaru'
+      macos:
         wakaru: '**/wakaru'
       windows:
         wakaru: '**/wakaru.exe'
@@ -231,14 +257,16 @@ tools:
     version: latest
     assets:
       linux: '^wabt-[\d.]+-linux-x64\.tar\.gz$'
+      macos: '^wabt-[\d.]+-macos-arm64\.tar\.gz$'
       windows: '^wabt-[\d.]+-windows-x64\.tar\.gz$'
     strip: 1
     bin:
-      linux:
+      linux: &wabt-unix
         wasm2wat: bin/wasm2wat
         wat2wasm: bin/wat2wasm
         wasm-objdump: bin/wasm-objdump
         wasm-validate: bin/wasm-validate
+      macos: *wabt-unix
       windows:
         wasm2wat: bin/wasm2wat.exe
         wat2wasm: bin/wat2wasm.exe
@@ -252,14 +280,17 @@ tools:
     version: 2026.09.15
     assets:
       linux: '^pwndbg_[\d.]+_x86_64-portable\.tar\.xz$'
+      macos: '^pwndbg_[\d.]+_macos_arm64-portable\.tar\.xz$'
     strip: 1
     bin:
-      linux:
+      linux: &pwndbg-unix
         pwndbg: bin/pwndbg
         gdb: bin/gdb
+      macos: *pwndbg-unix
 
   # --- GUI tools ---
-  # Linux AppImages run without FUSE (extract-and-run); Windows uses portable zips.
+  # Linux AppImages run without FUSE (extract-and-run); macOS uses the .app from the
+  # .dmg; Windows uses portable zips.
 
   # Rizin GUI; bundles the rz-ghidra decompiler (the static rizin CLI cannot load plugins)
   cutter:
@@ -267,10 +298,13 @@ tools:
     version: latest
     assets:
       linux: '^Cutter-v[\d.]+-Linux-x86_64\.AppImage$'
+      macos: '^Cutter-v[\d.]+-macOS-arm64\.dmg$'
       windows: '^Cutter-v[\d.]+-Windows-x86_64\.zip$'
     bin:
       linux:
         cutter: {path: 'Cutter-*.AppImage', env: {APPIMAGE_EXTRACT_AND_RUN: '1'}}
+      macos:
+        cutter: '*.app/Contents/MacOS/cutter'
       windows:
         cutter: '**/cutter.exe'
 
@@ -280,10 +314,13 @@ tools:
     version: latest
     assets:
       linux: '^imhex-[\d.]+-x86_64\.AppImage$'
+      macos: '^imhex-[\d.]+-macOS-arm64\.dmg$'
       windows: '^imhex-[\d.]+-Windows-Portable-x86_64\.zip$'
     bin:
       linux:
         imhex: {path: 'imhex-*.AppImage', env: {APPIMAGE_EXTRACT_AND_RUN: '1'}}
+      macos:
+        imhex: '*.app/Contents/MacOS/imhex'
       windows:
         imhex: '**/imhex.exe'
 
@@ -293,9 +330,12 @@ tools:
     version: latest
     assets:
       linux: '^ILSpy_linux-x64_[\d.]+\.zip$'
+      macos: '^ILSpy_macos-arm64_[\d.]+\.zip$'
       windows: '^ILSpy_windows_selfcontained_[\d.]+-x64\.zip$'
     bin:
       linux:
+        ilspy: '**/ILSpy'
+      macos:
         ilspy: '**/ILSpy'
       windows:
         ilspy: '**/ILSpy.exe'
@@ -306,10 +346,13 @@ tools:
   steamcmd:
     url:
       linux: https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz
+      macos: https://steamcdn-a.akamaihd.net/client/installer/steamcmd_osx.tar.gz
       windows: https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip
     version: rolling
     bin:
       linux:
+        steamcmd: steamcmd.sh
+      macos:
         steamcmd: steamcmd.sh
       windows:
         steamcmd: steamcmd.exe

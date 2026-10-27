@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # rea-agents CLI / MCP server with the suite environment (Ghidra, JDK, tools).
 set -euo pipefail
+# macOS: Homebrew's bash (platforms/macos/Brewfile), not the bundled 3.2
+((BASH_VERSINFO[0] >= 4)) || exec /opt/homebrew/bin/bash "$0" "$@"
 REA_SUITE_ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 # shellcheck source=common/env.sh disable=SC1091
 source "$REA_SUITE_ROOT/common/env.sh"

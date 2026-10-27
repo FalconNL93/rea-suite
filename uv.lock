@@ -2108,7 +2108,7 @@ source = { editable = "." }
 dependencies = [
     { name = "capstone" },
     { name = "cmake" },
-    { name = "die-python" },
+    { name = "die-python", marker = "platform_machine != 'arm64' or sys_platform != 'darwin'" },
     { name = "flare-capa" },
     { name = "flare-floss" },
     { name = "frida-tools" },
@@ -2138,7 +2138,7 @@ dev = [
 requires-dist = [
     { name = "capstone", specifier = ">=5" },
     { name = "cmake", specifier = ">=3.30" },
-    { name = "die-python", specifier = ">=0.5" },
+    { name = "die-python", marker = "platform_machine != 'arm64' or sys_platform != 'darwin'", specifier = ">=0.5" },
     { name = "flare-capa", specifier = ">=9" },
     { name = "flare-floss", specifier = ">=3" },
     { name = "frida-tools", specifier = ">=14" },

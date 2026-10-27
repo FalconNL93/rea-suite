@@ -1,0 +1,28 @@
+# Homebrew packages, installed by `rea-suite setup` (brew bundle); optional ones are
+# in common/components.yml (`brew:`). Counterpart of platforms/linux/apt-packages.txt.
+# LLDB, xxd, file, unzip, curl and git come with macOS and the Xcode Command Line Tools.
+
+# GNU userland, as on Linux: the scripts run on Homebrew's bash (not the 3.2 macOS
+# ships) and common/env.sh puts the gnubin directories first on PATH. The bootstrap
+# installs these before anything else (BASE in platforms/macos/bootstrap.sh).
+brew "bash"
+brew "coreutils"
+brew "findutils"
+brew "gawk"
+brew "gnu-sed"
+brew "gnu-tar"
+brew "grep"
+
+# Network analysis: GUI, tshark/capinfos on PATH, ChmodBPF for capture permissions
+cask "wireshark-app"
+
+# Firmware / installers / blobs
+brew "binwalk"
+brew "innoextract"
+brew "sevenzip"
+
+# Rizin publishes no portable macOS build (only a .pkg); the formula is its source here
+brew "rizin"
+
+# Android (rea: REA_ADB_PATH; frida-server push)
+cask "android-platform-tools"

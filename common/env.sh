@@ -3,8 +3,9 @@
 # interactive shell (e.g. when an agent launches the rea MCP server).
 #
 # Runtimes (uv, fnm/Node, Python, JDK, .NET) and their caches live in .runtime/,
-# installed by platforms/linux/bootstrap.sh; nothing here depends on ~ or /usr
-# except the apt packages in platforms/linux/apt-packages.txt.
+# installed by platforms/<os>/bootstrap.sh; nothing here depends on ~ or /usr
+# except the system packages (platforms/linux/apt-packages.txt,
+# platforms/macos/Brewfile).
 # shellcheck shell=bash
 
 REA_SUITE_ROOT="${REA_SUITE_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
@@ -15,6 +16,14 @@ _rea_path_prepend() {
   [ -d "$1" ] || return 0
   case ":$PATH:" in *":$1:"*) ;; *) PATH="$1:$PATH" ;; esac
 }
+
+# macOS: GNU coreutils, sed, grep, find, tar and awk from Homebrew ahead of the
+# BSD ones, so scripts behave as on Linux (platforms/macos/Brewfile).
+if [ "$(uname -s)" = Darwin ]; then
+  for _f in coreutils findutils gawk gnu-sed gnu-tar grep; do
+    _rea_path_prepend "/opt/homebrew/opt/$_f/libexec/gnubin"
+  done
+fi
 
 # --- runtimes in .runtime/ ---------------------------------------------------
 export UV_PYTHON_INSTALL_DIR="$REA_RUNTIME/python"

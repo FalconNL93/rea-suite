@@ -6,12 +6,14 @@
 #   3. the components marked `default: true`
 #
 # A component can bring:
-#   apt / winget:  system packages (platforms/linux/apt-packages.txt, platforms/windows/winget.json)
+#   apt / brew / winget:  system packages (platforms/linux/apt-packages.txt,
+#                  platforms/macos/Brewfile, platforms/windows/winget.json);
+#                  a brew cask is written `cask:<name>`
 #   uv-groups:     dependency groups from pyproject.toml
 #   tools:         entries from common/tools.yml (installed only when selected)
 #
 # Deselecting stops installing and checking a component; uv groups are removed on
-# the next sync, apt/winget packages and tools are left in place.
+# the next sync, system packages and tools are left in place.
 
 components:
   build:
@@ -21,6 +23,8 @@ components:
           g++-mingw-w64, nasm, autoconf, automake, libtool, bison, flex, pkgconf, ccache,
           binutils-multiarch, gdb-multiarch, qemu-user, qemu-user-binfmt]
     winget: [BrechtSanders.WinLibs.POSIX.UCRT, NASM.NASM]
+    # clang comes with the Xcode Command Line Tools; no multilib, gdb or qemu-user on macOS
+    brew: [llvm, lld, mingw-w64, nasm, autoconf, automake, libtool, bison, flex, pkgconf, ccache]
 
   angr:
     description: angr binary analysis framework (symbolic execution, CFG recovery; ~1 GB)
@@ -35,3 +39,4 @@ components:
     description: Virtual machines for running untrusted samples (QEMU + OVMF on Linux, VirtualBox on Windows; UTM on macOS)
     apt: [qemu-system-x86, qemu-utils, ovmf]
     winget: [Oracle.VirtualBox]
+    brew: [qemu, "cask:utm"]

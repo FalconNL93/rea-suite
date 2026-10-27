@@ -10,7 +10,8 @@ use it before .venv exists, and as `rea-tools components ...`.
   select [--defaults]          interactive menu; writes REA_SUITE_COMPONENTS to .env
   list                         all components, selected ones marked
   selected                     selected names, one per line
-  packages apt|winget          system packages of the selected components
+  packages apt|brew|winget     system packages of the selected components
+                               (brew: as Brewfile lines)
   uv-args                      `--group X` arguments for uv sync
 """
 
@@ -93,7 +94,7 @@ def write_selection(names: list[str]) -> None:
 
 
 def menu(components: dict[str, dict], chosen: set[str]) -> list[str]:
-    """Numbered toggle menu; works in any terminal (Linux, Windows, WSL)."""
+    """Numbered toggle menu; works in any terminal (Linux, macOS, Windows, WSL)."""
     names = list(components)
     while True:
         print("\nOptional components (toggle with numbers, Enter to confirm):\n")
@@ -121,7 +122,7 @@ def main(argv: list[str] | None = None) -> None:
     sub.add_parser("list")
     sub.add_parser("selected")
     p = sub.add_parser("packages")
-    p.add_argument("manager", choices=["apt", "winget"])
+    p.add_argument("manager", choices=["apt", "brew", "winget"])
     sub.add_parser("uv-args")
     args = parser.parse_args(argv)
 
@@ -142,7 +143,13 @@ def main(argv: list[str] | None = None) -> None:
     elif args.command == "selected":
         print("\n".join(selected()))
     elif args.command == "packages":
-        print("\n".join(p for n in selected() for p in components[n].get(args.manager, [])))
+        packages = [p for n in selected() for p in components[n].get(args.manager, [])]
+        if args.manager == "brew":
+            packages = [
+                f'cask "{p.removeprefix("cask:")}"' if p.startswith("cask:") else f'brew "{p}"'
+                for p in packages
+            ]
+        print("\n".join(packages))
     elif args.command == "uv-args":
         print(
             " ".join(f"--group {g}" for n in selected() for g in components[n].get("uv-groups", []))

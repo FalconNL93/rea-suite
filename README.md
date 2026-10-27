@@ -2,7 +2,8 @@
 
 Personal reverse engineering workbench: [REA](https://github.com/morluto/rea)
 (CLI + MCP server) plus the analysis tools around it, installed from one checkout
-on Linux/WSL and Windows so that everything stays updatable from one place.
+on Linux/WSL, macOS (Apple Silicon) and Windows so that everything stays updatable
+from one place.
 Rules for contributors and agents: `CLAUDE.md`.
 
 ## Layout
@@ -17,7 +18,7 @@ activate, activate.ps1  load the environment without direnv
 .python-version         Python for uv
 pyproject.toml/uv.lock  Python tools & libraries (uv)
 package.json            rea-agents (npm)
-bin/rea-suite           setup / select / update / doctor / reinstall / status (Linux)
+bin/rea-suite           setup / select / update / doctor / reinstall / status (Linux, macOS)
 bin/rea                 REA with the suite environment (used for MCP)
 bin/rea-ghidra          headless Ghidra: analyze once, decompile, xrefs, function list
 common/
@@ -29,6 +30,7 @@ common/
   ghidra_scripts/       headless Ghidra scripts used by rea-ghidra
 platforms/
   linux/                bootstrap.sh, apt package list
+  macos/                bootstrap.sh, Brewfile
   windows/              bootstrap.ps1, rea-suite.ps1, env.ps1, winget list
 .claude/skills/         process skills for agents working on this repository
 .devcontainer/          Ubuntu 26.04 container running the Linux bootstrap
@@ -51,6 +53,10 @@ What stays system-wide, because it needs root, drivers or a shell hook:
 - Linux: `platforms/linux/apt-packages.txt` and the apt packages of the selected
   components (compilers, LLDB + Python bindings, Wireshark/tshark with capture
   permissions, qemu, binwalk, innoextract, adb, xxd, Qt runtime library, base utilities).
+- macOS: `platforms/macos/Brewfile` and the brew packages of the selected components
+  (bash and GNU coreutils/sed/grep/find/tar/awk for the scripts, Wireshark with ChmodBPF,
+  rizin, binwalk, innoextract, 7-Zip, Android platform tools, compilers, QEMU/UTM), plus
+  the Xcode Command Line Tools (clang, LLDB, git).
 - Windows: `platforms/windows/winget.json` and the winget packages of the selected
   components (Git, Wireshark + Npcap, LLVM/LLDB, MinGW-w64, NASM, VirtualBox,
   innoextract, Sysinternals, System Informer, 7-Zip, Android platform tools).
@@ -70,6 +76,22 @@ direnv allow                            # or: source ./activate
 rea-suite doctor
 rea-suite agents                        # register REA (MCP via bin/rea) + REA skill
 ```
+
+macOS (Apple Silicon; Xcode Command Line Tools and [Homebrew](https://brew.sh) first):
+
+```sh
+cp .env.example .env                    # optional, as above
+platforms/macos/bootstrap.sh            # Homebrew bash + GNU tools, .runtime/, component menu, setup
+platforms/macos/bootstrap.sh --no-brew  # never call brew; `doctor` lists what is missing
+direnv allow                            # or: source ./activate
+rea-suite doctor
+rea-suite agents
+```
+
+The scripts run on Homebrew's bash (macOS ships bash 3.2; `bin/` re-executes itself
+with `/opt/homebrew/bin/bash`) and `common/env.sh` puts the GNU `gnubin` directories
+ahead of the BSD tools, so the shell code is the same as on Linux. Intel Macs are not
+supported: the `macos` assets in `tools.yml` are arm64 builds.
 
 Windows (PowerShell; untested so far):
 
@@ -105,7 +127,7 @@ removes its tools, apt/winget packages stay.
 
 ```sh
 rea-suite update               # runtimes, apt, uv.lock, uv tools, rea-agents@latest, tools.yml, REA skill
-rea-suite update --no-apt      # same without sudo
+rea-suite update --no-apt      # same without sudo (macOS: --no-brew skips Homebrew)
 rea-suite doctor               # check everything; exit 1 on problems
 rea-suite status               # versions and available updates
 rea-suite reinstall python     # or: runtime | node | tools | system | all | <tool from tools.yml>
@@ -138,10 +160,10 @@ avoids the fallback; a fine-grained token without any permissions is enough.
 | `rea-ghidra` | Headless Ghidra from the shell: analyze a binary once, then decompile addresses, find functions by string, list functions | this repo |
 | ghidriff | Diff two versions of a binary (what a patch changed), on top of Ghidra | pip |
 | Kuna | Agent-oriented decompiler ported from Ghidra; REA uses it as an engine | tools.yml |
-| Rizin (`rizin`, `rz-bin`, `rz-asm`, ...) | Fast command-line disassembly, binary info, patching and scripting | tools.yml |
+| Rizin (`rizin`, `rz-bin`, `rz-asm`, ...) | Fast command-line disassembly, binary info, patching and scripting | tools.yml (brew on macOS) |
 | Cutter | Rizin's GUI, with the Ghidra decompiler (rz-ghidra) built in | tools.yml |
 | ImHex | Hex editor with a pattern language for decoding file formats and structures | tools.yml |
-| Detect It Easy (`die`, `diec`) | Identify file type, compiler, packer and protector before you start | tools.yml, pip `die-python` |
+| Detect It Easy (`die`, `diec`) | Identify file type, compiler, packer and protector before you start (not on macOS: no arm64 build) | tools.yml, pip `die-python` |
 | FLOSS | Extract strings, including obfuscated and stack strings, from executables | pip |
 | capa | Name what an executable can do (network, crypto, persistence, ...) from its code | pip |
 | YARA-X (`yr`) | Match binaries against YARA rules (signatures, families, your own patterns) | tools.yml, pip `yara_x` |
@@ -149,7 +171,7 @@ avoids the fallback; a fine-grained token without any permissions is enough.
 | capstone, unicorn, keystone | Disassembler, CPU emulator and assembler engines for your own scripts | pip |
 | angr | Symbolic execution and CFG recovery: solve inputs, explore paths (component `angr`) | pip group |
 | ripgrep (`rg`) | Fast search through extracted trees, dumps and decompiler output | tools.yml |
-| xxd | Quick hex dumps and reverse hex-to-binary | apt (Git for Windows) |
+| xxd | Quick hex dumps and reverse hex-to-binary | apt (macOS, Git for Windows: built in) |
 
 ### Managed code: .NET, Java/Android, JavaScript, WebAssembly
 
@@ -170,11 +192,11 @@ avoids the fallback; a fine-grained token without any permissions is enough.
 | Frida (`frida`, `frida-trace`, `frida-ps`, ...) | Hook and trace functions in running processes (desktop and mobile) | pip |
 | objection | Frida-based mobile toolkit: SSL pinning bypass, runtime exploration | pip |
 | gdb, pwndbg | Debug Linux processes and core dumps; pwndbg adds memory/heap views (REA uses it for core contexts) | tools.yml (pwndbg portable) |
-| LLDB | Debugger for Linux/macOS/Windows, scriptable in Python | apt / winget LLVM |
+| LLDB | Debugger for Linux/macOS/Windows, scriptable in Python | apt / Xcode CLT / winget LLVM |
 | x64dbg (`x64dbg`, `x32dbg`) + ScyllaHide | Windows user-mode debugger; ScyllaHide hides it from anti-debug checks | tools.yml (Windows) |
-| pwntools | Script interactions with binaries and exploits; REA uses its Python | pip (Linux) |
+| pwntools | Script interactions with binaries and exploits; REA uses its Python | pip (Linux, macOS) |
 | qemu-user, gdb-multiarch, binutils-multiarch | Run, debug and disassemble ARM/MIPS/... userland binaries on x86 (component `build`) | apt |
-| QEMU + OVMF / VirtualBox | Virtual machines to run untrusted samples away from your system (component `vm`) | apt / winget |
+| QEMU + OVMF / VirtualBox | Virtual machines to run untrusted samples away from your system (component `vm`; UTM on macOS) | apt / brew / winget |
 | Sysinternals, System Informer | Watch processes, handles, registry and file activity of a running program (Windows) | winget |
 
 ### Network
@@ -182,18 +204,18 @@ avoids the fallback; a fine-grained token without any permissions is enough.
 | Tool | What it is for | Source |
 | --- | --- | --- |
 | mitmproxy (`mitmproxy`, `mitmdump`, `mitmweb`) | Intercept and modify HTTP(S) traffic of an app; REA reads its captures | pip |
-| Wireshark, tshark | Capture and dissect any network traffic; REA analyzes captures with tshark | apt / winget |
+| Wireshark, tshark | Capture and dissect any network traffic; REA analyzes captures with tshark | apt / brew cask / winget |
 
 ### Firmware, installers, containers, secrets
 
 | Tool | What it is for | Source |
 | --- | --- | --- |
-| binwalk | Find and carve embedded files and file systems in firmware images | apt |
+| binwalk | Find and carve embedded files and file systems in firmware images | apt / brew |
 | unblob | Recursively extract firmware and containers (more formats than binwalk) | uv tool (Linux) |
-| innoextract | Unpack Inno Setup installers without running them | apt / winget |
+| innoextract | Unpack Inno Setup installers without running them | apt / brew / winget |
 | gitleaks | Find keys, tokens and passwords in extracted apps, bundles and firmware trees | tools.yml |
 | PE-bear | Inspect and fix PE headers, sections and imports (Windows) | tools.yml |
-| adb | Talk to Android devices: install, pull APKs, push frida-server | apt / winget |
+| adb | Talk to Android devices: install, pull APKs, push frida-server | apt / brew cask / winget |
 
 ### Games
 
@@ -269,16 +291,33 @@ Projects live in `work/ghidra/<binary name>/`, logs in its `logs/`. The scripts 
 
 Component `build` (on by default), for building targets, patches, loaders and plugins:
 
-| | Linux (apt) | Windows |
-| --- | --- | --- |
-| C/C++ | build-essential, gcc/g++-multilib (32-bit), clang, lld, llvm | MSVC (Visual Studio / Build Tools, not managed here), LLVM (winget) |
-| Windows targets | mingw-w64 (`x86_64-w64-mingw32-gcc`, i686) | WinLibs MinGW-w64 GCC (winget) |
-| Assembler | nasm | NASM (winget) |
-| Build systems | cmake, ninja, meson from uv (`.venv`, always); autoconf, automake, libtool, bison, flex, pkgconf, ccache from apt | cmake, ninja, meson from uv |
-| Other architectures | binutils-multiarch, gdb-multiarch, qemu-user + binfmt (run ARM/MIPS/... userland binaries directly) | – |
+| | Linux (apt) | macOS (brew) | Windows |
+| --- | --- | --- | --- |
+| C/C++ | build-essential, gcc/g++-multilib (32-bit), clang, lld, llvm | clang (Xcode CLT), llvm, lld | MSVC (Visual Studio / Build Tools, not managed here), LLVM (winget) |
+| Windows targets | mingw-w64 (`x86_64-w64-mingw32-gcc`, i686) | mingw-w64 | WinLibs MinGW-w64 GCC (winget) |
+| Assembler | nasm | nasm | NASM (winget) |
+| Build systems | cmake, ninja, meson from uv (`.venv`, always); autoconf, automake, libtool, bison, flex, pkgconf, ccache from apt | same, from brew | cmake, ninja, meson from uv |
+| Other architectures | binutils-multiarch, gdb-multiarch, qemu-user + binfmt (run ARM/MIPS/... userland binaries directly) | – (no qemu-user on macOS) | – |
 
 MSVC is checked, not installed: it needs the Visual Studio installer with the
 "Desktop development with C++" workload.
+
+## macOS
+
+Same commands as on Linux (`bin/rea-suite`, `bin/rea`, `rea-ghidra`); system packages
+come from `platforms/macos/Brewfile` instead of apt. Differences:
+
+- Ghidra's release zip has no macOS natives, so the decompiler is missing until they
+  are built in the install: `cd tools/ghidra/current/support/gradle && ./gradlew buildNatives`
+  (Xcode CLT and the JDK Ghidra asks for). `rea doctor` reports it as `native_decompiler`.
+- Not available: Detect It Easy (only a .pkg installer for Apple Silicon, no die-python
+  wheel), unblob, qemu-user, gdb-multiarch, x86 multilib.
+- gdb (pwndbg) cannot debug native macOS processes; it works on core files and remote
+  targets. Use LLDB (Xcode CLT) for local processes.
+- Rizin comes from Homebrew (upstream ships only a .pkg); Cutter, ImHex and ILSpy are
+  the `.app` bundles from the release `.dmg`/zip, started through `tools/bin`.
+- Wireshark's cask installs ChmodBPF for capture permissions; it asks for your password
+  once.
 
 ## Windows and WSL together
 

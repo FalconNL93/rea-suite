@@ -25,7 +25,7 @@ MANIFEST = ROOT / "common" / "tools.yml"
 TOOLS_DIR = ROOT / "tools"
 BIN_DIR = TOOLS_DIR / "bin"
 STATE_FILE = TOOLS_DIR / "state.json"
-PLATFORM = "windows" if os.name == "nt" else "linux"
+PLATFORM = {"nt": "windows"}.get(os.name) or ("macos" if sys.platform == "darwin" else "linux")
 
 
 @dataclass

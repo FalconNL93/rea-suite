@@ -10,6 +10,8 @@
 # work/ghidra); output goes to stdout, Ghidra's log to <project>/logs/. Scripts:
 # common/ghidra_scripts/ (from the rogue-spear port's tools/ghidra).
 set -euo pipefail
+# macOS: Homebrew's bash (platforms/macos/Brewfile), not the bundled 3.2
+((BASH_VERSINFO[0] >= 4)) || exec /opt/homebrew/bin/bash "$0" "$@"
 
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 export REA_SUITE_ROOT="$ROOT"

@@ -1,23 +1,28 @@
 # rea-suite: rules for contributors and agents
 
 A personal reverse engineering workbench: REA (CLI + MCP server) and the analysis tools around it,
-installed and updated from one checkout on Linux/WSL and Windows. Start with `README.md` (layout,
-setup, what each tool is for); `rea-suite doctor` shows the state of an installation.
+installed and updated from one checkout on Linux/WSL, macOS (Apple Silicon) and Windows. Start with
+`README.md` (layout, setup, what each tool is for); `rea-suite doctor` shows the state of an
+installation.
 
 ## Ground rules
 
 * **Self-contained.** What can live in the checkout lives there: runtimes and caches in `.runtime/`,
   Python packages in `.venv/`, clashing CLI tools in `.runtime/uv-tools/`, npm packages in
   `node_modules/`, analysis tools in `tools/`. System packages are the exception, each with a reason:
-  only what needs root, a driver, a shell hook or a system library.
+  only what needs root, a driver, a shell hook or a system library. On macOS the scripts run on
+  Homebrew's bash and GNU userland (`common/env.sh` puts `gnubin` first), so Linux shell code
+  works there unchanged.
 * **One source per tool, updatable by the suite.** Every tool comes from exactly one of:
   `pyproject.toml` (uv), `common/uv-tools.txt`, `package.json`, `common/tools.yml` (GitHub release,
-  direct URL or dotnet tool), `platforms/linux/apt-packages.txt`, `platforms/windows/winget.json`,
-  or a component in `common/components.yml`. Prefer them in that order. Nothing is installed by a
-  one-off download or `curl | sh`.
-* **Both platforms.** A change to one platform's script has its counterpart: `bin/rea-suite` and
-  `platforms/windows/rea-suite.ps1`, `platforms/linux/bootstrap.sh` and `bootstrap.ps1`,
-  `common/env.sh` and `env.ps1`. Where a platform cannot have it, the README says so.
+  direct URL or dotnet tool), `platforms/linux/apt-packages.txt`, `platforms/macos/Brewfile`,
+  `platforms/windows/winget.json`, or a component in `common/components.yml`. Prefer them in that
+  order. Nothing is installed by a one-off download or `curl | sh`.
+* **Every platform.** A change to one platform's script has its counterparts: `bin/rea-suite`
+  (Linux and macOS) and `platforms/windows/rea-suite.ps1`; `platforms/linux/bootstrap.sh`,
+  `platforms/macos/bootstrap.sh` and `bootstrap.ps1`; `common/env.sh` and `env.ps1`; a tool in
+  `tools.yml` gets `linux`, `macos` and `windows` assets where upstream publishes them. Where a
+  platform cannot have it, the README says so.
 * **Verified by running, or not verified.** Say what ran (command and result) and what did not.
   The Windows scripts are untested until someone runs them on Windows; say so.
 * **Samples, captures and analysis output never go into git.** They live in `work/` (ignored).
@@ -47,7 +52,7 @@ setup, what each tool is for); `rea-suite doctor` shows the state of an installa
 |---|---|
 | `bin/` | Entry points: `rea-suite` (setup/update/doctor), `rea` (REA with the suite environment), `rea-ghidra` (headless Ghidra). |
 | `common/` | Cross-platform: `env.sh`, `tools.yml`, `components.yml`, `uv-tools.txt`, `rea_suite/` (Python: `rea-tools`, `diec`, components), `ghidra_scripts/`. |
-| `platforms/linux/`, `platforms/windows/` | Bootstrap, system package lists, Windows equivalents of the shell scripts. |
+| `platforms/linux/`, `platforms/macos/`, `platforms/windows/` | Bootstrap, system package lists (apt, Brewfile, winget), Windows equivalents of the shell scripts. |
 | `.claude/skills/` | Process skills (see its README). |
 | `work/` | Targets, captures, Ghidra projects (`rea-ghidra` uses `work/ghidra/`). Ignored. |
 

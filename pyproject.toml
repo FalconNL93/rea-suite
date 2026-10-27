@@ -18,8 +18,9 @@ dependencies = [
     "mitmproxy>=12",
     # YARA-X Python bindings (the `yr` CLI comes from common/tools.yml)
     "yara-x>=1",
-    # Detect It Easy engine; provides the `diec` console command (GUI: tools.yml)
-    "die-python>=0.5",
+    # Detect It Easy engine; provides the `diec` console command (GUI: tools.yml).
+    # No wheel for macOS on Apple Silicon.
+    "die-python>=0.5; sys_platform != 'darwin' or platform_machine != 'arm64'",
     # Capability detection, companion to FLOSS (CLI: capa)
     "flare-capa>=9",
     # Exploit/CTF toolkit; rea uses it via REA_PWNTOOLS_PYTHON

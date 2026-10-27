@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# rea-suite: set up, update and repair the whole suite (Debian/Ubuntu/WSL).
+# rea-suite: set up, update and repair the whole suite (Debian/Ubuntu/WSL, macOS).
 #
-#   rea-suite setup   [--no-apt]            install / repair; safe to re-run (runtimes in
-#                                            .runtime/ come from platforms/linux/bootstrap.sh)
+#   rea-suite setup   [--no-apt|--no-brew]  install / repair; safe to re-run (runtimes in
+#                                            .runtime/ come from platforms/<os>/bootstrap.sh)
 #   rea-suite select                        choose optional components (common/components.yml);
 #                                            stored in .env, then run setup
-#   rea-suite update  [--no-apt]            update everything: runtimes, apt packages,
+#   rea-suite update  [--no-apt|--no-brew]  update everything: runtimes, apt/brew packages,
 #                                            Python (uv.lock), rea-agents, tools.yml tools,
 #                                            REA skill
 #   rea-suite reinstall <what...>           runtime | python | node | tools | system | all |
@@ -16,8 +16,11 @@
 #                                            install/refresh the REA skill; default claude_code
 #   rea-suite tools <args...>               tools.yml manager (= rea-tools)
 #
-#   --no-apt  skip apt (no sudo)
+#   --no-apt  skip apt (no sudo); --no-brew  skip Homebrew (macOS)
 set -euo pipefail
+
+# macOS: Homebrew's bash (platforms/macos/Brewfile), not the bundled 3.2
+((BASH_VERSINFO[0] >= 4)) || exec /opt/homebrew/bin/bash "$0" "$@"
 
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 cd "$ROOT"
@@ -25,17 +28,28 @@ export REA_SUITE_ROOT="$ROOT"
 # shellcheck source=common/env.sh disable=SC1091
 source common/env.sh
 
+case "$(uname -s)" in
+  Darwin) OS=macos ;;
+  *) OS=linux ;;
+esac
 APT_LIST=platforms/linux/apt-packages.txt
+BREWFILE=platforms/macos/Brewfile
 NODE_VERSION="$(tr -d '[:space:]' <.node-version)"
 
 step() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33mwarning:\033[0m %s\n' "$*" >&2; }
 need() { command -v "$1" >/dev/null || { echo "missing: $1 (run $2)" >&2; exit 1; }; }
-BOOTSTRAP=platforms/linux/bootstrap.sh
+BOOTSTRAP=platforms/$OS/bootstrap.sh
 components() { uv run --quiet common/rea_suite/components.py "$@"; }
 usage() { sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; }
 
 # --- components --------------------------------------------------------------
+
+system_packages() { # [--reinstall | --upgrade]
+  if [[ "$OS" == macos ]]; then brew_packages "$@"
+  elif [[ "${1:-}" == --reinstall ]]; then apt_packages --reinstall
+  else apt_packages; fi
+}
 
 apt_packages() { # [--reinstall]
   step "apt packages"
@@ -43,6 +57,28 @@ apt_packages() { # [--reinstall]
   mapfile -t pkgs < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$APT_LIST"; components packages apt)
   sudo apt-get update
   sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "$@" "${pkgs[@]}"
+}
+
+brewfile() { # base Brewfile plus the selected components' packages
+  cat "$BREWFILE"
+  components packages brew
+}
+
+brew_packages() { # [--reinstall | --upgrade]
+  step "Homebrew packages"
+  need brew "https://brew.sh"
+  case "${1:-}" in
+    --reinstall)
+      brewfile | brew bundle install --file=- --no-upgrade
+      local formulae casks
+      read -ra formulae <<<"$(brewfile | brew bundle list --file=- --formula | xargs)"
+      read -ra casks <<<"$(brewfile | brew bundle list --file=- --cask | xargs)"
+      ((${#formulae[@]} == 0)) || brew reinstall "${formulae[@]}"
+      ((${#casks[@]} == 0)) || brew reinstall --cask "${casks[@]}"
+      ;;
+    --upgrade) brewfile | brew bundle install --file=- --upgrade ;;
+    *) brewfile | brew bundle install --file=- --no-upgrade ;;
+  esac
 }
 
 python_env() { # [--upgrade]
@@ -60,7 +96,7 @@ uv_tools() { # [--upgrade]
   while read -r line; do
     spec="${line%% @*}"
     platform="${line##* @}"
-    [[ "$line" != *" @"* || "$platform" == linux ]] || continue
+    [[ "$line" != *" @"* || "$platform" == "$OS" ]] || continue
     if [[ "${1:-}" == --upgrade ]]; then
       uv tool install --upgrade "$spec"
     else
@@ -99,7 +135,9 @@ rea_skill() { # [client...]
 
 runtimes() { # [--update]
   local flags=(--runtimes-only "$@")
-  ((APT)) || flags+=(--no-apt)
+  if ((SYSTEM == 0)); then
+    if [[ "$OS" == macos ]]; then flags+=(--no-brew); else flags+=(--no-apt); fi
+  fi
   "$ROOT/$BOOTSTRAP" "${flags[@]}"
   # shellcheck source=common/env.sh disable=SC1091
   source common/env.sh
@@ -113,7 +151,7 @@ git_hooks() {
 }
 
 cmd_setup() {
-  ((APT == 0)) || apt_packages
+  ((SYSTEM == 0)) || system_packages
   python_env
   uv_tools
   node_env
@@ -126,7 +164,7 @@ cmd_setup() {
 
 cmd_update() {
   runtimes --update
-  ((APT == 0)) || apt_packages
+  ((SYSTEM == 0)) || system_packages --upgrade
   python_env --upgrade
   uv_tools --upgrade
   node_env --upgrade
@@ -149,7 +187,7 @@ cmd_reinstall() {
       node) rm -rf node_modules && node_env ;;
       tools) rea-tools reinstall ;;
       system)
-        if ((APT)); then apt_packages --reinstall; fi
+        if ((SYSTEM)); then system_packages --reinstall; fi
         ;;
       all) cmd_reinstall system runtime python node tools ;;
       *) rea-tools reinstall "$what" ;;
@@ -234,7 +272,7 @@ cmd_doctor() {
 
   local tool
   while read -r tool; do
-    [[ "$tool" != *" @"* || "${tool##* @}" == linux ]] || continue
+    [[ "$tool" != *" @"* || "${tool##* @}" == "$OS" ]] || continue
     tool="${tool%% @*}"
     if [[ -d "$UV_TOOL_DIR/$tool" ]]; then ok "uv tool" "$tool"; else
       bad "uv tool" "$tool missing; run rea-suite setup"
@@ -251,13 +289,27 @@ cmd_doctor() {
     bad "hooks" "not enabled; run rea-suite setup (git config core.hooksPath .githooks)"
   fi
 
-  step "system packages (apt)"
-  local missing=()
-  while read -r pkg; do
-    dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q 'ok installed' || missing+=("$pkg")
-  done < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$APT_LIST"; components packages apt)
-  if ((${#missing[@]})); then bad "apt" "missing: ${missing[*]}; run rea-suite setup"
-  else ok "apt" "all packages from $APT_LIST installed"; fi
+  if [[ "$OS" == macos ]]; then
+    step "system packages (Homebrew)"
+    if ! command -v brew >/dev/null; then
+      bad "brew" "missing; install Homebrew (https://brew.sh)"
+    elif brewfile | HOMEBREW_NO_AUTO_UPDATE=1 brew bundle check --file=- >/dev/null 2>&1; then
+      ok "brew" "all packages from $BREWFILE installed"
+    else
+      bad "brew" "missing: $(brewfile | HOMEBREW_NO_AUTO_UPDATE=1 brew bundle check --file=- --verbose 2>&1 |
+        sed -n 's/^.* \([^ ]*\) needs to be installed.*$/\1/p' | xargs); run rea-suite setup"
+    fi
+    if xcode-select -p >/dev/null 2>&1; then ok "xcode clt" "$(xcode-select -p) (clang, lldb, git)"
+    else bad "xcode clt" "missing; run xcode-select --install"; fi
+  else
+    step "system packages (apt)"
+    local missing=()
+    while read -r pkg; do
+      dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q 'ok installed' || missing+=("$pkg")
+    done < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$APT_LIST"; components packages apt)
+    if ((${#missing[@]})); then bad "apt" "missing: ${missing[*]}; run rea-suite setup"
+    else ok "apt" "all packages from $APT_LIST installed"; fi
+  fi
 
   step "shell / desktop"
   if ! command -v direnv >/dev/null; then
@@ -267,7 +319,7 @@ cmd_doctor() {
   else
     info "direnv" ".envrc not allowed (direnv allow) or direnv hook not active"
   fi
-  if [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then ok "display" "GUI tools can start"
+  if [[ "$OS" == macos || -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then ok "display" "GUI tools can start"
   else info "display" "no DISPLAY/WAYLAND_DISPLAY; GUI tools (Ghidra, Cutter, ImHex) won't start"; fi
 
   rea_doctor_summary
@@ -296,13 +348,13 @@ cmd_agents() {
 
 # --- main --------------------------------------------------------------------
 
-APT=1
+SYSTEM=1
 cmd="${1:-}"
 (($#)) && shift
 args=()
 for arg in "$@"; do
   case "$arg" in
-    --no-apt) APT=0 ;;
+    --no-apt | --no-brew) SYSTEM=0 ;;
     *) args+=("$arg") ;;
   esac
 done

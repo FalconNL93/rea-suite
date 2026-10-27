@@ -9,10 +9,15 @@ from __future__ import annotations
 import argparse
 import sys
 
-import die
+try:
+    import die
+except ImportError:
+    die = None
 
 
 def main() -> None:
+    if die is None:
+        sys.exit("diec: die-python is not installed (no build for this platform)")
     parser = argparse.ArgumentParser(prog="diec", description=__doc__.splitlines()[0])
     parser.add_argument("files", nargs="+")
     parser.add_argument("-j", "--json", action="store_true", help="JSON output")
