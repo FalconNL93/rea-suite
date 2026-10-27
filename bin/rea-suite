@@ -15,6 +15,9 @@
 #   rea-suite agents [client...]            register the rea MCP server (via bin/rea) and
 #                                            install/refresh the REA skill; default claude_code
 #   rea-suite tools <args...>               tools.yml manager (= rea-tools)
+#   rea-suite clean [caches|tools|all]      free disk space: download caches (uv, npm,
+#                                            NuGet, Gradle) and inactive tool versions;
+#                                            without an argument only shows the sizes
 #
 #   --no-apt  skip apt (no sudo); --no-brew  skip Homebrew (macOS)
 set -euo pipefail
@@ -41,7 +44,7 @@ warn() { printf '\033[1;33mwarning:\033[0m %s\n' "$*" >&2; }
 need() { command -v "$1" >/dev/null || { echo "missing: $1 (run $2)" >&2; exit 1; }; }
 BOOTSTRAP=platforms/$OS/bootstrap.sh
 components() { uv run --quiet common/rea_suite/components.py "$@"; }
-usage() { sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'; }
 
 # --- components --------------------------------------------------------------
 
@@ -193,6 +196,36 @@ cmd_reinstall() {
         ;;
       all) cmd_reinstall system runtime python node tools ;;
       *) rea-tools reinstall "$what" ;;
+    esac
+  done
+}
+
+CACHES=(uv npm nuget gradle) # in .runtime/cache (common/env.sh)
+
+cmd_clean() {
+  local what name dir
+  if (($# == 0)); then
+    step "caches (rea-suite clean caches); refilled on the next setup or build"
+    for name in "${CACHES[@]}"; do
+      dir="$REA_RUNTIME/cache/$name"
+      [[ ! -d "$dir" ]] || printf '  %-8s %6s  %s\n' "$name" "$(du -sh "$dir" | cut -f1)" "$dir"
+    done
+    step "inactive tool versions (rea-suite clean tools); 'rea-tools use' rolls back to them"
+    rea-tools prune --dry-run
+    return
+  fi
+  [[ " $* " != *" all "* ]] || set -- caches tools
+  for what in "$@"; do
+    case "$what" in
+      caches)
+        step "clean caches"
+        uv cache clean
+        dotnet nuget locals all --clear
+        # npm's own clean leaves _prebuilds (frida); Gradle has no clean command
+        rm -rf "$REA_RUNTIME/cache/npm" "$REA_RUNTIME/cache/gradle" "$REA_RUNTIME/cache/dotnet-install.sh"
+        ;;
+      tools) step "clean tools"; rea-tools prune ;;
+      *) echo "clean what? caches | tools | all" >&2; exit 2 ;;
     esac
   done
 }
@@ -371,6 +404,7 @@ case "$cmd" in
   doctor) cmd_doctor ;;
   agents) cmd_agents "${args[@]}" ;;
   tools) rea-tools "${args[@]}" ;;
+  clean) cmd_clean "${args[@]}" ;;
   -h | --help | help | "") usage ;;
   *) echo "unknown command: $cmd" >&2; usage; exit 2 ;;
 esac

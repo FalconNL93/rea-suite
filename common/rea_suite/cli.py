@@ -405,6 +405,9 @@ def cmd_prune(args: argparse.Namespace) -> None:
         for entry in tool_dir.iterdir():
             if entry.name in ("current", state.get(tool.name)) or not entry.is_dir():
                 continue
+            if args.dry_run:
+                print(f"  {tool.name:18} {entry.name}")
+                continue
             print(f"removing {entry}")
             shutil.rmtree(entry)
 
@@ -483,6 +486,8 @@ def main() -> None:
             action="store_true",
             help="never build Ghidra extensions from source (also: REA_TOOLS_NO_BUILD=1)",
         )
+        if name == "prune":
+            p.add_argument("--dry-run", action="store_true", help="only list what would go")
         p.set_defaults(func=func)
     p = sub.add_parser("use", help="switch a tool to another installed version (rollback)")
     p.add_argument("tool")
