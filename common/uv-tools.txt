@@ -5,3 +5,6 @@
 
 # Recursive firmware/container extraction (arpy>=2.3 clashes with angr's cle)
 unblob @linux
+
+# PyInstaller archive extractor (pins old pycryptodome and xdis)
+pyinstxtractor-ng

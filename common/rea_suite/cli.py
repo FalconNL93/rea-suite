@@ -18,7 +18,7 @@ from pathlib import Path
 
 import yaml
 
-from . import components, ghidra, github
+from . import build, components, ghidra, github
 from .archive import extract
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -41,12 +41,17 @@ class Tool:
     bin: dict[str, dict] = field(default_factory=dict)
     ghidra_extensions: dict[str, dict] = field(default_factory=dict)
     plugins: dict[str, dict] = field(default_factory=dict)
+    build: dict = field(default_factory=dict)
+    follows_pip: bool = False
 
     @classmethod
     def from_manifest(cls, name: str, spec: dict) -> Tool:
+        version = str(spec.get("version", "latest"))
         return cls(
             name=name,
-            version=resolve_version(str(spec.get("version", "latest"))),
+            version=resolve_version(version),
+            follows_pip=version.startswith("pip:"),
+            build=spec.get("build") or {},
             github=spec.get("github"),
             dotnet_tool=spec.get("dotnet-tool"),
             url=spec.get("url") or {},
@@ -64,7 +69,13 @@ class Tool:
             or PLATFORM in self.assets
             or "any" in self.assets
             or PLATFORM in self.url
+            or bool(self.build)
         )
+
+    @property
+    def needs_build(self) -> bool:
+        """No prebuilt asset for this platform: built from source (tools.yml `build:`)."""
+        return bool(self.build) and PLATFORM not in self.assets and "any" not in self.assets
 
 
 def resolve_version(version: str) -> str:
@@ -111,10 +122,14 @@ def pick_assets(tool: Tool, release: dict) -> list[dict]:
 
 
 def install_github(tool: Tool, state: dict[str, str], force_latest: bool) -> None:
-    if force_latest and tool.version != "latest":
+    if force_latest and tool.version not in ("latest", "head"):
         print(f"{tool.name}: pinned to {tool.version}")
-    release = github.release(tool.github, tool.version)
-    tag = release["tag_name"]
+    if tool.version == "head":
+        commit = build.head_commit(tool.github)
+        release, tag = {"tag_name": commit}, commit[:12]
+    else:
+        release = github.release(tool.github, tool.version)
+        tag = release["tag_name"]
     tool_dir = TOOLS_DIR / tool.name
     dest = tool_dir / tag
     if state.get(tool.name) == tag and dest.exists():
@@ -122,15 +137,26 @@ def install_github(tool: Tool, state: dict[str, str], force_latest: bool) -> Non
         activate(tool, dest)
         return
 
-    assets = pick_assets(tool, release)
-    print(f"{tool.name}: installing {tag} ({', '.join(a['name'] for a in assets)})")
     tool_dir.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=tool_dir) as tmp:
         staging = Path(tmp) / "extract"
-        for asset in assets:
-            archive = Path(tmp) / asset["name"]
-            github.download(asset["browser_download_url"], archive)
-            extract(archive, staging, tool.strip)
+        if tool.needs_build:
+            print(f"{tool.name}: no prebuilt {tag} for {PLATFORM}, building from source")
+            try:
+                if "cargo" in tool.build:
+                    build.cargo(tool.build["cargo"], tag.removeprefix("v"), staging)
+                else:
+                    build.cmake(tool.github, release["tag_name"], staging)
+            except build.BuildUnavailable as exc:
+                print(f"  skipped: {exc}")
+                return
+        else:
+            assets = pick_assets(tool, release)
+            print(f"{tool.name}: installing {tag} ({', '.join(a['name'] for a in assets)})")
+            for asset in assets:
+                archive = Path(tmp) / asset["name"]
+                github.download(asset["browser_download_url"], archive)
+                extract(archive, staging, tool.strip)
         if dest.exists():
             shutil.rmtree(dest)
         staging.rename(dest)
@@ -322,7 +348,7 @@ def cmd_install(args: argparse.Namespace, force_latest: bool = False) -> None:
         elif (
             force_latest
             or not (TOOLS_DIR / tool.name / state.get(tool.name, "?")).is_dir()
-            or (tool.version != "latest" and state.get(tool.name) != tool.version)
+            or (tool.follows_pip and state.get(tool.name) != tool.version)
         ):
             install_github(tool, state, force_latest)
         else:
@@ -341,10 +367,15 @@ def cmd_status(args: argparse.Namespace) -> None:
         latest = "-"
         if tool.github:
             try:
-                latest = github.release(tool.github)["tag_name"]
-            except OSError as exc:
+                if tool.version == "head":
+                    latest = build.head_commit(tool.github)[:12]
+                else:
+                    latest = github.release(tool.github)["tag_name"]
+            except (OSError, subprocess.CalledProcessError) as exc:
                 latest = f"? ({exc})"
-        if tool.version != "latest":
+        if tool.follows_pip:
+            marker = f"  (follows the Python package: {tool.version})"
+        elif tool.version not in ("latest", "head"):
             marker = f"  (pinned to {tool.version})"
         else:
             marker = "" if latest in ("-", installed) else "  <- update available"
@@ -367,7 +398,17 @@ def cmd_check(args: argparse.Namespace) -> None:
         if tool.dotnet_tool:
             dest = TOOLS_DIR / tool.name
         if not version or not dest.is_dir():
+            if tool.needs_build:
+                print(
+                    f"  info  {tool.name:18} not installed; needs a source build "
+                    "(component `build`, then rea-suite setup)"
+                )
+                continue
             print(f"  FAIL  {tool.name:18} not installed (rea-tools install {tool.name})")
+            problems += 1
+            continue
+        if tool.follows_pip and version != tool.version:
+            print(f"  FAIL  {tool.name:18} {version}, but the Python package is {tool.version}")
             problems += 1
             continue
         names = list(tool.bin.get(PLATFORM, {})) or ([tool.name] if tool.dotnet_tool else [])

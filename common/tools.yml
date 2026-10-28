@@ -26,6 +26,11 @@
 #              .xz file is decompressed.
 #              `version: pip:<package>` follows the installed version of that Python
 #              package (release tag = package version) on install and update.
+#              `version: head` follows the newest commit of the default branch
+#              (for projects without releases; needs `build:`).
+# build:       how to build from source when no asset exists for the platform
+#              (common/rea_suite/build.py): `{cargo: <crate>}` or `{cmake: true}`.
+#              Rebuilt only when the version changes; off with REA_TOOLS_NO_BUILD=1.
 # url:         per-platform direct download instead of `github` (for self-updating
 #              tools); `version` is then just a label
 #
@@ -257,6 +262,23 @@ tools:
       windows:
         upx: upx.exe
 
+  # Python bytecode decompiler/disassembler (pycdc, pycdas), for the .pyc files
+  # pyinstxtractor-ng pulls out of PyInstaller apps. No releases or tags upstream:
+  # built from the newest commit with CMake (component `build`), again only when
+  # that commit changes.
+  pycdc:
+    github: zrax/pycdc
+    version: head
+    build: {cmake: true}
+    bin:
+      linux: &pycdc-unix
+        pycdc: pycdc
+        pycdas: pycdas
+      macos: *pycdc-unix
+      windows:
+        pycdc: pycdc.exe
+        pycdas: pycdas.exe
+
   # ILSpy command line decompiler for .NET assemblies.
   ilspycmd:
     dotnet-tool: ilspycmd
@@ -320,6 +342,23 @@ tools:
         uber-apk-signer: {path: 'uber-apk-signer-*.jar', jar: true}
       macos: *uber-apk-signer
       windows: *uber-apk-signer
+
+  # Download APKs from Google Play, APKPure, F-Droid or Huawei AppGallery without a phone.
+  # No macOS release: built with cargo there (component `build`).
+  apkeep:
+    github: EFForg/apkeep
+    version: latest
+    assets:
+      linux: '^apkeep-x86_64-unknown-linux-gnu$'
+      windows: '^apkeep-x86_64-pc-windows-msvc\.exe$'
+    build: {cargo: apkeep}
+    bin:
+      linux:
+        apkeep: apkeep-x86_64-unknown-linux-gnu
+      macos:
+        apkeep: bin/apkeep
+      windows:
+        apkeep: apkeep-x86_64-pc-windows-msvc.exe
 
   # frida-server for Android devices, the same version as the frida Python package
   # (Frida refuses a client/server mismatch). `rea-tools frida-server` pushes it.

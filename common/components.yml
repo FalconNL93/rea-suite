@@ -17,14 +17,16 @@
 
 components:
   build:
-    description: Compilers and build tools (gcc/clang/llvm, mingw-w64, nasm, autotools) and foreign-arch tools (binutils/gdb-multiarch, qemu-user)
+    description: Compilers and build tools (gcc/clang/llvm, mingw-w64, nasm, autotools, Rust via rustup) and foreign-arch tools (binutils/gdb-multiarch, qemu-user); also builds tools that have no release for this platform
     default: true
-    apt: [build-essential, gcc-multilib, g++-multilib, clang, lld, llvm, mingw-w64, gcc-mingw-w64,
+    apt: [rustup, build-essential, gcc-multilib, g++-multilib, clang, lld, llvm, mingw-w64, gcc-mingw-w64,
           g++-mingw-w64, nasm, autoconf, automake, libtool, bison, flex, pkgconf, ccache,
           binutils-multiarch, gdb-multiarch, qemu-user, qemu-user-binfmt]
-    winget: [BrechtSanders.WinLibs.POSIX.UCRT, NASM.NASM]
+    winget: [BrechtSanders.WinLibs.POSIX.UCRT, NASM.NASM, Rustlang.Rustup]
     # clang comes with the Xcode Command Line Tools; no multilib, gdb or qemu-user on macOS
-    brew: [llvm, lld, mingw-w64, nasm, autoconf, automake, libtool, bison, flex, pkgconf, ccache]
+    brew: [rustup, llvm, lld, mingw-w64, nasm, autoconf, automake, libtool, bison, flex, pkgconf, ccache]
+    # tools that exist only as source (built with the compilers above)
+    tools: [pycdc]
 
   angr:
     description: angr binary analysis framework (symbolic execution, CFG recovery; ~1 GB)

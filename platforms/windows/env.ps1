@@ -20,10 +20,13 @@ $env:NUGET_PACKAGES = "$Runtime\cache\nuget"
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $env:DOTNET_NOLOGO = '1'
 $env:GRADLE_USER_HOME = "$Runtime\cache\gradle"
+# Rust toolchain for source builds (rustup from component `build`)
+$env:RUSTUP_HOME = "$Runtime\rustup"
+$env:CARGO_HOME = "$Runtime\cargo"
 $jdk = Get-Content "$Runtime\jdk\current.txt" -ErrorAction SilentlyContinue
 if ($jdk -and (Test-Path "$Runtime\jdk\$jdk\bin\java.exe")) { $env:JAVA_HOME = "$Runtime\jdk\$jdk" }
 
-$paths = @("$Root\bin", "$Root\tools\bin", "$Root\.venv\Scripts", "$Root\node_modules\.bin", "$Runtime\bin", $env:UV_TOOL_BIN_DIR, $env:DOTNET_ROOT)
+$paths = @("$Root\bin", "$Root\tools\bin", "$Root\.venv\Scripts", "$Root\node_modules\.bin", "$Runtime\bin", $env:UV_TOOL_BIN_DIR, $env:DOTNET_ROOT, "$env:CARGO_HOME\bin")
 if ($env:JAVA_HOME) { $paths += "$env:JAVA_HOME\bin" }
 if (Test-Path "$Runtime\bin\fnm.exe") {
     $node = (Get-Content "$Root\.node-version" -Raw).Trim()

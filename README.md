@@ -195,7 +195,10 @@ avoids the fallback; a fine-grained token without any permissions is enough.
 | jadx-headless-mcp | JADX engine REA drives for Android analysis | tools.yml |
 | Apktool | Decode APK resources/smali and rebuild modified APKs | tools.yml |
 | uber-apk-signer | Sign, zipalign and verify APKs after changing them | tools.yml |
+| apkeep | Download APKs (Google Play, APKPure, F-Droid) without a phone | tools.yml (macOS: built with cargo) |
 | wakaru | Unpack and decompile bundled/minified JavaScript (webpack, Electron apps) | tools.yml |
+| pyinstxtractor-ng | Unpack PyInstaller executables into their .pyc files | uv tool |
+| pycdc, pycdas | Decompile and disassemble Python bytecode (.pyc) | tools.yml, built from source (component `build`) |
 | WABT (`wasm2wat`, `wasm-objdump`, ...) | Read and disassemble WebAssembly modules | tools.yml |
 
 ### Dynamic analysis: debug, instrument, emulate
@@ -323,10 +326,17 @@ Component `build` (on by default), for building targets, patches, loaders and pl
 | Windows targets | mingw-w64 (`x86_64-w64-mingw32-gcc`, i686) | mingw-w64 | WinLibs MinGW-w64 GCC (winget) |
 | Assembler | nasm | nasm | NASM (winget) |
 | Build systems | cmake, ninja, meson from uv (`.venv`, always); autoconf, automake, libtool, bison, flex, pkgconf, ccache from apt | same, from brew | cmake, ninja, meson from uv |
+| Rust | rustup (toolchain in `.runtime/rustup`, `.runtime/cargo`) | rustup | Rustlang.Rustup (winget) |
 | Other architectures | binutils-multiarch, gdb-multiarch, qemu-user + binfmt (run ARM/MIPS/... userland binaries directly) | – (no qemu-user on macOS) | – |
 
 MSVC is checked, not installed: it needs the Visual Studio installer with the
 "Desktop development with C++" workload.
+
+The same component builds tools that have no release for the platform (`build:` in
+`common/tools.yml`): apkeep on macOS (cargo), pycdc everywhere (CMake, no upstream
+releases). A build lands in `tools/<name>/<version>/` like a download, so
+`rea-suite update` builds again only when there is a new release or commit;
+`REA_TOOLS_NO_BUILD=1` skips builds, and `doctor` then reports those tools as info.
 
 ## macOS
 

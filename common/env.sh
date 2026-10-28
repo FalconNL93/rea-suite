@@ -38,6 +38,8 @@ export DOTNET_CLI_HOME="$REA_RUNTIME/dotnet-home"
 export NUGET_PACKAGES="$REA_RUNTIME/cache/nuget"
 export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1
 export GRADLE_USER_HOME="$REA_RUNTIME/cache/gradle"
+# Rust toolchain for source builds (rustup from component `build`)
+export RUSTUP_HOME="$REA_RUNTIME/rustup" CARGO_HOME="$REA_RUNTIME/cargo"
 if [ -x "$REA_RUNTIME/jdk/current/bin/java" ]; then
   export JAVA_HOME="$REA_RUNTIME/jdk/current"
 fi
@@ -45,6 +47,8 @@ fi
 _rea_path_prepend "$UV_TOOL_BIN_DIR"
 _rea_path_prepend "$REA_RUNTIME/bin"
 _rea_path_prepend "$DOTNET_ROOT"
+_rea_path_prepend "$CARGO_HOME/bin"
+_rea_path_prepend /opt/homebrew/opt/rustup/bin # keg-only on macOS
 [ -z "${JAVA_HOME:-}" ] || _rea_path_prepend "$JAVA_HOME/bin"
 
 # Node from .node-version via fnm (rea-agents has a strict engines range).
