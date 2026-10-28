@@ -6,6 +6,7 @@
     .\platforms\windows\rea-suite.ps1 select         # choose optional components (.env), then setup
     .\platforms\windows\rea-suite.ps1 winget         # install winget packages (base + components)
     .\platforms\windows\rea-suite.ps1 update         # runtimes, winget, uv.lock, rea-agents, tools.yml, REA skill
+    .\platforms\windows\rea-suite.ps1 update --ai    # an agent checks compatibility, proposes the plan, applies it
     .\platforms\windows\rea-suite.ps1 agents [agent...]  # rea MCP + REA skill for every detected agent
     .\platforms\windows\rea-suite.ps1 doctor         # check the installation
     .\platforms\windows\rea-suite.ps1 reinstall runtime|python|node|tools|all|<tool>
@@ -140,6 +141,13 @@ switch ($Command) {
     'select' { Components select; & $PSCommandPath setup }
     'winget' { Winget-Packages }
     'update' {
+        if ($Rest -contains '--ai') {
+            # an agent plans the update with the updating-the-suite skill (counterpart of bin/rea-suite)
+            $agent = if ($env:REA_SUITE_AGENT) { $env:REA_SUITE_AGENT } elseif (Get-Command claude -ErrorAction SilentlyContinue) { 'claude' } elseif (Get-Command codex -ErrorAction SilentlyContinue) { 'codex' }
+            if (-not $agent) { throw 'no agent CLI found (claude, codex); set REA_SUITE_AGENT' }
+            & $agent 'Plan and run an update of this rea-suite checkout (Windows: platforms\windows\rea-suite.ps1). Follow .claude/skills/updating-the-suite/SKILL.md step by step; present the plan and wait for my approval before changing anything.'
+            exit $LASTEXITCODE
+        }
         Components adopt
         & "$PSScriptRoot\bootstrap.ps1" -RuntimesOnly -Update
         Winget-Packages -Upgrade
@@ -166,8 +174,12 @@ switch ($Command) {
     'doctor' { Doctor }
     'status' {
         Step 'Python packages'; uv tree --outdated --depth 1
+        Step 'isolated uv tools (common/uv-tools.txt)'; uv tool list --outdated
+        Step 'npm packages (package.json; none listed = up to date)'
+        fnm exec --using=$Node -- npm outdated  # exits 1 when outdated
         Step 'tools.yml'; Invoke-Checked uv run rea-tools status
-        Step 'rea'; fnm exec --using=$Node -- npm outdated rea-agents  # exits 1 when outdated
+        Step 'system packages of the suite with updates'
+        foreach ($id in Winget-Ids) { winget list --id $id --exact --upgrade-available --accept-source-agreements 2>$null | Select-String $id }
     }
     'tools' { Invoke-Checked uv run rea-tools @Rest }
     'lint' { Invoke-Checked bash .githooks/lint.sh @Rest }

@@ -8,6 +8,7 @@ Duty 3 port.
 |---|---|
 | `diagnosing-bugs` | A failing install, update, tool or launcher: build a loop that goes red first, then hypotheses. |
 | `grilling` | Stress-testing a plan or design through rounds of questions. |
+| `updating-the-suite` | A planned update: compatibility first, a plan the user approves, then a targeted update (`rea-suite update --ai` starts it). Written for this suite, not taken over. |
 | `writing-for-agents` | Writing or editing `CLAUDE.md`, `AGENTS.md` or a skill. |
 
 All three were adapted by the CoD3 port from Matt Pocock's [skills](https://github.com/mattpocock/skills)

@@ -134,8 +134,9 @@ next `setup` or `update`, which says so; one you switched off stays off
 
 ```sh
 rea-suite update               # runtimes, apt, uv.lock, uv tools, rea-agents@latest, tools.yml, REA skill
-rea-suite agents               # repair agent setup: rea MCP back on bin/rea, REA skill refreshed
+rea-suite update --ai          # same parts, planned by an agent: compatibility first, then your approval
 rea-suite update --no-apt      # same without sudo (macOS: --no-brew skips Homebrew)
+rea-suite agents               # repair agent setup: rea MCP back on bin/rea, REA skill refreshed
 rea-suite doctor               # check everything; exit 1 on problems
 rea-suite status               # versions and available updates
 rea-suite reinstall python     # or: runtime | node | tools | system | all | <tool from tools.yml>
@@ -143,6 +144,14 @@ rea-suite tools prune          # drop old tool versions kept after an update
 rea-suite clean                # sizes of the download caches and inactive tool versions
 rea-suite clean caches         # or: tools | all; caches refill on the next setup or build
 ```
+
+`update` takes every newest release (pins in `tools.yml` excepted). `update --ai` starts
+your agent CLI (`claude`, else `codex`; `REA_SUITE_AGENT` picks one) with the
+`updating-the-suite` skill (`.claude/skills/`): it reads what the newer rea-agents
+verifies (Ghidra, JDK, Kuna, JADX bridge, pwndbg, Node), checks Ghidra extensions and
+release notes, and shows a plan of what goes to which version and what is held back and
+why. Nothing changes until you approve; afterwards it runs `doctor` and commits as
+`CLAUDE.md` says.
 
 The caches (uv, npm, NuGet, Gradle) live in `.runtime/cache/` and only speed up the next
 install; `clean caches` is always safe. `clean tools` removes the versions `rea-tools use`

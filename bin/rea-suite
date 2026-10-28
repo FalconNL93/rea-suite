@@ -8,6 +8,10 @@
 #   rea-suite update  [--no-apt|--no-brew]  update everything: runtimes, apt/brew packages,
 #                                            Python (uv.lock), rea-agents, tools.yml tools,
 #                                            REA skill (every detected agent)
+#   rea-suite update --ai                   an agent (claude, codex; REA_SUITE_AGENT) checks
+#                                            compatibility first, proposes what to update to
+#                                            which version and what to hold, then applies it
+#                                            once you agree
 #   rea-suite reinstall <what...>           runtime | python | node | tools | system | all |
 #                                            <tool> (= a name from common/tools.yml)
 #   rea-suite doctor                        check the installation; exit 1 on problems
@@ -263,9 +267,36 @@ cmd_status() {
     uv "$(uv --version 2>/dev/null || echo -)"
   step "Python packages (direct; newer releases are marked)"
   uv tree --outdated --depth 1 2>/dev/null | tail -n +2 || true
+  step "isolated uv tools (common/uv-tools.txt)"
+  uv tool list --outdated 2>/dev/null || true
+  step "npm packages (package.json; none listed = up to date)"
+  npm outdated 2>/dev/null || true
   step "tools.yml"
   rea-tools status
+  step "system packages of the suite with updates"
+  local pkgs
+  if [[ "$OS" == macos ]]; then
+    mapfile -t pkgs < <(brewfile | sed -n 's/^\(brew\|cask\) "\([^"]*\)".*/\2/p')
+    HOMEBREW_NO_AUTO_UPDATE=1 brew outdated --verbose "${pkgs[@]}" 2>/dev/null || true
+  else
+    mapfile -t pkgs < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$APT_LIST"; components packages apt)
+    apt list --upgradable 2>/dev/null | grep -E "^($(IFS='|'; echo "${pkgs[*]}"))/" || true
+  fi
   rea_doctor_summary
+}
+
+# update --ai: an agent plans the update (what to which version, what to hold back)
+# with the updating-the-suite skill, and applies it after the user agrees
+cmd_update_ai() {
+  local agent="${REA_SUITE_AGENT:-}" prompt
+  if [[ -z "$agent" ]]; then
+    if command -v claude >/dev/null; then agent=claude
+    elif command -v codex >/dev/null; then agent=codex
+    else echo "no agent CLI found (claude, codex); set REA_SUITE_AGENT" >&2; exit 2; fi
+  fi
+  prompt="Plan and run an update of this rea-suite checkout. Follow .claude/skills/updating-the-suite/SKILL.md step by step; present the plan and wait for my approval before changing anything."
+  ((SYSTEM)) || prompt+=" Skip system packages (--no-apt/--no-brew)."
+  cd "$ROOT" && exec "$agent" "$prompt"
 }
 
 rea_doctor_summary() {
@@ -420,7 +451,7 @@ done
 case "$cmd" in
   setup) cmd_setup ;;
   select) components select && cmd_setup ;;
-  update) cmd_update ;;
+  update) if [[ " ${args[*]} " == *" --ai "* ]]; then cmd_update_ai; else cmd_update; fi ;;
   reinstall) cmd_reinstall "${args[@]}" ;;
   status) cmd_status ;;
   doctor) cmd_doctor ;;
