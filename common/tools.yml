@@ -7,6 +7,7 @@
 #   status              show installed vs. latest versions (and Ghidra extensions)
 #   use <tool> <ver>    switch back to another installed version (rollback)
 #   prune               remove inactive versions
+#   frida-server        push frida-server (same version as pip frida) to an Android device
 #
 # Installed into tools/<name>/<version>/ with tools/<name>/current pointing at
 # the active version. Launchers are generated in tools/bin/ (on PATH via .envrc).
@@ -20,6 +21,11 @@
 #              Paths are globs (`**` allowed); the last match wins. `jar: true`
 #              runs the file with `java -jar`.
 # dotnet-tool: NuGet package installed with `dotnet tool install --tool-path`
+#              `any:` instead of a platform is a list of regexes, each matching one
+#              asset, installed on every platform (device binaries, data). A single
+#              .xz file is decompressed.
+#              `version: pip:<package>` follows the installed version of that Python
+#              package (release tag = package version) on install and update.
 # url:         per-platform direct download instead of `github` (for self-updating
 #              tools); `version` is then just a label
 #
@@ -204,6 +210,53 @@ tools:
       windows:
         capa: capa.exe
 
+  # Go symbol, type and build info recovery from stripped Go binaries.
+  # The macOS build is x86_64 and runs under Rosetta 2.
+  goresym:
+    github: mandiant/GoReSym
+    version: latest
+    assets:
+      linux: '^GoReSym-linux\.zip$'
+      macos: '^GoReSym-mac\.zip$'
+      windows: '^GoReSym-windows\.zip$'
+    bin:
+      linux:
+        goresym: GoReSym
+      macos:
+        goresym: GoReSym
+      windows:
+        goresym: GoReSym.exe
+
+  # Apple firmware, dyld_shared_cache, Mach-O and class-dump in one CLI
+  ipsw:
+    github: blacktop/ipsw
+    version: latest
+    assets:
+      linux: '^ipsw_[\d.]+_linux_x86_64\.tar\.gz$'
+      macos: '^ipsw_[\d.]+_macOS_arm64\.tar\.gz$'
+      windows: '^ipsw_[\d.]+_windows_x86_64\.zip$'
+    bin:
+      linux:
+        ipsw: ipsw
+      macos:
+        ipsw: ipsw
+      windows:
+        ipsw: ipsw.exe
+
+  # Executable packer; `upx -d` unpacks. macOS gets it from Homebrew (no upstream build).
+  upx:
+    github: upx/upx
+    version: latest
+    assets:
+      linux: '^upx-[\d.]+-amd64_linux\.tar\.xz$'
+      windows: '^upx-[\d.]+-win64\.zip$'
+    strip: 1
+    bin:
+      linux:
+        upx: upx
+      windows:
+        upx: upx.exe
+
   # ILSpy command line decompiler for .NET assemblies.
   ilspycmd:
     dotnet-tool: ilspycmd
@@ -253,6 +306,39 @@ tools:
         apktool: {path: 'apktool_*.jar', jar: true}
       windows:
         apktool: {path: 'apktool_*.jar', jar: true}
+
+  # Sign, zipalign and verify APKs (after apktool or apk-mitm changes)
+  uber-apk-signer:
+    github: patrickfav/uber-apk-signer
+    version: latest
+    assets:
+      linux: '^uber-apk-signer-[\d.]+\.jar$'
+      macos: '^uber-apk-signer-[\d.]+\.jar$'
+      windows: '^uber-apk-signer-[\d.]+\.jar$'
+    bin:
+      linux: &uber-apk-signer
+        uber-apk-signer: {path: 'uber-apk-signer-*.jar', jar: true}
+      macos: *uber-apk-signer
+      windows: *uber-apk-signer
+
+  # frida-server for Android devices, the same version as the frida Python package
+  # (Frida refuses a client/server mismatch). `rea-tools frida-server` pushes it.
+  frida-server:
+    github: frida/frida
+    version: pip:frida
+    assets:
+      any:
+        - '^frida-server-[\d.]+-android-arm64\.xz$'
+        - '^frida-server-[\d.]+-android-arm\.xz$'
+        - '^frida-server-[\d.]+-android-x86_64\.xz$'
+        - '^frida-server-[\d.]+-android-x86\.xz$'
+
+  # Community YARA rules (YARA Forge "core": the low false-positive set), for `yr scan`
+  yara-forge:
+    github: YARAHQ/yara-forge
+    version: latest
+    assets:
+      any: ['^yara-forge-rules-core\.zip$']
 
   # JavaScript bundle unpacker/decompiler (REA_WAKARU_COMMAND).
   wakaru:

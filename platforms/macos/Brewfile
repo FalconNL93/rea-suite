@@ -20,6 +20,7 @@ cask "wireshark-app"
 brew "binwalk"
 brew "innoextract"
 brew "sevenzip"
+brew "upx"       # tools.yml on Linux/Windows; upstream has no macOS build
 
 # Rizin publishes no portable macOS build (only a .pkg); the formula is its source here
 brew "rizin"

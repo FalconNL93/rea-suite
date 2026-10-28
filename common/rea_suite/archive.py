@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import lzma
 import shutil
 import subprocess
 import tarfile
@@ -20,9 +21,15 @@ def _stripped(name: str, strip: int) -> str | None:
 
 
 def extract(archive: Path, dest: Path, strip: int) -> None:
-    """Extract into dest (created); non-archives such as .jar are copied as-is."""
-    dest.mkdir(parents=True)
-    if not archive.name.endswith(ARCHIVE_SUFFIXES):
+    """Extract into dest (created if missing); non-archives such as .jar are copied as-is."""
+    dest.mkdir(parents=True, exist_ok=True)
+    if archive.name.endswith(".xz") and not archive.name.endswith(".tar.xz"):
+        # a single compressed file (frida-server-*.xz)
+        target = dest / archive.name[:-3]
+        with lzma.open(archive) as src, target.open("wb") as out:
+            shutil.copyfileobj(src, out)
+        target.chmod(0o755)
+    elif not archive.name.endswith(ARCHIVE_SUFFIXES):
         shutil.copy2(archive, dest / archive.name)
     elif archive.name.endswith(".dmg"):
         _extract_dmg(archive, dest)

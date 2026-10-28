@@ -175,7 +175,10 @@ avoids the fallback; a fine-grained token without any permissions is enough.
 | Detect It Easy (`die`, `diec`) | Identify file type, compiler, packer and protector before you start (not on macOS: no arm64 build) | tools.yml, pip `die-python` |
 | FLOSS | Extract strings, including obfuscated and stack strings, from executables | pip |
 | capa | Name what an executable can do (network, crypto, persistence, ...) from its code | tools.yml (standalone, rules built in) |
+| GoReSym (`goresym`) | Recover function names, types and build info from stripped Go binaries (macOS: x86_64 build, runs under Rosetta 2) | tools.yml |
+| UPX (`upx`) | Unpack UPX-packed executables (`upx -d`) | tools.yml (brew on macOS) |
 | YARA-X (`yr`) | Match binaries against YARA rules (signatures, families, your own patterns) | tools.yml, pip `yara_x` |
+| YARA Forge rules | Community YARA rules, low false-positive set: `yr scan tools/yara-forge/current/packages/core/yara-rules-core.yar <file>` | tools.yml |
 | LIEF, pefile | Parse and modify ELF/PE/Mach-O/DEX (LIEF) and PE (pefile) from Python | pip |
 | capstone, unicorn, keystone | Disassembler, CPU emulator and assembler engines for your own scripts | pip |
 | angr | Symbolic execution and CFG recovery: solve inputs, explore paths (component `angr`) | pip group |
@@ -191,6 +194,7 @@ avoids the fallback; a fine-grained token without any permissions is enough.
 | JADX (`jadx`, `jadx-gui`) | Decompile Android APK/DEX to Java | tools.yml |
 | jadx-headless-mcp | JADX engine REA drives for Android analysis | tools.yml |
 | Apktool | Decode APK resources/smali and rebuild modified APKs | tools.yml |
+| uber-apk-signer | Sign, zipalign and verify APKs after changing them | tools.yml |
 | wakaru | Unpack and decompile bundled/minified JavaScript (webpack, Electron apps) | tools.yml |
 | WABT (`wasm2wat`, `wasm-objdump`, ...) | Read and disassemble WebAssembly modules | tools.yml |
 
@@ -200,6 +204,7 @@ avoids the fallback; a fine-grained token without any permissions is enough.
 | --- | --- | --- |
 | Frida (`frida`, `frida-trace`, `frida-ps`, ...) | Hook and trace functions in running processes (desktop and mobile) | pip |
 | objection | Frida-based mobile toolkit: SSL pinning bypass, runtime exploration | pip |
+| frida-server | Frida for Android devices, always the version of the frida package; `rea-tools frida-server [--start]` pushes the right one for the device | tools.yml |
 | gdb, pwndbg | Debug Linux processes and core dumps; pwndbg adds memory/heap views (REA uses it for core contexts) | tools.yml (pwndbg portable) |
 | LLDB | Debugger for Linux/macOS/Windows, scriptable in Python | apt / Xcode CLT / winget LLVM |
 | x64dbg (`x64dbg`, `x32dbg`) + ScyllaHide | Windows user-mode debugger; ScyllaHide hides it from anti-debug checks | tools.yml (Windows) |
@@ -222,6 +227,7 @@ avoids the fallback; a fine-grained token without any permissions is enough.
 | binwalk | Find and carve embedded files and file systems in firmware images | apt / brew |
 | unblob | Recursively extract firmware and containers (more formats than binwalk) | uv tool (Linux) |
 | innoextract | Unpack Inno Setup installers without running them | apt / brew / winget |
+| ipsw | Apple firmware and dyld_shared_cache: download, extract, class-dump, Mach-O info | tools.yml |
 | gitleaks | Find keys, tokens and passwords in extracted apps, bundles and firmware trees | tools.yml |
 | PE-bear | Inspect and fix PE headers, sections and imports (Windows) | tools.yml |
 | adb | Talk to Android devices: install, pull APKs, push frida-server | apt / brew cask / winget |

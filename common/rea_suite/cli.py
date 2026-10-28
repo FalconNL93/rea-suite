@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import glob
+import importlib.metadata
 import json
 import os
 import re
@@ -45,7 +46,7 @@ class Tool:
     def from_manifest(cls, name: str, spec: dict) -> Tool:
         return cls(
             name=name,
-            version=str(spec.get("version", "latest")),
+            version=resolve_version(str(spec.get("version", "latest"))),
             github=spec.get("github"),
             dotnet_tool=spec.get("dotnet-tool"),
             url=spec.get("url") or {},
@@ -58,7 +59,22 @@ class Tool:
 
     @property
     def supported(self) -> bool:
-        return self.dotnet_tool is not None or PLATFORM in self.assets or PLATFORM in self.url
+        return (
+            self.dotnet_tool is not None
+            or PLATFORM in self.assets
+            or "any" in self.assets
+            or PLATFORM in self.url
+        )
+
+
+def resolve_version(version: str) -> str:
+    """`pip:<package>`: the installed version of that package in .venv, else latest."""
+    if not version.startswith("pip:"):
+        return version
+    try:
+        return importlib.metadata.version(version[4:])
+    except importlib.metadata.PackageNotFoundError:
+        return "latest"
 
 
 def load_tools() -> dict[str, Tool]:
@@ -78,16 +94,20 @@ def save_state(state: dict[str, str]) -> None:
 # --- GitHub release tools ----------------------------------------------------
 
 
-def pick_asset(tool: Tool, release: dict) -> dict:
-    pattern = re.compile(tool.assets[PLATFORM])
-    matches = [a for a in release["assets"] if pattern.search(a["name"])]
-    if len(matches) != 1:
-        names = ", ".join(a["name"] for a in release["assets"])
-        raise SystemExit(
-            f"{tool.name}: expected one asset matching {pattern.pattern!r} in "
-            f"{release['tag_name']}, found {len(matches)}. Available: {names}"
-        )
-    return matches[0]
+def pick_assets(tool: Tool, release: dict) -> list[dict]:
+    patterns = tool.assets.get(PLATFORM) or tool.assets["any"]
+    picked = []
+    for pattern in [patterns] if isinstance(patterns, str) else patterns:
+        regex = re.compile(pattern)
+        matches = [a for a in release["assets"] if regex.search(a["name"])]
+        if len(matches) != 1:
+            names = ", ".join(a["name"] for a in release["assets"])
+            raise SystemExit(
+                f"{tool.name}: expected one asset matching {pattern!r} in "
+                f"{release['tag_name']}, found {len(matches)}. Available: {names}"
+            )
+        picked.append(matches[0])
+    return picked
 
 
 def install_github(tool: Tool, state: dict[str, str], force_latest: bool) -> None:
@@ -102,14 +122,15 @@ def install_github(tool: Tool, state: dict[str, str], force_latest: bool) -> Non
         activate(tool, dest)
         return
 
-    asset = pick_asset(tool, release)
-    print(f"{tool.name}: installing {tag} ({asset['name']})")
+    assets = pick_assets(tool, release)
+    print(f"{tool.name}: installing {tag} ({', '.join(a['name'] for a in assets)})")
     tool_dir.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=tool_dir) as tmp:
-        archive = Path(tmp) / asset["name"]
-        github.download(asset["browser_download_url"], archive)
         staging = Path(tmp) / "extract"
-        extract(archive, staging, tool.strip)
+        for asset in assets:
+            archive = Path(tmp) / asset["name"]
+            github.download(asset["browser_download_url"], archive)
+            extract(archive, staging, tool.strip)
         if dest.exists():
             shutil.rmtree(dest)
         staging.rename(dest)
@@ -298,7 +319,11 @@ def cmd_install(args: argparse.Namespace, force_latest: bool = False) -> None:
             install_dotnet(tool, state, force_latest)
         elif tool.url:
             install_url(tool, state, force_latest)
-        elif force_latest or not (TOOLS_DIR / tool.name / state.get(tool.name, "?")).is_dir():
+        elif (
+            force_latest
+            or not (TOOLS_DIR / tool.name / state.get(tool.name, "?")).is_dir()
+            or (tool.version != "latest" and state.get(tool.name) != tool.version)
+        ):
             install_github(tool, state, force_latest)
         else:
             print(f"{tool.name}: {state[tool.name]} installed (use `update` for newer releases)")
@@ -464,11 +489,47 @@ def cmd_rea_pins(args: argparse.Namespace) -> None:
         sys.exit(1)
 
 
+ANDROID_ABI = {"arm64-v8a": "arm64", "armeabi-v7a": "arm", "x86_64": "x86_64", "x86": "x86"}
+
+
+def cmd_frida_server(args: argparse.Namespace) -> None:
+    """Push the frida-server matching the frida package to the connected Android device."""
+    adb = os.environ.get("REA_ADB_PATH") or shutil.which("adb")
+    if not adb:
+        raise SystemExit("adb not found; install the suite's system packages (rea-suite setup)")
+    serial = ["-s", args.serial] if args.serial else []
+
+    def shell(*cmd: str) -> str:
+        out = subprocess.run(
+            [adb, *serial, "shell", *cmd], check=False, capture_output=True, text=True
+        )
+        if out.returncode:
+            raise SystemExit(f"adb shell {' '.join(cmd)} failed: {out.stderr.strip()}")
+        return out.stdout.strip()
+
+    version = load_state().get("frida-server")
+    abi = shell("getprop", "ro.product.cpu.abi")
+    arch = ANDROID_ABI.get(abi)
+    server = TOOLS_DIR / "frida-server" / str(version) / f"frida-server-{version}-android-{arch}"
+    if not version or not server.is_file():
+        raise SystemExit(f"no frida-server for {abi}; run `rea-tools install frida-server`")
+    remote = "/data/local/tmp/frida-server"
+    subprocess.run([adb, *serial, "push", str(server), remote], check=True)
+    shell("chmod", "755", remote)
+    print(f"frida-server {version} ({arch}) is at {remote}")
+    if args.start:
+        # needs root; -D daemonizes so adb returns
+        shell("su", "-c", f"{remote} -D")
+        print("started; check with `frida-ps -U`")
+    else:
+        print(f"start it as root: adb shell su -c '{remote} -D' (or rerun with --start)")
+
+
 def cmd_asset(args: argparse.Namespace) -> None:
     """Print `<tag> <url>` of the latest release asset matching a regex (for shell scripts)."""
     tool = Tool(name=args.repo, github=args.repo, assets={PLATFORM: args.pattern})
     release = github.release(args.repo)
-    print(release["tag_name"], pick_asset(tool, release)["browser_download_url"])
+    print(release["tag_name"], pick_assets(tool, release)[0]["browser_download_url"])
 
 
 def main() -> None:
@@ -503,6 +564,10 @@ def main() -> None:
     p.set_defaults(func=lambda a: components.main(a.rest))
     p = sub.add_parser("rea-pins", help="check Ghidra pin and JDK against what REA verifies")
     p.set_defaults(func=cmd_rea_pins)
+    p = sub.add_parser("frida-server", help="push frida-server to the connected Android device")
+    p.add_argument("--start", action="store_true", help="start it as root after pushing")
+    p.add_argument("-s", "--serial", help="device serial (adb devices) when several are connected")
+    p.set_defaults(func=cmd_frida_server)
     p = sub.add_parser("asset", help="print tag and URL of the latest matching release asset")
     p.add_argument("repo", help="GitHub owner/repo")
     p.add_argument("pattern", help="regex for the asset name")
