@@ -71,7 +71,7 @@ What stays system-wide, because it needs root, drivers or a shell hook:
 Linux / WSL (Debian/Ubuntu, x86_64):
 
 ```sh
-cp .env.example .env                    # optional: preselect components, add GITHUB_TOKEN
+cp .env.example .env                    # optional: settings (components, builds, PATH, agent, REA, token)
 platforms/linux/bootstrap.sh            # base packages, .runtime/, component menu, setup
 platforms/linux/bootstrap.sh --no-apt   # never use sudo; `doctor` lists what is missing
 direnv allow                            # or: source ./activate

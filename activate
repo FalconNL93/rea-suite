@@ -10,9 +10,4 @@ else
   # shellcheck source=common/env.sh
   . "$REA_SUITE_ROOT/common/env.sh"
 fi
-# .env holds plain KEY=value lines (component selection, tokens)
-if [ -f "$REA_SUITE_ROOT/.env" ]; then
-  set -a
-  . "$REA_SUITE_ROOT/.env"
-  set +a
-fi
+# common/env.sh also loads .env (settings, see .env.example)

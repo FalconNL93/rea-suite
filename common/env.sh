@@ -12,6 +12,28 @@ REA_SUITE_ROOT="${REA_SUITE_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pw
 REA_RUNTIME="$REA_SUITE_ROOT/.runtime"
 export REA_SUITE_ROOT REA_RUNTIME
 
+# Settings: the environment of the run wins, then .env (see .env.example), then the
+# defaults below. Defaults this file computed itself (REA_SUITE_COMPUTED) are computed
+# again on every load, so a re-source after an install picks up new paths.
+for _f in ${REA_SUITE_COMPUTED:-}; do unset "$_f"; done
+REA_SUITE_COMPUTED=""
+if [ -f "$REA_SUITE_ROOT/.env" ]; then
+  while IFS= read -r _f || [ -n "$_f" ]; do
+    case "$_f" in '' | '#'*) continue ;; esac
+    _k="${_f%%=*}" _v="${_f#*=}"
+    _k="${_k#export }"
+    case "$_v" in \"*\") _v="${_v#\"}" _v="${_v%\"}" ;; \'*\') _v="${_v#\'}" _v="${_v%\'}" ;; esac
+    printenv "$_k" >/dev/null || export "$_k=$_v"
+  done <"$REA_SUITE_ROOT/.env"
+fi
+unset _k _v
+# _rea_default VAR value: export VAR=value unless the run or .env already set it
+_rea_default() {
+  printenv "$1" >/dev/null && return 0
+  export "$1=$2"
+  REA_SUITE_COMPUTED="$REA_SUITE_COMPUTED $1"
+}
+
 _rea_path_prepend() {
   [ -d "$1" ] || return 0
   case ":$PATH:" in *":$1:"*) ;; *) PATH="$1:$PATH" ;; esac
@@ -69,12 +91,12 @@ _rea_path_prepend "$REA_SUITE_ROOT/bin"
 export PATH
 
 export VIRTUAL_ENV="$REA_SUITE_ROOT/.venv"
-export GHIDRA_INSTALL_DIR="$REA_SUITE_ROOT/tools/ghidra/current"
+_rea_default GHIDRA_INSTALL_DIR "$REA_SUITE_ROOT/tools/ghidra/current"
 
 # rea-agents wants absolute paths for some external engines.
 _rea_tool() { # VAR command
   local path
-  if path="$(command -v "$2" 2>/dev/null)"; then export "$1=$path"; fi
+  if path="$(command -v "$2" 2>/dev/null)"; then _rea_default "$1" "$path"; fi
 }
 _rea_tool REA_TSHARK_COMMAND tshark
 _rea_tool REA_CAPINFOS_COMMAND capinfos
@@ -91,26 +113,28 @@ _rea_tool REA_UNBLOB_COMMAND unblob # Linux; REA's firmware extraction needs it
 _rea_tool REA_SIGROK_COMMAND sigrok-cli # component `hardware`
 
 for _f in "$REA_SUITE_ROOT"/tools/jadx-headless-mcp/current/*-all.jar; do
-  [ -f "$_f" ] && export REA_JADX_MCP_JAR="$_f"
+  [ ! -f "$_f" ] || _rea_default REA_JADX_MCP_JAR "$_f"
 done
 [ ! -d "$REA_SUITE_ROOT/tools/wabt/current/bin" ] ||
-  export REA_WABT_BIN_DIRECTORY="$REA_SUITE_ROOT/tools/wabt/current/bin"
+  _rea_default REA_WABT_BIN_DIRECTORY "$REA_SUITE_ROOT/tools/wabt/current/bin"
 [ ! -x "$REA_SUITE_ROOT/.venv/bin/python" ] ||
-  export REA_PWNTOOLS_PYTHON="$REA_SUITE_ROOT/.venv/bin/python"
+  _rea_default REA_PWNTOOLS_PYTHON "$REA_SUITE_ROOT/.venv/bin/python"
 for _f in "$GHIDRA_INSTALL_DIR"/Ghidra/Extensions/nativeaot/lib/*.jar; do
-  [ -f "$_f" ] && export REA_GHIDRA_NATIVEAOT_JAR="$_f"
+  [ ! -f "$_f" ] || _rea_default REA_GHIDRA_NATIVEAOT_JAR "$_f"
 done
 _pwndbg="$REA_SUITE_ROOT/tools/pwndbg/current"
 if [ -x "$_pwndbg/bin/gdb" ]; then
-  export REA_PWNDBG_GDB="$_pwndbg/bin/gdb" REA_PWNDBG_VENV_PATH="$_pwndbg"
+  _rea_default REA_PWNDBG_GDB "$_pwndbg/bin/gdb"
+  _rea_default REA_PWNDBG_VENV_PATH "$_pwndbg"
   for _f in "$_pwndbg"/lib/python3*/site-packages/pwndbginit/gdbinit.py; do
-    [ -f "$_f" ] && export REA_PWNDBG_GDBINIT="$_f"
+    [ ! -f "$_f" ] || _rea_default REA_PWNDBG_GDBINIT "$_f"
   done
 fi
 if [ -f "$REA_RUNTIME/chromium-path" ]; then
-  read -r REA_BROWSER_EXECUTABLE <"$REA_RUNTIME/chromium-path"
-  export REA_BROWSER_EXECUTABLE
+  read -r _f <"$REA_RUNTIME/chromium-path"
+  _rea_default REA_BROWSER_EXECUTABLE "$_f"
 fi
 unset _f _pwndbg
 
-unset -f _rea_path_prepend _rea_node_dir _rea_tool
+export REA_SUITE_COMPUTED
+unset -f _rea_path_prepend _rea_node_dir _rea_tool _rea_default

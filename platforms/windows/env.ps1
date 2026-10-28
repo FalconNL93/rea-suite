@@ -6,6 +6,22 @@ $Runtime = "$Root\.runtime"
 $env:REA_SUITE_ROOT = $Root
 $env:REA_RUNTIME = $Runtime
 
+# Settings: the environment of the run wins, then .env (see .env.example), then the
+# defaults below (counterpart of common/env.sh). Defaults computed here are listed in
+# REA_SUITE_COMPUTED and computed again on every load.
+foreach ($name in "$env:REA_SUITE_COMPUTED".Split(' ', [StringSplitOptions]::RemoveEmptyEntries)) { Remove-Item "env:$name" -ErrorAction SilentlyContinue }
+$env:REA_SUITE_COMPUTED = ''
+foreach ($line in Get-Content "$Root\.env" -ErrorAction SilentlyContinue) {
+    if ($line -match '^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$' -and -not (Test-Path "env:$($Matches[1])")) {
+        Set-Item "env:$($Matches[1])" ($Matches[2].Trim() -replace '^"(.*)"$', '$1' -replace "^'(.*)'$", '$1')
+    }
+}
+function Set-ReaDefault($name, $value) {
+    if (Test-Path "env:$name") { return }
+    Set-Item "env:$name" $value
+    $env:REA_SUITE_COMPUTED = "$env:REA_SUITE_COMPUTED $name"
+}
+
 # --- runtimes in .runtime\ -----------------------------------------------------
 $env:UV_PYTHON_INSTALL_DIR = "$Runtime\python"
 $env:UV_PYTHON_PREFERENCE = 'only-managed'
@@ -23,7 +39,7 @@ $env:GRADLE_USER_HOME = "$Runtime\cache\gradle"
 # Browsers for REA (component `browser`; rea-suite.ps1 setup installs them)
 $env:PLAYWRIGHT_BROWSERS_PATH = "$Runtime\ms-playwright"
 $chromium = Get-Content "$Runtime\chromium-path" -ErrorAction SilentlyContinue
-if ($chromium) { $env:REA_BROWSER_EXECUTABLE = $chromium.Trim() }
+if ($chromium) { Set-ReaDefault REA_BROWSER_EXECUTABLE $chromium.Trim() }
 # Rust toolchain for source builds (rustup from component `build`)
 $env:RUSTUP_HOME = "$Runtime\rustup"
 $env:CARGO_HOME = "$Runtime\cargo"
@@ -42,17 +58,17 @@ $env:Path = (($paths | Where-Object { Test-Path $_ }) + $env:Path) -join ';'
 # --- project environment ---------------------------------------------------------
 $env:VIRTUAL_ENV = "$Root\.venv"
 $state = Get-Content "$Root\tools\state.json" -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json
-if ($state.ghidra) { $env:GHIDRA_INSTALL_DIR = "$Root\tools\ghidra\$($state.ghidra)" }
+if ($state.ghidra) { Set-ReaDefault GHIDRA_INSTALL_DIR "$Root\tools\ghidra\$($state.ghidra)" }
 
 # Absolute engine paths for rea-agents
 $jar = Get-ChildItem "$Root\tools\jadx-headless-mcp" -Recurse -Filter '*-all.jar' -ErrorAction SilentlyContinue | Select-Object -First 1
-if ($jar) { $env:REA_JADX_MCP_JAR = $jar.FullName }
-if (Test-Path "$Root\.venv\Scripts\python.exe") { $env:REA_PWNTOOLS_PYTHON = "$Root\.venv\Scripts\python.exe" }
-if ($state.wabt) { $env:REA_WABT_BIN_DIRECTORY = "$Root\tools\wabt\$($state.wabt)\bin" }
+if ($jar) { Set-ReaDefault REA_JADX_MCP_JAR $jar.FullName }
+if (Test-Path "$Root\.venv\Scripts\python.exe") { Set-ReaDefault REA_PWNTOOLS_PYTHON "$Root\.venv\Scripts\python.exe" }
+if ($state.wabt) { Set-ReaDefault REA_WABT_BIN_DIRECTORY "$Root\tools\wabt\$($state.wabt)\bin" }
 foreach ($pair in @(
         @('REA_RIZIN_COMMAND', 'rizin'), @('REA_KUNA_COMMAND', 'kuna'), @('REA_APKTOOL_COMMAND', 'apktool'),
         @('REA_WAKARU_COMMAND', 'wakaru'), @('REA_ILSPY_CMD_PATH', 'ilspycmd'), @('REA_MITMDUMP_COMMAND', 'mitmdump'),
         @('REA_TSHARK_COMMAND', 'tshark'), @('REA_ADB_PATH', 'adb'), @('REA_SIGROK_COMMAND', 'sigrok-cli'))) {
     $cmd = Get-Command $pair[1] -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($cmd) { Set-Item "env:$($pair[0])" $cmd.Source }
+    if ($cmd) { Set-ReaDefault $pair[0] $cmd.Source }
 }
