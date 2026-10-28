@@ -14,6 +14,11 @@ wireshark
 # Firmware / installers / blobs
 binwalk
 innoextract
+unshield
+cabextract
+msitools
+# compare two versions of a package or installer (minimal: without the huge recommends)
+diffoscope-minimal
 
 # Android (rea: REA_ADB_PATH; frida-server push)
 adb

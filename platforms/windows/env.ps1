@@ -20,6 +20,10 @@ $env:NUGET_PACKAGES = "$Runtime\cache\nuget"
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $env:DOTNET_NOLOGO = '1'
 $env:GRADLE_USER_HOME = "$Runtime\cache\gradle"
+# Browsers for REA (component `browser`; rea-suite.ps1 setup installs them)
+$env:PLAYWRIGHT_BROWSERS_PATH = "$Runtime\ms-playwright"
+$chromium = Get-Content "$Runtime\chromium-path" -ErrorAction SilentlyContinue
+if ($chromium) { $env:REA_BROWSER_EXECUTABLE = $chromium.Trim() }
 # Rust toolchain for source builds (rustup from component `build`)
 $env:RUSTUP_HOME = "$Runtime\rustup"
 $env:CARGO_HOME = "$Runtime\cargo"
@@ -48,7 +52,7 @@ if ($state.wabt) { $env:REA_WABT_BIN_DIRECTORY = "$Root\tools\wabt\$($state.wabt
 foreach ($pair in @(
         @('REA_RIZIN_COMMAND', 'rizin'), @('REA_KUNA_COMMAND', 'kuna'), @('REA_APKTOOL_COMMAND', 'apktool'),
         @('REA_WAKARU_COMMAND', 'wakaru'), @('REA_ILSPY_CMD_PATH', 'ilspycmd'), @('REA_MITMDUMP_COMMAND', 'mitmdump'),
-        @('REA_TSHARK_COMMAND', 'tshark'), @('REA_ADB_PATH', 'adb'))) {
+        @('REA_TSHARK_COMMAND', 'tshark'), @('REA_ADB_PATH', 'adb'), @('REA_SIGROK_COMMAND', 'sigrok-cli'))) {
     $cmd = Get-Command $pair[1] -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($cmd) { Set-Item "env:$($pair[0])" $cmd.Source }
 }

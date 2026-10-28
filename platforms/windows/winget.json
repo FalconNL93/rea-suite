@@ -32,6 +32,9 @@
         },
         {
           "PackageIdentifier": "dscharrer.innoextract"
+        },
+        {
+          "PackageIdentifier": "activescott.lessmsi"
         }
       ]
     }

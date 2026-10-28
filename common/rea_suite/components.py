@@ -9,10 +9,12 @@ use it before .venv exists, and as `rea-tools components ...`.
 
   select [--defaults]          interactive menu; writes REA_SUITE_COMPONENTS to .env
   list                         all components, selected ones marked
+  adopt                        switch on new default components in .env (setup/update)
   selected                     selected names, one per line
   packages apt|brew|winget     system packages of the selected components
                                (brew: as Brewfile lines)
   uv-args                      `--group X` arguments for uv sync
+  values <key>                 a list field of the selected components (e.g. playwright)
 """
 
 from __future__ import annotations
@@ -28,6 +30,11 @@ ROOT = Path(__file__).resolve().parents[2]
 COMPONENTS_FILE = ROOT / "common" / "components.yml"
 ENV_FILE = ROOT / ".env"
 KEY = "REA_SUITE_COMPONENTS"
+# Components the user has been offered; a new one with `default: true` is switched on
+# once (setup/update say so), one the user switched off stays off.
+SEEN_KEY = "REA_SUITE_COMPONENTS_SEEN"
+# what existed before SEEN_KEY was written, for an older .env
+SEEN_BEFORE = ["build", "angr", "steam", "vm"]
 
 
 def load() -> dict[str, dict]:
@@ -53,6 +60,14 @@ def configured() -> bool:
     return KEY in os.environ or _read_env_file() is not None
 
 
+def new_defaults() -> list[str]:
+    """Components on by default that a .env selection has not seen yet."""
+    if _read_env_file() is None or os.environ.get(KEY, _read_env_file()) != _read_env_file():
+        return []  # defaults apply anyway, or the run names its components exactly
+    seen = (env_file_value(SEEN_KEY) or " ".join(SEEN_BEFORE)).split()
+    return [n for n, spec in load().items() if spec.get("default") and n not in seen]
+
+
 def selected() -> list[str]:
     components = load()
     raw = os.environ.get(KEY)
@@ -60,7 +75,7 @@ def selected() -> list[str]:
         raw = _read_env_file()
     if raw is None:
         return [name for name, spec in components.items() if spec.get("default")]
-    names = raw.replace(",", " ").split()
+    names = raw.replace(",", " ").split() + new_defaults()
     unknown = [n for n in names if n not in components]
     if unknown:
         print(f"warning: unknown component(s) in {KEY}: {', '.join(unknown)}", file=sys.stderr)
@@ -78,19 +93,30 @@ def selected_tools() -> set[str]:
 
 
 def write_selection(names: list[str]) -> None:
-    line = f'{KEY}="{" ".join(names)}"'
     lines = ENV_FILE.read_text().splitlines() if ENV_FILE.exists() else []
-    for i, existing in enumerate(lines):
-        name = existing.partition("=")[0].removeprefix("export ").strip()
-        if name == KEY:
-            lines[i] = line
-            break
-    else:
-        lines += [
-            "# Optional components (common/components.yml); `rea-suite select` edits this",
-            line,
-        ]
+    values = {KEY: " ".join(names), SEEN_KEY: " ".join(load())}
+    for key, value in values.items():
+        line = f'{key}="{value}"'
+        for i, existing in enumerate(lines):
+            if existing.partition("=")[0].removeprefix("export ").strip() == key:
+                lines[i] = line
+                break
+        else:
+            if key == KEY:
+                lines.append(
+                    "# Optional components (common/components.yml); `rea-suite select` edits this"
+                )
+            lines.append(line)
     ENV_FILE.write_text("\n".join(lines) + "\n")
+
+
+def adopt() -> None:
+    """Record new default components in .env and say which were switched on."""
+    added = new_defaults()
+    if not added:
+        return
+    write_selection(selected())
+    print(f"new component(s), on by default: {' '.join(added)} (rea-suite select changes it)")
 
 
 def menu(components: dict[str, dict], chosen: set[str]) -> list[str]:
@@ -120,10 +146,13 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--if-unset", action="store_true", help="only when nothing is configured yet")
     p.add_argument("--defaults", action="store_true", help="write the defaults without asking")
     sub.add_parser("list")
+    sub.add_parser("adopt")
     sub.add_parser("selected")
     p = sub.add_parser("packages")
     p.add_argument("manager", choices=["apt", "brew", "winget"])
     sub.add_parser("uv-args")
+    p = sub.add_parser("values")
+    p.add_argument("key", help="a list field, e.g. playwright")
     args = parser.parse_args(argv)
 
     components = load()
@@ -136,6 +165,8 @@ def main(argv: list[str] | None = None) -> None:
             names = menu(components, set(selected()))
         write_selection(names)
         print(f'{KEY}="{" ".join(names)}" written to {ENV_FILE}')
+    elif args.command == "adopt":
+        adopt()
     elif args.command == "list":
         chosen = set(selected())
         for name, spec in components.items():
@@ -150,6 +181,8 @@ def main(argv: list[str] | None = None) -> None:
                 for p in packages
             ]
         print("\n".join(packages))
+    elif args.command == "values":
+        print("\n".join(v for n in selected() for v in components[n].get(args.key, [])))
     elif args.command == "uv-args":
         print(
             " ".join(f"--group {g}" for n in selected() for g in components[n].get("uv-groups", []))

@@ -125,11 +125,29 @@ node_env() { # [--upgrade]
     local before after
     before="$(rea_agents_version)"
     fnm exec --using="$NODE_VERSION" -- npm install rea-agents@latest
+    fnm exec --using="$NODE_VERSION" -- npm update # the other tools in package.json
     after="$(rea_agents_version)"
     [[ "$before" == "$after" ]] || echo "rea-agents $before -> $after"
   else
     fnm exec --using="$NODE_VERSION" -- npm ci
   fi
+  browsers
+}
+
+# Browsers of the selected components (component `browser`), from rea-agents' own
+# playwright-core: it downloads only a build it does not have yet and drops old ones.
+browsers() {
+  local browser
+  for browser in $(components values playwright); do
+    step "$browser for REA (Playwright, .runtime/ms-playwright)"
+    fnm exec --using="$NODE_VERSION" -- node node_modules/playwright-core/cli.js install "$browser"
+  done
+  # REA_BROWSER_EXECUTABLE (common/env.sh) reads this
+  fnm exec --using="$NODE_VERSION" -- node -e '
+    import("playwright-core").then(({ chromium }) => {
+      const fs = require("fs"), path = chromium.executablePath();
+      if (fs.existsSync(path)) fs.writeFileSync(process.argv[1], path + "\n");
+    })' "$REA_RUNTIME/chromium-path"
 }
 
 suite_tools() { # install | update
@@ -158,6 +176,7 @@ git_hooks() {
 }
 
 cmd_setup() {
+  components adopt
   ((SYSTEM == 0)) || system_packages
   python_env
   uv_tools
@@ -170,6 +189,7 @@ cmd_setup() {
 }
 
 cmd_update() {
+  components adopt
   runtimes --update
   ((SYSTEM == 0)) || system_packages --upgrade
   python_env --upgrade
@@ -305,6 +325,11 @@ cmd_doctor() {
     ok "node_modules" "rea-agents $(node -p 'require("./node_modules/rea-agents/package.json").version')"
   else
     bad "node_modules" "rea-agents missing or not matching package-lock; run rea-suite setup"
+  fi
+
+  if components values playwright | grep -qx chromium; then
+    if [[ -x "${REA_BROWSER_EXECUTABLE:-}" ]]; then ok "chromium" "$REA_BROWSER_EXECUTABLE"
+    else bad "chromium" "missing (component browser); run rea-suite setup"; fi
   fi
 
   local tool

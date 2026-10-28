@@ -63,8 +63,22 @@ function Uv-Tools([switch]$Upgrade) {
 function Node-Env([switch]$Upgrade) {
     Step "Node $Node + rea-agents (fnm/npm)"; Need fnm
     Invoke-Checked fnm install $Node
-    if ($Upgrade) { Invoke-Checked fnm exec --using=$Node -- npm install rea-agents@latest }
+    if ($Upgrade) {
+        Invoke-Checked fnm exec --using=$Node -- npm install rea-agents@latest
+        Invoke-Checked fnm exec --using=$Node -- npm update  # the other tools in package.json
+    }
     else { Invoke-Checked fnm exec --using=$Node -- npm ci }
+    Browsers
+}
+# Browsers of the selected components, from rea-agents' own playwright-core (counterpart
+# of browsers() in bin/rea-suite); env.ps1 reads chromium-path into REA_BROWSER_EXECUTABLE.
+function Browsers {
+    foreach ($browser in Components values playwright) {
+        Step "$browser for REA (Playwright, .runtime\ms-playwright)"
+        Invoke-Checked fnm exec --using=$Node -- node node_modules\playwright-core\cli.js install $browser
+    }
+    $js = 'import("playwright-core").then(({ chromium }) => { const fs = require("fs"), p = chromium.executablePath(); if (fs.existsSync(p)) fs.writeFileSync(process.argv[1], p + "\n"); })'
+    Invoke-Checked fnm exec --using=$Node -- node -e $js "$env:REA_RUNTIME\chromium-path"
 }
 function Suite-Tools([string]$Action) {
     Step 'tools from common/tools.yml'
@@ -87,6 +101,10 @@ function Doctor {
     $groups = "$(Components uv-args)".Split(' ', [StringSplitOptions]::RemoveEmptyEntries)
     uv sync --check --quiet @groups 2>$null; if ($LASTEXITCODE) { Bad '.venv' 'out of sync; run rea-suite.ps1 setup' } else { Ok '.venv' 'in sync with uv.lock' }
     npm ls rea-agents --depth=0 *> $null; if ($LASTEXITCODE) { Bad 'node_modules' 'run rea-suite.ps1 setup' } else { Ok 'node_modules' 'rea-agents installed' }
+    if ((Components values playwright) -contains 'chromium') {
+        if ($env:REA_BROWSER_EXECUTABLE -and (Test-Path $env:REA_BROWSER_EXECUTABLE)) { Ok 'chromium' $env:REA_BROWSER_EXECUTABLE }
+        else { Bad 'chromium' 'missing (component browser); run rea-suite.ps1 setup' }
+    }
     Step 'tools.yml'
     uv run rea-tools check; if ($LASTEXITCODE) { $script:problems++ }
     uv run rea-tools rea-pins; if ($LASTEXITCODE) { $script:problems++ }
@@ -118,10 +136,11 @@ function Doctor {
 }
 
 switch ($Command) {
-    'setup' { Python-Env; Uv-Tools; Node-Env; Suite-Tools install; git config core.hooksPath .githooks }
+    'setup' { Components adopt; Python-Env; Uv-Tools; Node-Env; Suite-Tools install; git config core.hooksPath .githooks }
     'select' { Components select; & $PSCommandPath setup }
     'winget' { Winget-Packages }
     'update' {
+        Components adopt
         & "$PSScriptRoot\bootstrap.ps1" -RuntimesOnly -Update
         Winget-Packages -Upgrade
         . "$PSScriptRoot\env.ps1"

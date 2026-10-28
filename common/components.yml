@@ -11,6 +11,8 @@
 #                  a brew cask is written `cask:<name>`
 #   uv-groups:     dependency groups from pyproject.toml
 #   tools:         entries from common/tools.yml (installed only when selected)
+#   playwright:    browsers installed with rea-agents' own playwright-core (always the
+#                  build that version expects) into .runtime/ms-playwright
 #
 # Deselecting stops installing and checking a component; uv groups are removed on
 # the next sync, system packages and tools are left in place.
@@ -27,6 +29,24 @@ components:
     brew: [rustup, llvm, lld, mingw-w64, nasm, autoconf, automake, libtool, bison, flex, pkgconf, ccache]
     # tools that exist only as source (built with the compilers above)
     tools: [pycdc]
+
+  browser:
+    description: Chromium for REA's browser captures and web module tracing (Playwright's build for the installed rea-agents; ~300 MB)
+    default: true
+    playwright: [chromium]
+
+  mobile:
+    description: Android work beyond adb and Frida, which are always there - scrcpy (device screen), apkeep (download APKs), uber-apk-signer
+    default: true
+    apt: [scrcpy]
+    brew: [scrcpy]
+    winget: [Genymobile.scrcpy]
+    tools: [apkeep, uber-apk-signer]
+
+  hardware:
+    description: sigrok-cli for logic analyzer and signal recordings; REA decodes them (REA_SIGROK_COMMAND). Linux and macOS
+    apt: [sigrok-cli]
+    brew: [sigrok-cli]
 
   angr:
     description: angr binary analysis framework (symbolic execution, CFG recovery; ~1 GB)

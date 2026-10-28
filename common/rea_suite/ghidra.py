@@ -108,6 +108,11 @@ def _sync_one(
             asset = next(a for a in release["assets"] if a["name"] == matches[-1])
             break
     if asset is None:
+        if marker and marker["ghidra"] == version and os.environ.get("REA_TOOLS_NO_BUILD"):
+            print(
+                f"  ghidra extension {name}: {marker['tag']} kept (built earlier; builds are off)"
+            )
+            return
         if not spec.get("build") or os.environ.get("REA_TOOLS_NO_BUILD"):
             raise LookupError(f"no release has a build for Ghidra {version} (source build off)")
         tag = newest["tag_name"]

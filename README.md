@@ -113,7 +113,10 @@ REA_SUITE_COMPONENTS="build steam"
 
 | Component | Default | Brings |
 | --- | --- | --- |
-| `build` | yes | compilers and build tools, foreign-architecture binutils/gdb/qemu-user ([Build toolchains](#build-toolchains)) |
+| `build` | yes | compilers and build tools, Rust, foreign-architecture binutils/gdb/qemu-user, and the tools that only exist as source ([Build toolchains](#build-toolchains)) |
+| `browser` | yes | Chromium for REA's browser captures and web module tracing (~300 MB) |
+| `mobile` | yes | scrcpy, apkeep, uber-apk-signer (adb, Frida and frida-server are always there) |
+| `hardware` | no | sigrok-cli for logic analyzer recordings (Linux, macOS) |
 | `angr` | no | the angr framework (~1 GB) |
 | `steam` | no | SteamCMD and Steamless (Windows) |
 | `vm` | no | QEMU + OVMF (Linux) or VirtualBox (Windows); UTM on macOS |
@@ -122,6 +125,10 @@ Change it with `rea-suite select` (menu, then setup), by editing `.env`, or per 
 with `REA_SUITE_COMPONENTS="..." rea-suite setup`. Deselecting stops installing and
 checking a component; `uv sync` drops its Python group, `rea-tools remove <tool>`
 removes its tools, apt/winget packages stay.
+
+A component added to the suite later with default `yes` is switched on once by the
+next `setup` or `update`, which says so; one you switched off stays off
+(`REA_SUITE_COMPONENTS_SEEN` in `.env` records what you have been offered).
 
 ## Updating and repairing
 
@@ -195,8 +202,12 @@ avoids the fallback; a fine-grained token without any permissions is enough.
 | jadx-headless-mcp | JADX engine REA drives for Android analysis | tools.yml |
 | Apktool | Decode APK resources/smali and rebuild modified APKs | tools.yml |
 | uber-apk-signer | Sign, zipalign and verify APKs after changing them | tools.yml |
+| apk-mitm | Patch an APK so mitmproxy can intercept its HTTPS (certificate pinning, network security config) | npm |
+| scrcpy | Mirror and control an Android device screen (component `mobile`) | apt / brew / winget |
 | apkeep | Download APKs (Google Play, APKPure, F-Droid) without a phone | tools.yml (macOS: built with cargo) |
 | wakaru | Unpack and decompile bundled/minified JavaScript (webpack, Electron apps) | tools.yml |
+| webcrack | Deobfuscate and unpack JavaScript (obfuscator.io string arrays, webpack bundles) | npm |
+| asar | List and extract Electron `app.asar` archives | npm `@electron/asar` |
 | pyinstxtractor-ng | Unpack PyInstaller executables into their .pyc files | uv tool |
 | pycdc, pycdas | Decompile and disassemble Python bytecode (.pyc) | tools.yml, built from source (component `build`) |
 | WABT (`wasm2wat`, `wasm-objdump`, ...) | Read and disassemble WebAssembly modules | tools.yml |
@@ -222,6 +233,8 @@ avoids the fallback; a fine-grained token without any permissions is enough.
 | --- | --- | --- |
 | mitmproxy (`mitmproxy`, `mitmdump`, `mitmweb`) | Intercept and modify HTTP(S) traffic of an app; REA reads its captures | pip |
 | Wireshark, tshark | Capture and dissect any network traffic; REA analyzes captures with tshark | apt / brew cask / winget |
+| sigrok-cli | Decode logic analyzer and signal recordings; REA uses it (component `hardware`, Linux/macOS) | apt / brew |
+| Chromium (Playwright) | Browser REA drives for web captures and module tracing; the build rea-agents' playwright-core expects (component `browser`) | rea-agents' playwright-core |
 
 ### Firmware, installers, containers, secrets
 
@@ -230,6 +243,8 @@ avoids the fallback; a fine-grained token without any permissions is enough.
 | binwalk | Find and carve embedded files and file systems in firmware images | apt / brew |
 | unblob | Recursively extract firmware and containers (more formats than binwalk) | uv tool (Linux) |
 | innoextract | Unpack Inno Setup installers without running them | apt / brew / winget |
+| unshield, cabextract, msitools / lessmsi | Unpack InstallShield, CAB and MSI installers (Windows: lessmsi; 7-Zip opens CABs) | apt / brew / winget |
+| diffoscope | Compare two versions of a package, installer or archive in depth (not on Windows) | apt (`diffoscope-minimal`) / brew |
 | ipsw | Apple firmware and dyld_shared_cache: download, extract, class-dump, Mach-O info | tools.yml |
 | gitleaks | Find keys, tokens and passwords in extracted apps, bundles and firmware trees | tools.yml |
 | PE-bear | Inspect and fix PE headers, sections and imports (Windows) | tools.yml |

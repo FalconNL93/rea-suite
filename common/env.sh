@@ -38,6 +38,8 @@ export DOTNET_CLI_HOME="$REA_RUNTIME/dotnet-home"
 export NUGET_PACKAGES="$REA_RUNTIME/cache/nuget"
 export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1
 export GRADLE_USER_HOME="$REA_RUNTIME/cache/gradle"
+# Browsers for REA (component `browser`; rea-suite setup installs them)
+export PLAYWRIGHT_BROWSERS_PATH="$REA_RUNTIME/ms-playwright"
 # Rust toolchain for source builds (rustup from component `build`)
 export RUSTUP_HOME="$REA_RUNTIME/rustup" CARGO_HOME="$REA_RUNTIME/cargo"
 if [ -x "$REA_RUNTIME/jdk/current/bin/java" ]; then
@@ -86,6 +88,7 @@ _rea_tool REA_APKTOOL_COMMAND apktool
 _rea_tool REA_WAKARU_COMMAND wakaru
 _rea_tool REA_ADB_PATH adb
 _rea_tool REA_UNBLOB_COMMAND unblob # Linux; REA's firmware extraction needs it
+_rea_tool REA_SIGROK_COMMAND sigrok-cli # component `hardware`
 
 for _f in "$REA_SUITE_ROOT"/tools/jadx-headless-mcp/current/*-all.jar; do
   [ -f "$_f" ] && export REA_JADX_MCP_JAR="$_f"
@@ -103,6 +106,10 @@ if [ -x "$_pwndbg/bin/gdb" ]; then
   for _f in "$_pwndbg"/lib/python3*/site-packages/pwndbginit/gdbinit.py; do
     [ -f "$_f" ] && export REA_PWNDBG_GDBINIT="$_f"
   done
+fi
+if [ -f "$REA_RUNTIME/chromium-path" ]; then
+  read -r REA_BROWSER_EXECUTABLE <"$REA_RUNTIME/chromium-path"
+  export REA_BROWSER_EXECUTABLE
 fi
 unset _f _pwndbg
 

@@ -19,6 +19,10 @@ cask "wireshark-app"
 # Firmware / installers / blobs
 brew "binwalk"
 brew "innoextract"
+brew "unshield"
+brew "cabextract"
+brew "msitools"
+brew "diffoscope"
 brew "sevenzip"
 brew "upx"       # tools.yml on Linux/Windows; upstream has no macOS build
 
