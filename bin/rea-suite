@@ -43,7 +43,7 @@ case "$(uname -s)" in
   Darwin) OS=macos ;;
   *)
     OS=linux
-    # shellcheck source=platforms/linux/packages.sh
+    # shellcheck source=platforms/linux/packages.sh disable=SC1091
     source platforms/linux/packages.sh
     ;;
 esac
@@ -445,6 +445,12 @@ cmd_doctor() {
     ok "direnv" ".envrc allowed"
   else
     info "direnv" ".envrc not allowed (direnv allow) or direnv hook not active"
+  fi
+  if [[ -e /proc/sys/fs/binfmt_misc/WSLInterop ]]; then
+    local bridged
+    bridged="$(grep -l "through WSL interop" tools/bin/* 2>/dev/null | xargs -r -n1 basename | xargs)"
+    if [[ -n "$bridged" ]]; then ok "wsl interop" "Windows tools: $bridged"
+    else info "wsl interop" "no Windows checkout found; set REA_SUITE_WINDOWS_ROOT, then rea-tools wsl-bridge"; fi
   fi
   if [[ "$OS" == macos || -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then ok "display" "GUI tools can start"
   else info "display" "no DISPLAY/WAYLAND_DISPLAY; GUI tools (Ghidra, Cutter, ImHex) won't start"; fi

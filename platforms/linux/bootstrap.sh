@@ -45,7 +45,7 @@ die() { printf '\033[1;31merror:\033[0m %s\n' "$*" >&2; exit 1; }
 mkdir -p .runtime/bin .runtime/cache # before env.sh, so .runtime/bin lands on PATH
 # shellcheck source=common/env.sh disable=SC1091
 source common/env.sh
-# shellcheck source=platforms/linux/packages.sh
+# shellcheck source=platforms/linux/packages.sh disable=SC1091
 source platforms/linux/packages.sh
 pkg_manager >/dev/null || die "needs apt (Debian/Ubuntu) or dnf (Fedora/RHEL)"
 

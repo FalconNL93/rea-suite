@@ -419,10 +419,18 @@ wsl -- bash -lc "cd ~/Dev/rea && source ./activate && unblob -e work/out work/fi
 ```
 
 From WSL into Windows (needs WSL interop; check `cat /proc/sys/fs/binfmt_misc/WSLInterop`,
-it is controlled by `[interop] enabled` in `/etc/wsl.conf`):
+it is controlled by `[interop] enabled` in `/etc/wsl.conf`). With a Windows checkout set up
+as well, `rea-suite setup` in WSL writes launchers in `tools/bin` for its Windows-only
+tools (x64dbg/x32dbg, dnSpy, PE-bear, Steamless): `x64dbg work/sample.exe` then starts
+the Windows x64dbg, with existing Linux paths in the arguments turned into Windows paths.
+That is how REA and agents in WSL reach them too. The Windows checkout is found through
+`rea-suite.cmd` on the Windows PATH (setup puts it there), or set `REA_SUITE_WINDOWS_ROOT`
+in `.env`; `rea-tools wsl-bridge` writes the launchers again. Windows programs on the
+Windows PATH (Sysinternals, `notepad.exe`) work from WSL without any of this.
 
 ```sh
-cmd.exe /c 'C:\Users\<user>\rea-suite\tools\bin\x64dbg.cmd' "$(wslpath -w work/sample.exe)"
+x64dbg work/sample.exe            # interop launcher (see above)
+cmd.exe /c 'C:\Users\<user>\rea-suite\tools\bin\x64dbg.cmd' "$(wslpath -w work/sample.exe)"  # by hand
 powershell.exe -File 'C:\Users\<user>\rea-suite\platforms\windows\rea-suite.ps1' doctor
 wslpath -w work/sample.exe        # Linux path -> Windows path (and `wslpath -u` back)
 ```
