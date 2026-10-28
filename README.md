@@ -90,6 +90,12 @@ rea-suite doctor
 rea-suite agents
 ```
 
+`setup` also puts `bin/` on your PATH, so `rea-suite`, `rea` and `rea-ghidra` work from
+any directory: a marked block in `~/.zshrc` / `~/.bashrc` (fish: `conf.d/rea-suite.fish`),
+written once and only replaced by itself; on Windows `<checkout>\bin` (with `rea-suite.cmd`
+and `rea.cmd`) appended to the user PATH. Existing entries are never removed, and a file that
+already names `bin/` is left alone. `REA_SUITE_NO_PATH=1` skips it.
+
 The scripts run on Homebrew's bash (macOS ships bash 3.2; `bin/` re-executes itself
 with `/opt/homebrew/bin/bash`) and `common/env.sh` puts the GNU `gnubin` directories
 ahead of the BSD tools, so the shell code is the same as on Linux. Intel Macs are not

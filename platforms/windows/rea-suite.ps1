@@ -44,6 +44,24 @@ function Winget-Packages([switch]$Upgrade) {
     }
     $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User') + ';' + $env:Path
 }
+# <root>\bin on the user's PATH (registry), appended once; existing entries stay as they are
+# (read unexpanded, so %VAR% references survive). REA_SUITE_NO_PATH=1 skips.
+function User-Path([switch]$Check) {
+    $bin = "$Root\bin"
+    $key = Get-Item 'HKCU:\Environment'
+    $raw = $key.GetValue('Path', '', 'DoNotExpandEnvironmentNames')
+    $entries = @($raw -split ';' | Where-Object { $_ })
+    $present = $entries | Where-Object { [Environment]::ExpandEnvironmentVariables($_).TrimEnd('\') -ieq $bin }
+    if ($Check) { return [bool]$present }
+    if ($env:REA_SUITE_NO_PATH) { Write-Host '  PATH: skipped (REA_SUITE_NO_PATH)'; return }
+    if ($present) { Write-Host "  PATH: $bin already there"; return }
+    Set-ItemProperty 'HKCU:\Environment' -Name Path -Type ExpandString -Value (($entries + $bin) -join ';')
+    # tell running programs (Explorer, new terminals) that the environment changed
+    Add-Type -Namespace RS -Name Native -MemberDefinition '[DllImport("user32.dll", CharSet = CharSet.Auto)] public static extern IntPtr SendMessageTimeout(IntPtr h, uint m, UIntPtr w, string l, uint f, uint t, out UIntPtr r);'
+    $r = [UIntPtr]::Zero
+    [void][RS.Native]::SendMessageTimeout([IntPtr]0xffff, 0x1a, [UIntPtr]::Zero, 'Environment', 2, 5000, [ref]$r)
+    Write-Host "  PATH: $bin added; new terminals have rea-suite and rea"
+}
 function Need($cmd) { if (-not (Get-Command $cmd -ErrorAction SilentlyContinue)) { throw "$cmd missing; run platforms\windows\bootstrap.ps1" } }
 
 function Python-Env([switch]$Upgrade) {
@@ -126,6 +144,9 @@ function Doctor {
             default { Bad $client "rea starts $cmd, not rea.ps1; run rea-suite.ps1 agents" }
         }
     }
+    Step 'PATH'
+    if (User-Path -Check) { Ok 'PATH' "$Root\bin (rea-suite, rea from anywhere)" }
+    else { Write-Host '  info  PATH               bin\ not on your PATH; run rea-suite.ps1 setup' -ForegroundColor Yellow }
     Step 'MSVC'
     $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
     $vs = if (Test-Path $vswhere) { & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath }
@@ -137,7 +158,7 @@ function Doctor {
 }
 
 switch ($Command) {
-    'setup' { Components adopt; Python-Env; Uv-Tools; Node-Env; Suite-Tools install; git config core.hooksPath .githooks }
+    'setup' { Components adopt; Python-Env; Uv-Tools; Node-Env; Suite-Tools install; git config core.hooksPath .githooks; Step 'bin\ on your PATH'; User-Path }
     'select' { Components select; & $PSCommandPath setup }
     'winget' { Winget-Packages }
     'update' {

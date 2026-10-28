@@ -188,6 +188,8 @@ cmd_setup() {
   node_env
   suite_tools install
   git_hooks
+  step "bin/ on your PATH (shell startup file; REA_SUITE_NO_PATH=1 skips)"
+  uv run --quiet common/rea_suite/userpath.py add
   step "done"
   echo "Next: 'direnv allow' (or 'source ./activate'), 'rea-suite doctor', and"
   echo "'rea-suite agents' to register REA with your agent."
@@ -418,6 +420,12 @@ cmd_doctor() {
   done < <(agents list)
 
   step "shell / desktop"
+  if command -v rea-suite >/dev/null && [[ "$(readlink -f "$(command -v rea-suite)")" == "$ROOT/bin/rea-suite" ]] ||
+    uv run --quiet common/rea_suite/userpath.py check >/dev/null; then
+    ok "PATH" "$ROOT/bin (rea-suite, rea, rea-ghidra from anywhere)"
+  else
+    info "PATH" "bin/ not on PATH; run rea-suite setup (or use ./activate)"
+  fi
   if ! command -v direnv >/dev/null; then
     info "direnv" "not installed; use 'source ./activate' instead"
   elif [[ "$(direnv status --json 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin)["state"]["foundRC"]["allowed"])' 2>/dev/null)" == 0 ]]; then
