@@ -14,6 +14,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -157,6 +158,29 @@ def _sync_one(
         (dest / MARKER).write_text(json.dumps(marker, indent=2) + "\n")
 
 
+PLATFORM = {"nt": "windows"}.get(os.name) or ("macos" if sys.platform == "darwin" else "linux")
+# Ghidra's name for this platform's native directory (os/<name>/)
+GHIDRA_OS = {"linux": "linux_x86_64", "macos": "mac_arm_64", "windows": "win_x86_64"}[PLATFORM]
+
+
+def _add_deps(project: Path, deps: list[dict], work: Path) -> None:
+    """Copy files from other releases into the source tree before a build (kaiju: Z3)."""
+    for dep in deps:
+        release = github.release(dep["github"], str(dep.get("version", "latest")))
+        pattern = re.compile(dep["assets"][PLATFORM])
+        asset = next(a for a in release["assets"] if pattern.search(a["name"]))
+        archive = work / asset["name"]
+        github.download(asset["browser_download_url"], archive)
+        unpacked = work / f"dep-{dep['github'].replace('/', '-')}"
+        extract(archive, unpacked, 1)
+        archive.unlink()
+        for source_glob, target in dep["copy"].items():
+            dest = project / target.replace("{os}", GHIDRA_OS)
+            dest.mkdir(parents=True, exist_ok=True)
+            for f in unpacked.glob(source_glob):
+                shutil.copy2(f, dest / f.name)
+
+
 def _build(install: Path, repo: str, tag: str, spec: dict, work: Path) -> Path:
     # Source and build tree stay in .runtime/build/ghidra-<repo>/<tag>-<ghidra>/.
     repo_name = repo.rsplit("/", 1)[1]
@@ -168,9 +192,11 @@ def _build(install: Path, repo: str, tag: str, spec: dict, work: Path) -> Path:
     extract(tarball, project, 1)
     tarball.unlink()
     project = project / spec.get("subdir", "")
+    _add_deps(project, spec.get("deps", []), work)
     gradlew = install / "support" / "gradle" / ("gradlew.bat" if os.name == "nt" else "gradlew")
     subprocess.run(
-        [str(gradlew), "--no-daemon", "--quiet", f"-PGHIDRA_INSTALL_DIR={install.resolve()}"],
+        [str(gradlew), "--no-daemon", "--quiet", f"-PGHIDRA_INSTALL_DIR={install.resolve()}"]
+        + spec.get("gradle-args", []),
         cwd=project,
         check=True,
         env={**os.environ, "GHIDRA_INSTALL_DIR": str(install.resolve())},

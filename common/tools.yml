@@ -42,7 +42,10 @@
 #              in which {ghidra} is the Ghidra version (e.g. 12.1.4); the newest
 #              release with such a build is used. With `build: true` and no
 #              matching build, the newest release's source (`subdir` if nested)
-#              is built with Ghidra's own Gradle wrapper.
+#              is built with Ghidra's own Gradle wrapper (`gradle-args` adds arguments;
+#              `deps` copies files of other releases into the source first:
+#              `{github, version, assets: {<platform>: regex}, copy: {<glob>: <dir>}}`,
+#              `{os}` in a dir is Ghidra's native directory name).
 # plugins:     files from another release copied into the install dir:
 #              `copy: {<glob in archive>: <dir in install>}`.
 
@@ -73,10 +76,22 @@ tools:
         github: antoniovazquezblanco/GhidraFindcrypt
         asset: '^ghidra_{ghidra}_PUBLIC_\d+_GhidraFindcrypt\.zip$'
         build: true
-      # function hashing, OOAnalyzer C++ class recovery (native build: prebuilt only)
+      # function hashing, OOAnalyzer C++ class recovery. Built like upstream's CI does
+      # when no release has a build for this Ghidra: Z3 from its release, not compiled.
       kaiju:
         github: CERTCC/kaiju
         asset: '^ghidra_{ghidra}_PUBLIC_\d+_kaiju\.zip$'
+        build: true
+        gradle-args: [-PKAIJU_SKIP_Z3_BUILD, buildExtension]
+        deps:
+          # the Z3 version kaiju's release workflow builds against
+          - github: Z3Prover/z3
+            version: z3-4.12.1
+            assets:
+              linux: '^z3-4\.12\.1-x64-glibc-2\.35\.zip$'
+              macos: '^z3-4\.12\.1-arm64-osx-11\.0\.zip$'
+              windows: '^z3-4\.12\.1-x64-win\.zip$'
+            copy: {'bin/*.jar': lib, 'bin/*.so': 'os/{os}', 'bin/*.dylib': 'os/{os}', 'bin/*.dll': 'os/{os}'}
       # Xbox 360 XEX loader
       xexloaderwv:
         github: zeroKilo/XEXLoaderWV

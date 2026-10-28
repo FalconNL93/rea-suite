@@ -317,7 +317,7 @@ checks that they are on. Findings are shown redacted (rule, file, line). Tokens 
 | Extension | What it is for | Source |
 | --- | --- | --- |
 | FindCrypt | Label crypto constants (AES S-boxes, hash IVs, ...) during analysis | prebuilt per Ghidra version |
-| Kaiju (CERT/CC) | Function hashing across binaries, OOAnalyzer C++ class recovery | prebuilt only (native build) |
+| Kaiju (CERT/CC) | Function hashing across binaries, OOAnalyzer C++ class recovery | prebuilt or built (Z3 from its release, as upstream's CI does) |
 | XEXLoaderWV | Load Xbox 360 XEX executables | prebuilt or built |
 | ghidra-firmware-utils | Load UEFI images, PCI option ROMs and other firmware formats | prebuilt or built |
 | ghidra-nativeaot | Recover .NET Native AOT binaries; REA loads its jar | prebuilt or built |
