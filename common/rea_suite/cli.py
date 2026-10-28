@@ -535,10 +535,7 @@ ANDROID_ABI = {"arm64-v8a": "arm64", "armeabi-v7a": "arm", "x86_64": "x86_64", "
 
 def cmd_frida_server(args: argparse.Namespace) -> None:
     """Push the frida-server matching the frida package to the connected Android device."""
-    adb = os.environ.get("REA_ADB_PATH") or shutil.which("adb")
-    if not adb:
-        raise SystemExit("adb not found; install the suite's system packages (rea-suite setup)")
-    serial = ["-s", args.serial] if args.serial else []
+    adb, *serial = adb_command(args.serial)
 
     def shell(*cmd: str) -> str:
         out = subprocess.run(
@@ -564,6 +561,60 @@ def cmd_frida_server(args: argparse.Namespace) -> None:
         print("started; check with `frida-ps -U`")
     else:
         print(f"start it as root: adb shell su -c '{remote} -D' (or rerun with --start)")
+
+
+def adb_command(serial: str | None) -> list[str]:
+    adb = os.environ.get("REA_ADB_PATH") or shutil.which("adb")
+    if not adb:
+        raise SystemExit("adb not found; install the suite's system packages (rea-suite setup)")
+    return [adb, *(["-s", serial] if serial else [])]
+
+
+def cmd_mitm_ca(args: argparse.Namespace) -> None:
+    """Put mitmproxy's CA certificate on the connected Android device."""
+    from mitmproxy.certs import CertStore  # .venv; creates ~/.mitmproxy on first use
+
+    confdir = Path.home() / ".mitmproxy"
+    CertStore.from_store(confdir, "mitmproxy", 2048)
+    cert = confdir / "mitmproxy-ca-cert.cer"
+    adb = adb_command(args.serial)
+    if not args.system:
+        subprocess.run(
+            [*adb, "push", str(cert), "/sdcard/Download/mitmproxy-ca-cert.cer"], check=True
+        )
+        print(
+            "pushed to Download/. Install it on the device: Settings > Security > Encryption & "
+            "credentials > Install a certificate > CA certificate.\n"
+            "Apps trust user CAs only when they opt in; apk-mitm <apk> patches an app to do so, "
+            "or use --system on a rooted device."
+        )
+        return
+    # System store: <subject hash>.0; Android 14+ reads it from the conscrypt APEX, so
+    # mount a copy over that directory as well (both last until reboot).
+    from cryptography import x509
+
+    pem = cert.read_bytes()
+    name = x509.load_pem_x509_certificate(pem).subject
+    subject_hash = subprocess.run(
+        ["openssl", "x509", "-noout", "-subject_hash_old", "-in", str(cert)],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    remote = f"/data/local/tmp/{subject_hash}.0"
+    subprocess.run([*adb, "push", str(cert), remote], check=True)
+    script = f"""
+set -e
+for d in /system/etc/security/cacerts /apex/com.android.conscrypt/cacerts; do
+  [ -d "$d" ] || continue
+  t=/data/local/tmp/cacerts-$(echo $d | tr / _)
+  rm -rf "$t"; mkdir -p "$t"; cp "$d"/* "$t"/; cp {remote} "$t"/
+  chmod 644 "$t"/*; chcon u:object_r:system_security_cacerts_file:s0 "$t"/* 2>/dev/null || true
+  mount -t tmpfs tmpfs "$d" && cp "$t"/* "$d"/ && chcon u:object_r:system_security_cacerts_file:s0 "$d"/* 2>/dev/null || true
+done
+"""
+    subprocess.run([*adb, "shell", "su", "-c", script], check=True)
+    print(f"{name.rfc4514_string()} is a system CA until the device reboots (rerun after a reboot)")
 
 
 def cmd_asset(args: argparse.Namespace) -> None:
@@ -609,6 +660,10 @@ def main() -> None:
     p.add_argument("--start", action="store_true", help="start it as root after pushing")
     p.add_argument("-s", "--serial", help="device serial (adb devices) when several are connected")
     p.set_defaults(func=cmd_frida_server)
+    p = sub.add_parser("mitm-ca", help="put mitmproxy's CA certificate on the Android device")
+    p.add_argument("--system", action="store_true", help="system store on a rooted device")
+    p.add_argument("-s", "--serial", help="device serial (adb devices) when several are connected")
+    p.set_defaults(func=cmd_mitm_ca)
     p = sub.add_parser("asset", help="print tag and URL of the latest matching release asset")
     p.add_argument("repo", help="GitHub owner/repo")
     p.add_argument("pattern", help="regex for the asset name")

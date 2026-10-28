@@ -231,7 +231,7 @@ avoids the fallback; a fine-grained token without any permissions is enough.
 
 | Tool | What it is for | Source |
 | --- | --- | --- |
-| mitmproxy (`mitmproxy`, `mitmdump`, `mitmweb`) | Intercept and modify HTTP(S) traffic of an app; REA reads its captures | pip |
+| mitmproxy (`mitmproxy`, `mitmdump`, `mitmweb`) | Intercept and modify HTTP(S) traffic of an app; REA reads its captures; `rea-tools mitm-ca [--system]` puts its CA on an Android device | pip |
 | Wireshark, tshark | Capture and dissect any network traffic; REA analyzes captures with tshark | apt / brew cask / winget |
 | sigrok-cli | Decode logic analyzer and signal recordings; REA uses it (component `hardware`, Linux/macOS) | apt / brew |
 | Chromium (Playwright) | Browser REA drives for web captures and module tracing; the build rea-agents' playwright-core expects (component `browser`) | rea-agents' playwright-core |

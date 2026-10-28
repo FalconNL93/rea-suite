@@ -8,6 +8,7 @@
 #   use <tool> <ver>    switch back to another installed version (rollback)
 #   prune               remove inactive versions
 #   frida-server        push frida-server (same version as pip frida) to an Android device
+#   mitm-ca             put mitmproxy's CA on an Android device (--system: rooted, until reboot)
 #
 # Installed into tools/<name>/<version>/ with tools/<name>/current pointing at
 # the active version. Launchers are generated in tools/bin/ (on PATH via .envrc).
