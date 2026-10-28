@@ -174,7 +174,7 @@ avoids the fallback; a fine-grained token without any permissions is enough.
 | ImHex | Hex editor with a pattern language for decoding file formats and structures | tools.yml |
 | Detect It Easy (`die`, `diec`) | Identify file type, compiler, packer and protector before you start (not on macOS: no arm64 build) | tools.yml, pip `die-python` |
 | FLOSS | Extract strings, including obfuscated and stack strings, from executables | pip |
-| capa | Name what an executable can do (network, crypto, persistence, ...) from its code | pip |
+| capa | Name what an executable can do (network, crypto, persistence, ...) from its code | tools.yml (standalone, rules built in) |
 | YARA-X (`yr`) | Match binaries against YARA rules (signatures, families, your own patterns) | tools.yml, pip `yara_x` |
 | LIEF, pefile | Parse and modify ELF/PE/Mach-O/DEX (LIEF) and PE (pefile) from Python | pip |
 | capstone, unicorn, keystone | Disassembler, CPU emulator and assembler engines for your own scripts | pip |

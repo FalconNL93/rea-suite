@@ -187,6 +187,23 @@ tools:
       windows:
         yr: '**/yr.exe'
 
+  # Capability detection, companion to FLOSS. The standalone build embeds the rules
+  # and signatures of its version; the pip package ships neither.
+  capa:
+    github: mandiant/capa
+    version: latest
+    assets:
+      linux: '^capa-v[\d.]+-linux\.zip$'
+      macos: '^capa-v[\d.]+-macos-arm64\.zip$'
+      windows: '^capa-v[\d.]+-windows\.zip$'
+    bin:
+      linux:
+        capa: capa
+      macos:
+        capa: capa
+      windows:
+        capa: capa.exe
+
   # ILSpy command line decompiler for .NET assemblies.
   ilspycmd:
     dotnet-tool: ilspycmd

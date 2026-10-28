@@ -21,8 +21,6 @@ dependencies = [
     # Detect It Easy engine; provides the `diec` console command (GUI: tools.yml).
     # No wheel for macOS on Apple Silicon.
     "die-python>=0.5; sys_platform != 'darwin' or platform_machine != 'arm64'",
-    # Capability detection, companion to FLOSS (CLI: capa)
-    "flare-capa>=9",
     # Exploit/CTF toolkit; rea uses it via REA_PWNTOOLS_PYTHON
     "pwntools>=4.14; sys_platform != 'win32'",
     # Frida-based mobile runtime exploration (CLI: objection)

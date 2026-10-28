@@ -81,6 +81,7 @@ _rea_tool REA_KUNA_COMMAND kuna
 _rea_tool REA_APKTOOL_COMMAND apktool
 _rea_tool REA_WAKARU_COMMAND wakaru
 _rea_tool REA_ADB_PATH adb
+_rea_tool REA_UNBLOB_COMMAND unblob # Linux; REA's firmware extraction needs it
 
 for _f in "$REA_SUITE_ROOT"/tools/jadx-headless-mcp/current/*-all.jar; do
   [ -f "$_f" ] && export REA_JADX_MCP_JAR="$_f"
