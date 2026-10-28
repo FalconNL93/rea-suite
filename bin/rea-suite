@@ -22,9 +22,10 @@
 #   rea-suite tools <args...>               tools.yml manager (= rea-tools)
 #   rea-suite lint [file...]                ruff, shellcheck and a PowerShell parse check on
 #                                            this repository (.githooks/lint.sh)
-#   rea-suite clean [caches|tools|all]      free disk space: download caches (uv, npm,
-#                                            NuGet, Gradle) and inactive tool versions;
-#                                            without an argument only shows the sizes
+#   rea-suite clean [caches|builds|tools|all]  free disk space: download caches (uv, npm,
+#                                            NuGet, Gradle), source builds (.runtime/build)
+#                                            and inactive tool versions; without an
+#                                            argument only shows the sizes
 #
 #   --no-apt  skip apt (no sudo); --no-brew  skip Homebrew (macOS)
 set -euo pipefail
@@ -236,22 +237,29 @@ cmd_clean() {
       dir="$REA_RUNTIME/cache/$name"
       [[ ! -d "$dir" ]] || printf '  %-8s %6s  %s\n' "$name" "$(du -sh "$dir" | cut -f1)" "$dir"
     done
+    dir="$CARGO_HOME/registry"
+    [[ ! -d "$dir" ]] || printf '  %-8s %6s  %s\n' cargo "$(du -sh "$dir" | cut -f1)" "$dir"
+    step "sources and build trees (rea-suite clean builds); the next build starts afresh"
+    [[ ! -d "$REA_RUNTIME/build" ]] || du -sh "$REA_RUNTIME/build"/* 2>/dev/null | sed 's/^/  /'
     step "inactive tool versions (rea-suite clean tools); 'rea-tools use' rolls back to them"
     rea-tools prune --dry-run
     return
   fi
-  [[ " $* " != *" all "* ]] || set -- caches tools
+  [[ " $* " != *" all "* ]] || set -- caches builds tools
   for what in "$@"; do
     case "$what" in
       caches)
         step "clean caches"
         uv cache clean
         dotnet nuget locals all --clear
-        # npm's own clean leaves _prebuilds (frida); Gradle has no clean command
-        rm -rf "$REA_RUNTIME/cache/npm" "$REA_RUNTIME/cache/gradle" "$REA_RUNTIME/cache/dotnet-install.sh"
+        # npm's own clean leaves _prebuilds (frida); Gradle has no clean command;
+        # cargo's downloaded crates are refetched by the next build
+        rm -rf "$REA_RUNTIME/cache/npm" "$REA_RUNTIME/cache/gradle" "$REA_RUNTIME/cache/dotnet-install.sh" \
+          "$CARGO_HOME/registry" "$CARGO_HOME/git"
         ;;
+      builds) step "clean builds"; rm -rf "$REA_RUNTIME/build" ;;
       tools) step "clean tools"; rea-tools prune ;;
-      *) echo "clean what? caches | tools | all" >&2; exit 2 ;;
+      *) echo "clean what? caches | builds | tools | all" >&2; exit 2 ;;
     esac
   done
 }

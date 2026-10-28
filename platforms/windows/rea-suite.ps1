@@ -12,7 +12,7 @@
     .\platforms\windows\rea-suite.ps1 reinstall runtime|python|node|tools|all|<tool>
     .\platforms\windows\rea-suite.ps1 status
     .\platforms\windows\rea-suite.ps1 tools <rea-tools args>
-    .\platforms\windows\rea-suite.ps1 clean [caches|tools|all]   # no argument: show sizes only
+    .\platforms\windows\rea-suite.ps1 clean [caches|builds|tools|all]   # no argument: show sizes only
     .\platforms\windows\rea-suite.ps1 lint [file...]             # ruff, shellcheck, PowerShell parse (Git Bash)
 .NOTES
     Not tested on Windows yet.
@@ -191,10 +191,12 @@ switch ($Command) {
                 $mb = [math]::Round((Get-ChildItem $dir -Recurse -File -Force | Measure-Object Length -Sum).Sum / 1MB)
                 Write-Host ('  {0,-8} {1,6} MB  {2}' -f (Split-Path $dir -Leaf), $mb, $dir)
             }
+            Step 'sources and build trees (clean builds); the next build starts afresh'
+            Get-ChildItem "$env:REA_RUNTIME\build" -Directory -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "  $($_.FullName)" }
             Step "inactive tool versions (clean tools); 'rea-tools use' rolls back to them"
             Invoke-Checked uv run rea-tools prune --dry-run
         }
-        if ($Rest -contains 'all') { $Rest = 'caches', 'tools' }
+        if ($Rest -contains 'all') { $Rest = 'caches', 'builds', 'tools' }
         foreach ($what in $Rest) {
             switch ($what) {
                 'caches' {
@@ -202,10 +204,11 @@ switch ($Command) {
                     Invoke-Checked uv cache clean
                     Invoke-Checked dotnet nuget locals all --clear
                     # npm's own clean leaves _prebuilds (frida); Gradle has no clean command
-                    Remove-Item -Recurse -Force "$env:REA_RUNTIME\cache\npm", "$env:REA_RUNTIME\cache\gradle" -ErrorAction SilentlyContinue
+                    Remove-Item -Recurse -Force "$env:REA_RUNTIME\cache\npm", "$env:REA_RUNTIME\cache\gradle", "$env:CARGO_HOME\registry", "$env:CARGO_HOME\git" -ErrorAction SilentlyContinue
                 }
+                'builds' { Step 'clean builds'; Remove-Item -Recurse -Force "$env:REA_RUNTIME\build" -ErrorAction SilentlyContinue }
                 'tools' { Step 'clean tools'; Invoke-Checked uv run rea-tools prune }
-                default { throw "clean what? caches | tools | all" }
+                default { throw "clean what? caches | builds | tools | all" }
             }
         }
     }

@@ -146,7 +146,7 @@ def install_github(tool: Tool, state: dict[str, str], force_latest: bool) -> Non
                 if "cargo" in tool.build:
                     build.cargo(tool.build["cargo"], tag.removeprefix("v"), staging)
                 else:
-                    build.cmake(tool.github, release["tag_name"], staging)
+                    build.cmake(tool.name, tool.github, release["tag_name"], staging)
             except build.BuildUnavailable as exc:
                 print(f"  skipped: {exc}")
                 return

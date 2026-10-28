@@ -17,7 +17,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from . import github
+from . import build, github
 from .archive import extract
 
 MARKER = ".rea-suite.json"
@@ -158,11 +158,15 @@ def _sync_one(
 
 
 def _build(install: Path, repo: str, tag: str, spec: dict, work: Path) -> Path:
+    # Source and build tree stay in .runtime/build/ghidra-<repo>/<tag>-<ghidra>/.
+    repo_name = repo.rsplit("/", 1)[1]
+    work = build.build_dir(f"ghidra-{repo_name}", f"{tag}-{ghidra_version(install)}")
     tarball = work / "source.tar.gz"
     github.download(github.source_url(repo, tag), tarball)
     # Gradle names the extension after the project directory, so use the repo name.
-    project = work / "src" / repo.rsplit("/", 1)[1]
+    project = work / "src" / repo_name
     extract(tarball, project, 1)
+    tarball.unlink()
     project = project / spec.get("subdir", "")
     gradlew = install / "support" / "gradle" / ("gradlew.bat" if os.name == "nt" else "gradlew")
     subprocess.run(

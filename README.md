@@ -141,8 +141,8 @@ rea-suite doctor               # check everything; exit 1 on problems
 rea-suite status               # versions and available updates
 rea-suite reinstall python     # or: runtime | node | tools | system | all | <tool from tools.yml>
 rea-suite tools prune          # drop old tool versions kept after an update
-rea-suite clean                # sizes of the download caches and inactive tool versions
-rea-suite clean caches         # or: tools | all; caches refill on the next setup or build
+rea-suite clean                # sizes of the download caches, source builds and inactive tool versions
+rea-suite clean caches         # or: builds | tools | all; caches refill on the next setup or build
 ```
 
 `update` takes every newest release (pins in `tools.yml` excepted). `update --ai` starts
@@ -154,8 +154,9 @@ why. Nothing changes until you approve; afterwards it runs `doctor` and commits 
 `CLAUDE.md` says.
 
 The caches (uv, npm, NuGet, Gradle) live in `.runtime/cache/` and only speed up the next
-install; `clean caches` is always safe. `clean tools` removes the versions `rea-tools use`
-could roll back to.
+install; `clean caches` is always safe. `clean builds` removes the sources and build trees of
+source-built tools and Ghidra extensions (`.runtime/build/`; each tool keeps only its newest
+build anyway). `clean tools` removes the versions `rea-tools use` could roll back to.
 
 Windows: the same commands through `platforms\windows\rea-suite.ps1`.
 

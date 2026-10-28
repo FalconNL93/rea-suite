@@ -2,7 +2,9 @@
 
 Only used when no prebuilt asset exists, and never with REA_TOOLS_NO_BUILD=1. A build
 lands in tools/<name>/<version>/ like a download, so it is redone only when the
-version (release tag, or commit for `version: head`) changes.
+version (release tag, or commit for `version: head`) changes. Source and build tree of
+the newest build stay in .runtime/build/<name>/<version>/; a newer build replaces them,
+`rea-suite clean builds` removes them all.
 
   cargo: <crate>   `cargo install --locked` of that crate at the release version;
                    the Rust toolchain comes from rustup (component `build`) and
@@ -16,11 +18,21 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
-import tempfile
 from pathlib import Path
 
 from . import github
 from .archive import extract
+
+BUILD_ROOT = Path(__file__).resolve().parents[2] / ".runtime" / "build"
+
+
+def build_dir(name: str, version: str) -> Path:
+    """.runtime/build/<name>/<version>/, empty; older versions of name are removed."""
+    for old in (BUILD_ROOT / name).glob("*"):
+        shutil.rmtree(old) if old.is_dir() else old.unlink()
+    path = BUILD_ROOT / name / version
+    path.mkdir(parents=True)
+    return path
 
 
 class BuildUnavailable(Exception):
@@ -61,32 +73,38 @@ def _rust_toolchain() -> None:
 
 
 def cargo(crate: str, version: str, dest: Path) -> None:
-    """cargo install <crate>@<version> into dest (binaries in dest/bin)."""
+    """cargo install <crate>@<version> into dest (binaries in dest/bin).
+
+    The crate source lands in .runtime/cargo/registry, the build tree in .runtime/build.
+    """
     check_allowed()
     _rust_toolchain()
-    print(f"  building {crate} {version} with cargo (only when the version changes)")
+    work = build_dir(crate, version)
+    print(f"  building {crate} {version} with cargo in {work} (only when the version changes)")
     subprocess.run(
-        ["cargo", "install", "--locked", "--version", version, "--root", str(dest), crate],
+        ["cargo", "install", "--locked", "--version", version, "--root", str(dest)]
+        + ["--target-dir", str(work / "target"), crate],
         check=True,
     )
     for leftover in (".crates.toml", ".crates2.json"):
         (dest / leftover).unlink(missing_ok=True)
 
 
-def cmake(repo: str, ref: str, dest: Path) -> None:
-    """Build the source of repo at ref with CMake + Ninja; the build tree becomes dest."""
+def cmake(name: str, repo: str, ref: str, dest: Path) -> None:
+    """Build repo at ref with CMake + Ninja; source in .runtime/build, build tree = dest."""
     check_allowed()
     for tool in ("cmake", "ninja"):
         if not shutil.which(tool):
             raise BuildUnavailable(f"needs {tool} (pyproject.toml; run rea-suite setup)")
-    print(f"  building {repo} at {ref[:12]} with CMake (only when it changes)")
-    with tempfile.TemporaryDirectory(dir=dest.parent) as tmp:
-        tarball = Path(tmp) / "source.tar.gz"
-        github.download(source_tarball(repo, ref), tarball)
-        src = Path(tmp) / "src"
-        extract(tarball, src, 1)
-        subprocess.run(
-            ["cmake", "-S", str(src), "-B", str(dest), "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release"],
-            check=True,
-        )
-        subprocess.run(["cmake", "--build", str(dest)], check=True)
+    work = build_dir(name, ref[:12])
+    print(f"  building {repo} at {ref[:12]} with CMake in {work} (only when it changes)")
+    tarball = work / "source.tar.gz"
+    github.download(source_tarball(repo, ref), tarball)
+    src = work / "src"
+    extract(tarball, src, 1)
+    tarball.unlink()
+    subprocess.run(
+        ["cmake", "-S", str(src), "-B", str(dest), "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release"],
+        check=True,
+    )
+    subprocess.run(["cmake", "--build", str(dest)], check=True)
