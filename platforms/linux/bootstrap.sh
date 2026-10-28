@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# First-time installer for rea-suite on Debian/Ubuntu (incl. WSL). Safe to re-run.
+# First-time installer for rea-suite on Debian/Ubuntu (incl. WSL), Fedora and RHEL-family
+# systems (Rocky, Alma; EPEL is enabled for them). Safe to re-run.
 #
 #   platforms/linux/bootstrap.sh [--no-apt] [--select] [--update] [--runtimes-only]
 #
@@ -9,7 +10,7 @@
 # 3. optional components: a menu on the first run (stored in .env; see
 #    .env.example to preselect), then `bin/rea-suite setup`
 #
-#   --no-apt          never call apt/sudo (prints what is missing instead)
+#   --no-apt          never call apt/dnf/sudo (prints what is missing instead; --no-dnf too)
 #   --select          show the component menu again
 #   --update          also upgrade runtimes that are already installed
 #   --runtimes-only   stop after step 2 (used by `rea-suite update`)
@@ -25,7 +26,7 @@ APT=1 UPDATE=0 RUNTIMES_ONLY=0 SELECT=0
 pass=()
 for arg in "$@"; do
   case "$arg" in
-    --no-apt) APT=0; pass+=("$arg") ;;
+    --no-apt | --no-dnf) APT=0; pass+=("$arg") ;;
     --select) SELECT=1 ;;
     --update) UPDATE=1 ;;
     --runtimes-only) RUNTIMES_ONLY=1 ;;
@@ -44,19 +45,18 @@ die() { printf '\033[1;31merror:\033[0m %s\n' "$*" >&2; exit 1; }
 mkdir -p .runtime/bin .runtime/cache # before env.sh, so .runtime/bin lands on PATH
 # shellcheck source=common/env.sh disable=SC1091
 source common/env.sh
+# shellcheck source=platforms/linux/packages.sh
+source platforms/linux/packages.sh
+pkg_manager >/dev/null || die "needs apt (Debian/Ubuntu) or dnf (Fedora/RHEL)"
 
 # --- 1. base packages ------------------------------------------------------------
 
-base=(curl ca-certificates git tar xz-utils unzip python3)
-missing=()
-for pkg in "${base[@]}"; do
-  dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q 'ok installed' || missing+=("$pkg")
-done
+mapfile -t base < <(printf '%s\n' curl ca-certificates git tar xz-utils unzip python3 | pkg_native)
+mapfile -t missing < <(pkg_missing "${base[@]}")
 if ((${#missing[@]})); then
   step "base packages: ${missing[*]}"
   ((APT)) || die "missing ${missing[*]}; install them or drop --no-apt"
-  sudo apt-get update
-  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "${missing[@]}"
+  pkg_install "${missing[@]}"
 fi
 
 # --- 2. runtimes -------------------------------------------------------------------

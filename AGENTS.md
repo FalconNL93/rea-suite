@@ -19,7 +19,8 @@ installation.
   `common/rea_suite/agents.py`. Agent-specific code is limited to the per-agent entries there.
 * **One source per tool, updatable by the suite.** Every tool comes from exactly one of:
   `pyproject.toml` (uv), `common/uv-tools.txt`, `package.json`, `common/tools.yml` (GitHub release,
-  direct URL or dotnet tool), `platforms/linux/apt-packages.txt`, `platforms/macos/Brewfile`,
+  direct URL or dotnet tool), `platforms/linux/apt-packages.txt` (Debian names; Fedora/RHEL
+  names that differ go in `platforms/linux/dnf-names.txt`), `platforms/macos/Brewfile`,
   `platforms/windows/winget.json`, or a component in `common/components.yml`. Prefer them in that
   order. Nothing is installed by a one-off download or `curl | sh`.
 * **Every platform.** A change to one platform's script has its counterparts: `bin/rea-suite`

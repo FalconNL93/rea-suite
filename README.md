@@ -52,9 +52,13 @@ installation; nothing in `~` or `/usr` is required.
 
 What stays system-wide, because it needs root, drivers or a shell hook:
 
-- Linux: `platforms/linux/apt-packages.txt` and the apt packages of the selected
-  components (compilers, LLDB + Python bindings, Wireshark/tshark with capture
-  permissions, qemu, binwalk, innoextract, adb, xxd, Qt runtime library, base utilities).
+- Linux: `platforms/linux/apt-packages.txt` and the packages of the selected components
+  (compilers, LLDB + Python bindings, Wireshark/tshark with capture permissions, qemu,
+  binwalk, innoextract, adb, xxd, Qt runtime library, base utilities). The lists use Debian
+  names; on Fedora/RHEL `platforms/linux/dnf-names.txt` translates the ones that differ and
+  `platforms/linux/packages.sh` installs them with apt or dnf. RHEL lacks a few even with
+  EPEL (binwalk, unshield, diffoscope, qemu-user, scrcpy, sigrok-cli): `doctor` lists them
+  as not packaged there, everything else works.
 - macOS: `platforms/macos/Brewfile` and the brew packages of the selected components
   (bash and GNU coreutils/sed/grep/find/tar/awk for the scripts, Wireshark with ChmodBPF,
   rizin, binwalk, innoextract, 7-Zip, Android platform tools, compilers, QEMU/UTM), plus
@@ -68,12 +72,13 @@ What stays system-wide, because it needs root, drivers or a shell hook:
 
 ## Setup
 
-Linux / WSL (Debian/Ubuntu, x86_64):
+Linux / WSL (x86_64): Debian/Ubuntu (apt), Fedora, and RHEL with its rebuilds such as
+Rocky and Alma (dnf; the bootstrap enables EPEL and CRB there):
 
 ```sh
 cp .env.example .env                    # optional: settings (components, builds, PATH, agent, REA, token)
 platforms/linux/bootstrap.sh            # base packages, .runtime/, component menu, setup
-platforms/linux/bootstrap.sh --no-apt   # never use sudo; `doctor` lists what is missing
+platforms/linux/bootstrap.sh --no-apt   # never use sudo (--no-dnf is the same); `doctor` lists what is missing
 direnv allow                            # or: source ./activate
 rea-suite doctor
 rea-suite agents                        # REA skill for every detected agent, MCP via bin/rea

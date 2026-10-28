@@ -1,0 +1,26 @@
+# Debian/Ubuntu name -> Fedora/RHEL name(s), for the packages that differ (packages.sh).
+# Several names: all of them; `a|b`: the first one the system has; `-`: none there.
+# Checked on Fedora 44 and Rocky Linux 9 and 10 with EPEL + CRB.
+tshark              wireshark-cli
+diffoscope-minimal  diffoscope
+adb                 android-tools
+libxcb-cursor0      xcb-util-cursor
+xz-utils            xz
+procps              procps-ng
+xxd                 xxd|vim-common
+build-essential     gcc gcc-c++ make
+gcc-multilib        glibc-devel.i686 libgcc.i686
+g++-multilib        libstdc++-devel.i686
+mingw-w64           mingw64-gcc mingw64-gcc-c++ mingw32-gcc mingw32-gcc-c++
+gcc-mingw-w64       -
+g++-mingw-w64       -
+binutils-multiarch  binutils-aarch64-linux-gnu binutils-arm-linux-gnu binutils-riscv64-linux-gnu binutils-mips64-linux-gnu binutils-powerpc64-linux-gnu
+gdb-multiarch       gdb
+lib32gcc-s1         libgcc.i686
+qemu-utils          qemu-img
+qemu-system-x86     qemu-system-x86|qemu-kvm
+ovmf                edk2-ovmf
+# Rust for source builds: rustup (Fedora: rustup-init), else the distribution's cargo (RHEL)
+rustup              rustup|cargo
+# scrcpy is in COPR only (zeno/scrcpy)
+scrcpy              -

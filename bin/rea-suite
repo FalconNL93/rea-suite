@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# rea-suite: set up, update and repair the whole suite (Debian/Ubuntu/WSL, macOS).
+# rea-suite: set up, update and repair the whole suite (Debian/Ubuntu/WSL, Fedora/RHEL, macOS).
 #
 #   rea-suite setup   [--no-apt|--no-brew]  install / repair; safe to re-run (runtimes in
 #                                            .runtime/ come from platforms/<os>/bootstrap.sh)
@@ -27,7 +27,7 @@
 #                                            and inactive tool versions; without an
 #                                            argument only shows the sizes
 #
-#   --no-apt  skip apt (no sudo); --no-brew  skip Homebrew (macOS)
+#   --no-apt / --no-dnf  skip system packages (no sudo); --no-brew  skip Homebrew (macOS)
 set -euo pipefail
 
 # macOS: Homebrew's bash (platforms/macos/Brewfile), not the bundled 3.2
@@ -41,7 +41,11 @@ source common/env.sh
 
 case "$(uname -s)" in
   Darwin) OS=macos ;;
-  *) OS=linux ;;
+  *)
+    OS=linux
+    # shellcheck source=platforms/linux/packages.sh
+    source platforms/linux/packages.sh
+    ;;
 esac
 APT_LIST=platforms/linux/apt-packages.txt
 BREWFILE=platforms/macos/Brewfile
@@ -59,16 +63,20 @@ usage() { sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'; }
 
 system_packages() { # [--reinstall | --upgrade]
   if [[ "$OS" == macos ]]; then brew_packages "$@"
-  elif [[ "${1:-}" == --reinstall ]]; then apt_packages --reinstall
-  else apt_packages; fi
+  elif [[ "${1:-}" == --reinstall ]]; then linux_packages --reinstall
+  else linux_packages; fi
 }
 
-apt_packages() { # [--reinstall]
-  step "apt packages"
+# the base list plus the selected components', in this system's names (packages.sh)
+linux_package_names() {
+  { sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$APT_LIST"; components packages apt; } | pkg_native
+}
+
+linux_packages() { # [--reinstall]
+  step "system packages ($(pkg_manager))"
   local pkgs
-  mapfile -t pkgs < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$APT_LIST"; components packages apt)
-  sudo apt-get update
-  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "$@" "${pkgs[@]}"
+  mapfile -t pkgs < <(linux_package_names)
+  pkg_install "$@" "${pkgs[@]}"
 }
 
 brewfile() { # base Brewfile plus the selected components' packages
@@ -289,8 +297,8 @@ cmd_status() {
     mapfile -t pkgs < <(brewfile | sed -n 's/^\(brew\|cask\) "\([^"]*\)".*/\2/p')
     HOMEBREW_NO_AUTO_UPDATE=1 brew outdated --verbose "${pkgs[@]}" 2>/dev/null || true
   else
-    mapfile -t pkgs < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$APT_LIST"; components packages apt)
-    apt list --upgradable 2>/dev/null | grep -E "^($(IFS='|'; echo "${pkgs[*]}"))/" || true
+    mapfile -t pkgs < <(linux_package_names)
+    pkg_upgradable "${pkgs[@]}"
   fi
   rea_doctor_summary
 }
@@ -400,13 +408,18 @@ cmd_doctor() {
     if xcode-select -p >/dev/null 2>&1; then ok "xcode clt" "$(xcode-select -p) (clang, lldb, git)"
     else bad "xcode clt" "missing; run xcode-select --install"; fi
   else
-    step "system packages (apt)"
-    local missing=()
+    local manager pkgs missing=() absent=()
+    manager="$(pkg_manager)"
+    step "system packages ($manager)"
+    mapfile -t pkgs < <(linux_package_names)
     while read -r pkg; do
-      dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q 'ok installed' || missing+=("$pkg")
-    done < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$APT_LIST"; components packages apt)
-    if ((${#missing[@]})); then bad "apt" "missing: ${missing[*]}; run rea-suite setup"
-    else ok "apt" "all packages from $APT_LIST installed"; fi
+      # on dnf a package this system does not carry at all is information, not a fault
+      if [[ "$manager" == dnf ]] && ! dnf -q info "$pkg" >/dev/null 2>&1; then absent+=("$pkg")
+      else missing+=("$pkg"); fi
+    done < <(pkg_missing "${pkgs[@]}")
+    if ((${#missing[@]})); then bad "$manager" "missing: ${missing[*]}; run rea-suite setup"
+    else ok "$manager" "all packages from $APT_LIST installed"; fi
+    ((${#absent[@]} == 0)) || info "$manager" "not packaged for this system: ${absent[*]}"
   fi
 
   step "agents (rea MCP server; rea-suite agents repairs)"
@@ -453,7 +466,7 @@ cmd="${1:-}"
 args=()
 for arg in "$@"; do
   case "$arg" in
-    --no-apt | --no-brew) SYSTEM=0 ;;
+    --no-apt | --no-dnf | --no-brew) SYSTEM=0 ;;
     *) args+=("$arg") ;;
   esac
 done

@@ -8,7 +8,8 @@ the newest build stay in .runtime/build/<name>/<version>/; a newer build replace
 
   cargo: <crate>   `cargo install --locked` of that crate at the release version;
                    the Rust toolchain comes from rustup (component `build`) and
-                   lives in .runtime/rustup and .runtime/cargo
+                   lives in .runtime/rustup and .runtime/cargo; where the system has
+                   only cargo (RHEL), that one builds
   cmake: true      configure and build the source with CMake and Ninja (.venv);
                    `bin:` paths are relative to the build directory
 """
@@ -62,14 +63,25 @@ def source_tarball(repo: str, ref: str) -> str:
 
 
 def _rust_toolchain() -> None:
-    if not shutil.which("rustup"):
-        raise BuildUnavailable("needs rustup (select component `build`, then rea-suite setup)")
-    if subprocess.run(["rustup", "which", "cargo"], capture_output=True, check=False).returncode:
-        print("  rust: installing the stable toolchain into .runtime/rustup")
+    """A cargo to build with: rustup's toolchain in .runtime, else the system's cargo."""
+    if not shutil.which("rustup") and shutil.which("rustup-init"):
+        # Fedora packages only rustup-init; it installs rustup into CARGO_HOME (.runtime)
+        print("  rust: installing rustup into .runtime/cargo")
         subprocess.run(
-            ["rustup", "toolchain", "install", "stable", "--profile", "minimal"], check=True
+            ["rustup-init", "-y", "--no-modify-path", "--profile", "minimal"], check=True
         )
-        subprocess.run(["rustup", "default", "stable"], check=True)
+        os.environ["PATH"] = f"{os.environ['CARGO_HOME']}/bin{os.pathsep}{os.environ['PATH']}"
+    if shutil.which("rustup"):
+        if subprocess.run(
+            ["rustup", "which", "cargo"], capture_output=True, check=False
+        ).returncode:
+            print("  rust: installing the stable toolchain into .runtime/rustup")
+            subprocess.run(
+                ["rustup", "toolchain", "install", "stable", "--profile", "minimal"], check=True
+            )
+            subprocess.run(["rustup", "default", "stable"], check=True)
+    elif not shutil.which("cargo"):
+        raise BuildUnavailable("needs rustup or cargo (select component `build`, then setup)")
 
 
 def cargo(crate: str, version: str, dest: Path) -> None:
