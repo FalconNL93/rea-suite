@@ -118,6 +118,15 @@ switch ($Command) {
         Step 'versions REA verifies (Ghidra pin, JDK)'
         uv run rea-tools rea-pins
         if ($LASTEXITCODE) { Write-Warning 'the new rea-agents verifies other versions; follow the hints above' }
+        # refresh the REA skill for each client that has it (Codex's lives in ~/.agents/skills)
+        $claudeHome = if ($env:CLAUDE_CONFIG_DIR) { $env:CLAUDE_CONFIG_DIR } else { "$HOME\.claude" }
+        $skillDirs = @{ claude_code = "$claudeHome\skills"; codex = "$HOME\.agents\skills" }
+        foreach ($client in 'claude_code', 'codex') {
+            if (Test-Path "$($skillDirs[$client])\reverse-engineer-anything") {
+                Step "REA skill for $client"
+                Invoke-Checked fnm exec --using=$Node -- node node_modules\rea-agents\scripts\rea.mjs setup --yes --skill-client $client
+            }
+        }
     }
     'reinstall' {
         foreach ($what in $Rest) {
