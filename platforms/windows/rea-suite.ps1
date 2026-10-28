@@ -5,7 +5,8 @@
     .\platforms\windows\rea-suite.ps1 setup          # after bootstrap.ps1; safe to re-run
     .\platforms\windows\rea-suite.ps1 select         # choose optional components (.env), then setup
     .\platforms\windows\rea-suite.ps1 winget         # install winget packages (base + components)
-    .\platforms\windows\rea-suite.ps1 update         # runtimes, winget, uv.lock, rea-agents, tools.yml
+    .\platforms\windows\rea-suite.ps1 update         # runtimes, winget, uv.lock, rea-agents, tools.yml, REA skill
+    .\platforms\windows\rea-suite.ps1 agents [agent...]  # rea MCP + REA skill for every detected agent
     .\platforms\windows\rea-suite.ps1 doctor         # check the installation
     .\platforms\windows\rea-suite.ps1 reinstall runtime|python|node|tools|all|<tool>
     .\platforms\windows\rea-suite.ps1 status
@@ -16,7 +17,7 @@
     Not tested on Windows yet.
 #>
 param(
-    [Parameter(Position = 0)][ValidateSet('setup', 'select', 'winget', 'update', 'reinstall', 'doctor', 'status', 'tools', 'clean', 'lint')][string]$Command = 'setup',
+    [Parameter(Position = 0)][ValidateSet('setup', 'select', 'winget', 'update', 'reinstall', 'agents', 'doctor', 'status', 'tools', 'clean', 'lint')][string]$Command = 'setup',
     [Parameter(Position = 1, ValueFromRemainingArguments)][string[]]$Rest = @()
 )
 $ErrorActionPreference = 'Stop'
@@ -28,6 +29,7 @@ $Node = (Get-Content .node-version -Raw).Trim()
 function Step($msg) { Write-Host "`n==> $msg" -ForegroundColor Blue }
 function Invoke-Checked { & $args[0] @($args | Select-Object -Skip 1); if ($LASTEXITCODE) { throw "$($args[0]) failed ($LASTEXITCODE)" } }
 function Components { uv run --quiet common\rea_suite\components.py @args }
+function Agents { Invoke-Checked uv run --quiet common\rea_suite\agents.py @args }
 function Winget-Ids {
     (Get-Content "$PSScriptRoot\winget.json" -Raw | ConvertFrom-Json).Sources[0].Packages.PackageIdentifier
     Components packages winget
@@ -96,6 +98,15 @@ function Doctor {
     Step 'git'
     if ((git config core.hooksPath) -eq '.githooks') { Ok 'hooks' 'gitleaks runs on commit and push' }
     else { Bad 'hooks' 'not enabled; run rea-suite.ps1 setup' }
+    Step 'agents (rea MCP server; rea-suite.ps1 agents repairs)'
+    foreach ($line in uv run --quiet common\rea_suite\agents.py list) {
+        $client, $state, $cmd = $line -split "`t", 3
+        switch ($state) {
+            'ok' { Ok $client 'rea via platforms\windows\rea.ps1' }
+            'missing' { Write-Host ('  info  {0,-18} rea not registered; rea-suite.ps1 agents {0}' -f $client) -ForegroundColor Yellow }
+            default { Bad $client "rea starts $cmd, not rea.ps1; run rea-suite.ps1 agents" }
+        }
+    }
     Step 'MSVC'
     $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
     $vs = if (Test-Path $vswhere) { & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath }
@@ -118,16 +129,9 @@ switch ($Command) {
         Step 'versions REA verifies (Ghidra pin, JDK)'
         uv run rea-tools rea-pins
         if ($LASTEXITCODE) { Write-Warning 'the new rea-agents verifies other versions; follow the hints above' }
-        # refresh the REA skill for every agent rea-agents detects (the dry run changes nothing)
-        $rea = @('exec', "--using=$Node", '--', 'node', 'node_modules\rea-agents\scripts\rea.mjs', 'setup')
-        $plan = & fnm @rea --all-detected --dry-run --format json | ConvertFrom-Json
-        $clients = @($plan.clientStates | Where-Object detected | ForEach-Object { $_.client.name })
-        if ($clients) {
-            Step "REA skill for $($clients -join ' ')"
-            $flags = @($clients | ForEach-Object { '--skill-client', $_ })
-            Invoke-Checked fnm @rea --yes @flags --filter-output status,appliedActions
-        }
+        Agents skills
     }
+    'agents' { Agents register @Rest }
     'reinstall' {
         foreach ($what in $Rest) {
             switch ($what) {

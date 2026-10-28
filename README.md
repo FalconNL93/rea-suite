@@ -31,7 +31,7 @@ common/
 platforms/
   linux/                bootstrap.sh, apt package list
   macos/                bootstrap.sh, Brewfile
-  windows/              bootstrap.ps1, rea-suite.ps1, env.ps1, winget list
+  windows/              bootstrap.ps1, rea-suite.ps1, rea.ps1 (= bin/rea), env.ps1, winget list
 .claude/skills/         process skills for agents working on this repository
 .devcontainer/          Ubuntu 26.04 container running the Linux bootstrap
 .runtime/               (ignored) uv, fnm + Node, Python, JDK, .NET SDK and caches
