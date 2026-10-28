@@ -7,13 +7,14 @@
 #                                            stored in .env, then run setup
 #   rea-suite update  [--no-apt|--no-brew]  update everything: runtimes, apt/brew packages,
 #                                            Python (uv.lock), rea-agents, tools.yml tools,
-#                                            REA skill (each client that has it)
+#                                            REA skill (every detected agent)
 #   rea-suite reinstall <what...>           runtime | python | node | tools | system | all |
 #                                            <tool> (= a name from common/tools.yml)
 #   rea-suite doctor                        check the installation; exit 1 on problems
 #   rea-suite status                        versions + available updates
-#   rea-suite agents [client...]            register the rea MCP server (via bin/rea) and
-#                                            install/refresh the REA skill; default claude_code
+#   rea-suite agents [client...]            register (or repair) the rea MCP server via
+#                                            bin/rea and install/refresh the REA skill;
+#                                            default: every agent rea-agents detects
 #   rea-suite tools <args...>               tools.yml manager (= rea-tools)
 #   rea-suite lint [file...]                ruff, shellcheck and a PowerShell parse check on
 #                                            this repository (.githooks/lint.sh)
@@ -138,19 +139,11 @@ suite_tools() { # install | update
   rea-tools "$1"
 }
 
-rea_skill() { # [client...]
-  local client
-  for client in "${@:-claude_code}"; do
-    step "REA skill for $client"
-    "$ROOT/bin/rea" setup --yes --skill-client "$client"
-  done
-}
-
-# clients that already have the REA skill; rea-agents keeps Codex's in ~/.agents/skills
-installed_skill_clients() {
-  SKILL_CLIENTS=()
-  [[ ! -d "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/reverse-engineer-anything" ]] || SKILL_CLIENTS+=(claude_code)
-  [[ ! -d "$HOME/.agents/skills/reverse-engineer-anything" ]] || SKILL_CLIENTS+=(codex)
+rea_skill() { # client...
+  local client flags=()
+  for client in "$@"; do flags+=(--skill-client "$client"); done
+  step "REA skill for $*"
+  "$ROOT/bin/rea" setup --yes "${flags[@]}" --filter-output status,appliedActions
 }
 
 runtimes() { # [--update]
@@ -191,8 +184,9 @@ cmd_update() {
   suite_tools update
   step "versions REA verifies (Ghidra pin, JDK)"
   rea-tools rea-pins || warn "the new rea-agents verifies other versions; follow the hints above"
-  installed_skill_clients
-  ((${#SKILL_CLIENTS[@]} == 0)) || rea_skill "${SKILL_CLIENTS[@]}"
+  local clients
+  mapfile -t clients < <(detected_clients | cut -f1)
+  ((${#clients[@]} == 0)) || rea_skill "${clients[@]}"
   step "done"
   git -C "$ROOT" status --short -- uv.lock package.json package-lock.json
   echo "Commit the lockfile changes above to record the new versions."
@@ -363,6 +357,14 @@ cmd_doctor() {
     else ok "apt" "all packages from $APT_LIST installed"; fi
   fi
 
+  step "agents (rea MCP server; rea-suite agents repairs)"
+  local client command
+  while IFS=$'\t' read -r client command; do
+    if [[ "$command" == "$ROOT/bin/rea" ]]; then ok "$client" "rea via bin/rea"
+    elif [[ "$command" == - ]]; then info "$client" "rea not registered (rea-suite agents does Claude Code and Codex)"
+    else bad "$client" "rea starts $command, not bin/rea; run rea-suite agents"; fi
+  done < <(detected_clients)
+
   step "shell / desktop"
   if ! command -v direnv >/dev/null; then
     info "direnv" "not installed; use 'source ./activate' instead"
@@ -383,19 +385,61 @@ cmd_doctor() {
   printf '\033[1;32mall checks passed\033[0m\n'
 }
 
-cmd_agents() {
-  local clients=("${@:-claude_code}") client
-  for client in "${clients[@]}"; do
-    if [[ "$client" == claude_code ]]; then
+# agents rea-agents detects on this machine, one per line: client, registered rea command
+# (or -). rea setup --dry-run changes nothing; its client list follows rea-agents.
+detected_clients() {
+  "$ROOT/bin/rea" setup --all-detected --dry-run --format json 2>/dev/null | python3 -c '
+import json, sys
+plan = json.load(sys.stdin)
+registered = {r["client"]: (r.get("command") or ["-"])[0] for r in plan["doctor"]["identity"]["registrations"]}
+for state in plan["clientStates"]:
+    if state["detected"]:
+        name = state["client"]["name"]
+        print(name, registered.get(name, "-"), sep="\t")'
+}
+
+# MCP registration through bin/rea for the clients with a CLI for it; rea setup would
+# register node_modules/.bin/rea and skip the suite environment
+register_mcp() { # client; fails for a client without such a CLI
+  case "$1" in
+    claude_code)
       need claude "https://claude.com/claude-code"
       step "MCP registration for Claude Code"
       claude mcp remove --scope user rea >/dev/null 2>&1 || true
       claude mcp add --scope user rea -- "$ROOT/bin/rea" mcp
-    else
-      warn "$client: register '$ROOT/bin/rea mcp' as MCP server manually (rea setup would bypass bin/rea)"
-    fi
-  done
+      ;;
+    codex)
+      need codex "https://github.com/openai/codex"
+      step "MCP registration for Codex"
+      codex mcp remove rea >/dev/null 2>&1 || true
+      codex mcp add rea -- "$ROOT/bin/rea" mcp
+      # the timeouts rea setup gives Codex (rea-agents mcpStartupPolicy); Ghidra starts slowly
+      python3 - "${CODEX_HOME:-$HOME/.codex}/config.toml" <<'PY'
+import re, sys
+path = sys.argv[1]
+text = open(path).read()
+head = "[mcp_servers.rea]\n"
+section = re.search(r"^\[mcp_servers\.rea\]\n(?:(?!\[).*\n?)*", text, re.M)
+if section and "startup_timeout_sec" not in section.group(0):
+    text = text.replace(head, head + "startup_timeout_sec = 30\ntool_timeout_sec = 450\n", 1)
+    open(path, "w").write(text)
+PY
+      ;;
+    *) return 1 ;;
+  esac
+}
+
+cmd_agents() {
+  local clients=("$@") client
+  if ((${#clients[@]} == 0)); then
+    mapfile -t clients < <(detected_clients | cut -f1)
+    ((${#clients[@]})) || { echo "no agent found; name a client (rea setup --help)" >&2; exit 2; }
+    echo "agents found: ${clients[*]}"
+  fi
+  local manual=()
+  for client in "${clients[@]}"; do register_mcp "$client" || manual+=("$client"); done
   rea_skill "${clients[@]}"
+  ((${#manual[@]} == 0)) || echo "MCP for ${manual[*]}: add '$ROOT/bin/rea mcp' in its settings yourself (rea setup would bypass bin/rea)"
 }
 
 # --- main --------------------------------------------------------------------

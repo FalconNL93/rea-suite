@@ -74,7 +74,7 @@ platforms/linux/bootstrap.sh            # base packages, .runtime/, component me
 platforms/linux/bootstrap.sh --no-apt   # never use sudo; `doctor` lists what is missing
 direnv allow                            # or: source ./activate
 rea-suite doctor
-rea-suite agents                        # register REA (MCP via bin/rea) + REA skill
+rea-suite agents                        # REA skill for every detected agent, MCP via bin/rea
 ```
 
 macOS (Apple Silicon; Xcode Command Line Tools and [Homebrew](https://brew.sh) first):
@@ -127,6 +127,7 @@ removes its tools, apt/winget packages stay.
 
 ```sh
 rea-suite update               # runtimes, apt, uv.lock, uv tools, rea-agents@latest, tools.yml, REA skill
+rea-suite agents               # repair agent setup: rea MCP back on bin/rea, REA skill refreshed
 rea-suite update --no-apt      # same without sudo (macOS: --no-brew skips Homebrew)
 rea-suite doctor               # check everything; exit 1 on problems
 rea-suite status               # versions and available updates
