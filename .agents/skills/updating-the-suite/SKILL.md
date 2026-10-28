@@ -7,7 +7,7 @@ description: Planned update of rea-suite: check compatibility first, propose whi
 
 `rea-suite update` moves everything to the newest release blindly. This is the careful variant: a
 **plan** first, grounded in evidence, approved by the user, then a targeted update that leaves the
-tree green. Read `CLAUDE.md` (pins, lockfiles, platforms) before starting. Scratch files go in
+tree green. Read `AGENTS.md` (pins, lockfiles, platforms) before starting. Scratch files go in
 `work/update/` (ignored).
 
 On Windows every `rea-suite <cmd>` below is `.\platforms\windows\rea-suite.ps1 <cmd>`; on macOS
@@ -100,5 +100,5 @@ report.
 ## 6. Report and commit
 
 Report per part: from, to, verified by what (command and result); what was held and why.
-Commit as `CLAUDE.md` says: lockfile changes (`uv.lock`, `package-lock.json`) on their own, pin
+Commit as `AGENTS.md` says: lockfile changes (`uv.lock`, `package-lock.json`) on their own, pin
 changes in `tools.yml` and the bootstraps with the reason in the body. Ask before pushing.

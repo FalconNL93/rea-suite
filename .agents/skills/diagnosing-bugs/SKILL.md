@@ -7,7 +7,7 @@ description: Diagnosis loop for hard bugs in rea-suite: a failing install, updat
 
 A discipline for hard bugs. Skip phases only when explicitly justified.
 
-Read `CLAUDE.md` and the README section of the area first (layout, setup, Ghidra extensions,
+Read `AGENTS.md` and the README section of the area first (layout, setup, Ghidra extensions,
 Windows and WSL). The environment every tool sees is `common/env.sh` (`platforms/windows/env.ps1`).
 
 ## Redact
@@ -123,4 +123,4 @@ on every platform the fix touches (say which ones were not run).
 - The regression test or scripted check passes.
 - Every `[DEBUG-...]` line and throwaway file is gone.
 - The cause that turned out right, and the ones ruled out, are in the commit message (plain
-  sentences) and, when it is a lasting gotcha, in `CLAUDE.md` or the README.
+  sentences) and, when it is a lasting gotcha, in `AGENTS.md` or the README.

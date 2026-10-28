@@ -8,7 +8,7 @@
 #   rea-suite update  [--no-apt|--no-brew]  update everything: runtimes, apt/brew packages,
 #                                            Python (uv.lock), rea-agents, tools.yml tools,
 #                                            REA skill (every detected agent)
-#   rea-suite update --ai                   an agent (claude, codex; REA_SUITE_AGENT) checks
+#   rea-suite update --ai                   an agent (the first CLI found, or REA_SUITE_AGENT) checks
 #                                            compatibility first, proposes what to update to
 #                                            which version and what to hold, then applies it
 #                                            once you agree
@@ -296,15 +296,9 @@ cmd_status() {
 # update --ai: an agent plans the update (what to which version, what to hold back)
 # with the updating-the-suite skill, and applies it after the user agrees
 cmd_update_ai() {
-  local agent="${REA_SUITE_AGENT:-}" prompt
-  if [[ -z "$agent" ]]; then
-    if command -v claude >/dev/null; then agent=claude
-    elif command -v codex >/dev/null; then agent=codex
-    else echo "no agent CLI found (claude, codex); set REA_SUITE_AGENT" >&2; exit 2; fi
-  fi
-  prompt="Plan and run an update of this rea-suite checkout. Follow .claude/skills/updating-the-suite/SKILL.md step by step; present the plan and wait for my approval before changing anything."
+  local prompt="Plan and run an update of this rea-suite checkout. Follow .agents/skills/updating-the-suite/SKILL.md step by step; present the plan and wait for my approval before changing anything."
   ((SYSTEM)) || prompt+=" Skip system packages (--no-apt/--no-brew)."
-  cd "$ROOT" && exec "$agent" "$prompt"
+  agents launch "$prompt"
 }
 
 rea_doctor_summary() {

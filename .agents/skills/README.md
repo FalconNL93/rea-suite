@@ -1,6 +1,8 @@
 # Skills
 
-Process skills for this repository, loaded by Claude Code from this folder. Taken over from the
+Process skills for this repository. Codex and other agents that follow the `.agents/skills`
+convention load them from here, Claude Code through the `.claude/skills` link; an agent without
+skill support can be pointed at a `SKILL.md` by path. Taken over from the
 rogue-spear port (`~/Dev/rogue-spear/.claude/skills`, 2026-10-27), which took them from the Call of
 Duty 3 port.
 

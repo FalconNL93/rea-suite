@@ -10,6 +10,9 @@ platforms/windows/rea-suite.ps1, with the suite environment loaded.
   register [agent...]  point the rea MCP server at the suite launcher and refresh the
                        REA skill; default: every detected agent
   skills               refresh the REA skill for every detected agent
+  launch <prompt>      start an interactive agent session with that prompt: REA_SUITE_AGENT
+                       (any command; the prompt is appended), else the first CLI found in
+                       AGENT_CLIS; without one, print the prompt to paste into any agent
 
 Which agents exist and where their configuration lives comes from rea-agents
 (`rea setup --dry-run`), so a client it learns about is picked up here too. The
@@ -22,7 +25,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -45,6 +50,16 @@ if WINDOWS:
 else:
     REA = [str(ROOT / "bin" / "rea")]
     LAUNCHER = [str(ROOT / "bin" / "rea"), "mcp"]
+
+# Agent CLIs that take a first prompt and stay interactive, in order of preference; the
+# prompt replaces {prompt}. Another agent works through REA_SUITE_AGENT.
+AGENT_CLIS = [
+    ["claude", "{prompt}"],
+    ["codex", "{prompt}"],
+    ["copilot", "-i", "{prompt}"],
+    ["opencode", "--prompt", "{prompt}"],
+    ["gemini", "-i", "{prompt}"],
+]
 
 # what rea setup gives Codex (rea-agents mcpStartupPolicy); Ghidra starts slowly
 CODEX_TIMEOUTS = "startup_timeout_sec = 30\ntool_timeout_sec = 450\n"
@@ -188,6 +203,22 @@ def cmd_skills(_: argparse.Namespace) -> None:
     skills([a["name"] for a in agents()])
 
 
+def cmd_launch(args: argparse.Namespace) -> None:
+    custom = os.environ.get("REA_SUITE_AGENT")
+    if custom:
+        command = [*shlex.split(custom, posix=not WINDOWS), args.prompt]
+    else:
+        found = next((cli for cli in AGENT_CLIS if shutil.which(cli[0])), None)
+        if found is None:
+            print("No agent CLI found; give this to your agent (or set REA_SUITE_AGENT):\n")
+            print(args.prompt)
+            return
+        command = [arg.replace("{prompt}", args.prompt) for arg in found]
+    print(f"starting {command[0]} (REA_SUITE_AGENT picks another agent)", flush=True)
+    executable = shutil.which(command[0]) or command[0]
+    sys.exit(subprocess.run([executable, *command[1:]], check=False).returncode)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -196,6 +227,9 @@ def main() -> None:
     p.add_argument("agents", nargs="*")
     p.set_defaults(func=cmd_register)
     sub.add_parser("skills").set_defaults(func=cmd_skills)
+    p = sub.add_parser("launch")
+    p.add_argument("prompt")
+    p.set_defaults(func=cmd_launch)
     args = parser.parse_args()
     try:
         args.func(args)

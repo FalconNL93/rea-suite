@@ -39,4 +39,4 @@ to them and wait.
 
 The session is done when the frontier is empty: every branch of the design tree visited, nothing
 left silently assumed. Do not act on it until the user confirms you have reached a shared
-understanding. A decision worth keeping goes into the README section of its area or `CLAUDE.md`.
+understanding. A decision worth keeping goes into the README section of its area or `AGENTS.md`.

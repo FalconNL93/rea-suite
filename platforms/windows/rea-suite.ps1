@@ -143,9 +143,7 @@ switch ($Command) {
     'update' {
         if ($Rest -contains '--ai') {
             # an agent plans the update with the updating-the-suite skill (counterpart of bin/rea-suite)
-            $agent = if ($env:REA_SUITE_AGENT) { $env:REA_SUITE_AGENT } elseif (Get-Command claude -ErrorAction SilentlyContinue) { 'claude' } elseif (Get-Command codex -ErrorAction SilentlyContinue) { 'codex' }
-            if (-not $agent) { throw 'no agent CLI found (claude, codex); set REA_SUITE_AGENT' }
-            & $agent 'Plan and run an update of this rea-suite checkout (Windows: platforms\windows\rea-suite.ps1). Follow .claude/skills/updating-the-suite/SKILL.md step by step; present the plan and wait for my approval before changing anything.'
+            Agents launch 'Plan and run an update of this rea-suite checkout (Windows: platforms\windows\rea-suite.ps1). Follow .agents/skills/updating-the-suite/SKILL.md step by step; present the plan and wait for my approval before changing anything.'
             exit $LASTEXITCODE
         }
         Components adopt

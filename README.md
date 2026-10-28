@@ -4,7 +4,7 @@ Personal reverse engineering workbench: [REA](https://github.com/morluto/rea)
 (CLI + MCP server) plus the analysis tools around it, installed from one checkout
 on Linux/WSL, macOS (Apple Silicon) and Windows so that everything stays updatable
 from one place.
-Rules for contributors and agents: `CLAUDE.md`.
+Rules for contributors and agents: `AGENTS.md`.
 
 ## Layout
 
@@ -32,7 +32,9 @@ platforms/
   linux/                bootstrap.sh, apt package list
   macos/                bootstrap.sh, Brewfile
   windows/              bootstrap.ps1, rea-suite.ps1, rea.ps1 (= bin/rea), env.ps1, winget list
-.claude/skills/         process skills for agents working on this repository
+AGENTS.md               rules for contributors and agents (CLAUDE.md imports it)
+.agents/skills/         process skills for agents working on this repository
+                        (.claude/skills links here for Claude Code)
 .devcontainer/          Ubuntu 26.04 container running the Linux bootstrap
 .runtime/               (ignored) uv, fnm + Node, Python, JDK, .NET SDK and caches
 tools/                  (ignored) downloaded tools; launchers in tools/bin
@@ -146,12 +148,14 @@ rea-suite clean caches         # or: builds | tools | all; caches refill on the 
 ```
 
 `update` takes every newest release (pins in `tools.yml` excepted). `update --ai` starts
-your agent CLI (`claude`, else `codex`; `REA_SUITE_AGENT` picks one) with the
-`updating-the-suite` skill (`.claude/skills/`): it reads what the newer rea-agents
+an agent with the `updating-the-suite` skill (`.agents/skills/`): the first of `claude`,
+`codex`, `copilot`, `opencode`, `gemini` it finds, or any command in `REA_SUITE_AGENT`
+(the prompt is appended, e.g. `REA_SUITE_AGENT="codex -m <model>"`); without one it prints
+the prompt to give to whatever agent you use. The agent reads what the newer rea-agents
 verifies (Ghidra, JDK, Kuna, JADX bridge, pwndbg, Node), checks Ghidra extensions and
 release notes, and shows a plan of what goes to which version and what is held back and
 why. Nothing changes until you approve; afterwards it runs `doctor` and commits as
-`CLAUDE.md` says.
+`AGENTS.md` says.
 
 The caches (uv, npm, NuGet, Gradle) live in `.runtime/cache/` and only speed up the next
 install; `clean caches` is always safe. `clean builds` removes the sources and build trees of
@@ -418,6 +422,9 @@ Notes:
   Windows process, run the Windows install.
 - mitmproxy in WSL can intercept Windows traffic by pointing the Windows proxy at
   WSL's address (`localhost` with WSL's mirrored networking mode).
+- `.claude/skills` is a symlink; a Windows checkout gets it only with symlinks enabled
+  (Developer Mode and `git config --global core.symlinks true` before cloning). Agents that
+  read `.agents/skills` need neither.
 - Agents (REA MCP) can be registered on either side with `rea-suite agents` /
   the Windows equivalent; each registration uses that side's `bin/rea`.
 - GUI tools from WSL appear on the Windows desktop through WSLg.
