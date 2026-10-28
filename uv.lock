@@ -2161,7 +2161,7 @@ requires-dist = [
 angr = [{ name = "angr", specifier = ">=10" }]
 dev = [
     { name = "ruff", specifier = ">=0.8" },
-    { name = "shellcheck-py", specifier = ">=0.11.0.1" },
+    { name = "shellcheck-py", specifier = ">=0.11" },
 ]
 
 [[package]]
