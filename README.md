@@ -18,6 +18,7 @@ activate, activate.ps1  load the environment without direnv
 .python-version         Python for uv
 pyproject.toml/uv.lock  Python tools & libraries (uv)
 package.json            rea-agents (npm)
+.npmrc                  npm installs only releases a week old (rea-agents exempt)
 bin/rea-suite           setup / select / update / doctor / reinstall / status (Linux, macOS)
 bin/rea                 REA with the suite environment (used for MCP)
 bin/rea-ghidra          headless Ghidra: analyze once, decompile, xrefs, function list
