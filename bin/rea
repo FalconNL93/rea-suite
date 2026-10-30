@@ -8,7 +8,8 @@ REA_SUITE_ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd
 source "$REA_SUITE_ROOT/common/env.sh"
 # rea setup registers node_modules/.bin/rea, without the suite environment, and rea doctor's remediation for this
 # launcher's registration says to run it: after a setup (not a dry run), the agents are pointed back here.
-if [[ "${1:-}" == setup && " $* " != *" --dry-run "* ]]; then
+# rea-suite agents runs rea setup through this launcher itself and sets REA_SUITE_AGENTS, so it does not recurse.
+if [[ "${1:-}" == setup && " $* " != *" --dry-run "* && -z "${REA_SUITE_AGENTS:-}" ]]; then
   status=0
   node "$REA_SUITE_ROOT/node_modules/rea-agents/scripts/rea.mjs" "$@" || status=$?
   "$REA_SUITE_ROOT/bin/rea-suite" agents >&2 || true

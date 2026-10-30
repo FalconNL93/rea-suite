@@ -50,6 +50,8 @@ if WINDOWS:
 else:
     REA = [str(ROOT / "bin" / "rea")]
     LAUNCHER = [str(ROOT / "bin" / "rea"), "mcp"]
+    # bin/rea runs rea-suite agents after a setup; this keeps our own setups from doing that
+    os.environ["REA_SUITE_AGENTS"] = "1"
 
 # Agent CLIs that take a first prompt and stay interactive, in order of preference; the
 # prompt replaces {prompt}. Another agent works through REA_SUITE_AGENT.
