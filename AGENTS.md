@@ -60,7 +60,7 @@ installation.
 | Path | Holds |
 |---|---|
 | `bin/` | Entry points: `rea-suite` (setup/update/doctor), `rea` (REA with the suite environment), `rea-ghidra` (headless Ghidra). |
-| `common/` | Cross-platform: `env.sh`, `tools.yml`, `components.yml`, `uv-tools.txt`, `rea_suite/` (Python: `rea-tools`, `diec`, components, agents), `ghidra_scripts/`. |
+| `common/` | Cross-platform: `env.sh`, `box.sh` (distrobox on immutable hosts), `tools.yml`, `components.yml`, `uv-tools.txt`, `rea_suite/` (Python: `rea-tools`, `diec`, components, agents), `ghidra_scripts/`. |
 | `platforms/linux/`, `platforms/macos/`, `platforms/windows/` | Bootstrap, system package lists (apt, Brewfile, winget), Windows equivalents of the shell scripts. |
 | `.agents/skills/` | Process skills (see its README). |
 | `work/` | Targets, captures, Ghidra projects (`rea-ghidra` uses `work/ghidra/`). Ignored. |

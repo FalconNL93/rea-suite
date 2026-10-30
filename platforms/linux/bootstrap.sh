@@ -43,6 +43,34 @@ die() { printf '\033[1;31merror:\033[0m %s\n' "$*" >&2; exit 1; }
 [[ "$(uname -s)" == Linux ]] || die "Linux only; on Windows use platforms/windows/bootstrap.ps1"
 [[ "$(uname -m)" == x86_64 ]] || die "only x86_64 is supported (tools.yml assets are x86_64)"
 
+# --- 0. immutable hosts ------------------------------------------------------------
+
+# SteamOS, Fedora Atomic (Silverblue, Kinoite, Bazzite, ...): the system is read-only, so
+# the suite goes into a distrobox, recorded in .env as REA_SUITE_DISTROBOX. common/box.sh
+# then runs this script inside it, and later every bin/ script started on the host.
+export REA_SUITE_ROOT="$ROOT"
+box="${REA_SUITE_DISTROBOX:-$(sed -n "s/^REA_SUITE_DISTROBOX=[\"']\{0,1\}\([^\"']*\).*/\1/p" .env 2>/dev/null || true)}"
+# shellcheck disable=SC1091
+if [[ -z "$box" ]] && { [[ -e /run/ostree-booted ]] || (. /etc/os-release && [[ "$ID" == steamos ]]); }; then
+  box=rea-suite
+fi
+if [[ -n "$box" && ! -e /run/.containerenv && ! -e /.dockerenv ]]; then
+  command -v distrobox >/dev/null || die "this system is read-only; install distrobox (https://distrobox.it), then run this again"
+  if ! distrobox list 2>/dev/null | awk -F'|' 'NR > 1 { gsub(/ /, "", $2); print $2 }' | grep -qx "$box"; then
+    image="${REA_SUITE_DISTROBOX_IMAGE:-docker.io/library/archlinux:latest}"
+    step "distrobox $box ($image)"
+    distrobox create --yes -n "$box" -i "$image"
+  fi
+  if ! grep -q '^REA_SUITE_DISTROBOX=' .env 2>/dev/null; then
+    [[ ! -s .env || -z "$(tail -c1 .env)" ]] || echo >>.env
+    echo "REA_SUITE_DISTROBOX=$box" >>.env
+  fi
+  step "on inside distrobox $box (bin/ scripts started on this host go there too)"
+  export REA_SUITE_DISTROBOX="$box"
+  # shellcheck source=common/box.sh disable=SC1091
+  source common/box.sh
+fi
+
 mkdir -p .runtime/bin .runtime/cache # before env.sh, so .runtime/bin lands on PATH
 # shellcheck source=common/env.sh disable=SC1091
 source common/env.sh

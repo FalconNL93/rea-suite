@@ -36,6 +36,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 cd "$ROOT"
 export REA_SUITE_ROOT="$ROOT"
+# shellcheck source=common/box.sh disable=SC1091
+source "$REA_SUITE_ROOT/common/box.sh" # immutable host: on inside the distrobox
 # shellcheck source=common/env.sh disable=SC1091
 source common/env.sh
 

@@ -77,7 +77,9 @@ What stays system-wide, because it needs root, drivers or a shell hook:
 ## Setup
 
 Linux / WSL (x86_64): Debian/Ubuntu (apt), Fedora, and RHEL with its rebuilds such as
-Rocky and Alma (dnf; the bootstrap enables EPEL and CRB there):
+Rocky and Alma (dnf; the bootstrap enables EPEL and CRB there), and Arch (pacman; it runs
+`pacman -Syu` before installing, since Arch does not support partial upgrades). Immutable
+systems such as the Steam Deck: see [below](#immutable-systems-steam-deck-fedora-atomic).
 
 ```sh
 cp .env.example .env                    # optional: settings (components, builds, PATH, agent, REA, token)
@@ -98,6 +100,28 @@ direnv allow                            # or: source ./activate
 rea-suite doctor
 rea-suite agents
 ```
+
+### Immutable systems (Steam Deck, Fedora Atomic)
+
+SteamOS, Fedora Silverblue/Kinoite, Bazzite and other image-based systems have a read-only
+root, so the suite goes into a [distrobox](https://distrobox.it) (preinstalled on SteamOS
+3.5+, Bazzite and Fedora Atomic). The bootstrap notices such a host, creates the box
+`rea-suite` (Arch; `REA_SUITE_DISTROBOX_IMAGE` picks another image, such as
+`docker.io/library/ubuntu:24.04`), records it in `.env` as `REA_SUITE_DISTROBOX` and goes
+on inside it:
+
+```sh
+platforms/linux/bootstrap.sh            # on the host: creates the box, installs inside it
+```
+
+The box shares your home directory, so the checkout, `.runtime/`, `tools/` and the agents'
+configurations are the same inside and out. `bin/rea`, `bin/rea-suite` and `bin/rea-ghidra`
+started on the host continue inside the box (`common/box.sh`), so an agent running on the
+host starts REA's MCP server there, with the box's lldb, tshark and adb. The tools in
+`tools/bin` and the system packages are only on the box's PATH: `distrobox enter rea-suite`
+for a shell there. Setting `REA_SUITE_DISTROBOX` on any other Linux uses a box there too.
+With the `porting` component, Arch's wine pulls in a kernel package (for its NTSYNC
+module), which does nothing in a box.
 
 `setup` also puts `bin/` on your PATH, so `rea-suite`, `rea` and `rea-ghidra` work from
 any directory: a marked block in `~/.zshrc` / `~/.bashrc` (fish: `conf.d/rea-suite.fish`),
