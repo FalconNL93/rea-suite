@@ -132,7 +132,7 @@ rea_agents_version() {
 node_env() { # [--upgrade]
   step "Node $NODE_VERSION + rea-agents (fnm/npm)"
   need fnm "$BOOTSTRAP"
-  fnm install "$NODE_VERSION"
+  fnm install "$NODE_VERSION" 2>&1 | grep -v '^warning: Version already installed' || true
   if [[ "${1:-}" == --upgrade ]]; then
     # rea moves fast and bumps majors; follow latest, the lockfile records it
     local before after
