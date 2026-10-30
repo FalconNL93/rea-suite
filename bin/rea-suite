@@ -203,7 +203,9 @@ runtimes() { # [--update]
 
 git_hooks() {
   # gitleaks pre-commit/pre-push hooks (.githooks); harmless outside a git checkout
-  git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1 && git -C "$ROOT" config core.hooksPath .githooks
+  if git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+    git -C "$ROOT" config core.hooksPath .githooks
+  fi
 }
 
 cmd_setup() {
