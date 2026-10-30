@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# First-time installer for rea-suite on Debian/Ubuntu (incl. WSL), Fedora and RHEL-family
-# systems (Rocky, Alma; EPEL is enabled for them). Safe to re-run.
+# First-time installer for rea-suite on Debian/Ubuntu (incl. WSL), Fedora, RHEL-family
+# systems (Rocky, Alma; EPEL is enabled for them) and Arch. Safe to re-run.
 #
 #   platforms/linux/bootstrap.sh [--no-apt] [--select] [--update] [--runtimes-only]
 #
@@ -10,7 +10,8 @@
 # 3. optional components: a menu on the first run (stored in .env; see
 #    .env.example to preselect), then `bin/rea-suite setup`
 #
-#   --no-apt          never call apt/dnf/sudo (prints what is missing instead; --no-dnf too)
+#   --no-apt          never call apt/dnf/pacman/sudo (prints what is missing instead;
+#                     --no-dnf and --no-pacman too)
 #   --select          show the component menu again
 #   --update          also upgrade runtimes that are already installed
 #   --runtimes-only   stop after step 2 (used by `rea-suite update`)
@@ -26,11 +27,11 @@ APT=1 UPDATE=0 RUNTIMES_ONLY=0 SELECT=0
 pass=()
 for arg in "$@"; do
   case "$arg" in
-    --no-apt | --no-dnf) APT=0; pass+=("$arg") ;;
+    --no-apt | --no-dnf | --no-pacman) APT=0; pass+=("$arg") ;;
     --select) SELECT=1 ;;
     --update) UPDATE=1 ;;
     --runtimes-only) RUNTIMES_ONLY=1 ;;
-    -h | --help) sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h | --help) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "unknown option: $arg" >&2; exit 2 ;;
   esac
 done
@@ -47,7 +48,7 @@ mkdir -p .runtime/bin .runtime/cache # before env.sh, so .runtime/bin lands on P
 source common/env.sh
 # shellcheck source=platforms/linux/packages.sh disable=SC1091
 source platforms/linux/packages.sh
-pkg_manager >/dev/null || die "needs apt (Debian/Ubuntu) or dnf (Fedora/RHEL)"
+pkg_manager >/dev/null || die "needs apt (Debian/Ubuntu), dnf (Fedora/RHEL) or pacman (Arch)"
 
 # --- 1. base packages ------------------------------------------------------------
 

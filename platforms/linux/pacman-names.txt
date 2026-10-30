@@ -1,0 +1,33 @@
+# Debian/Ubuntu name -> Arch name(s), for the packages that differ (packages.sh).
+# Several names: all of them; `a|b`: the one installed, else the first one available;
+# `-`: none there. Checked on Arch Linux (core and extra) in October 2026.
+tshark              wireshark-cli
+wireshark           wireshark-qt
+diffoscope-minimal  diffoscope
+adb                 android-tools
+libxcb-cursor0      xcb-util-cursor
+xz-utils            xz
+procps              procps-ng
+python3             python
+# lldb ships its Python bindings
+python3-lldb        -
+# vim, gvim and tinyxxd all carry /usr/bin/xxd and conflict with each other
+xxd                 tinyxxd|vim|gvim
+build-essential     base-devel
+# gcc builds -m32 itself (it provides gcc-multilib) with the 32-bit libraries
+gcc-multilib        lib32-glibc lib32-gcc-libs
+g++-multilib        -
+mingw-w64           mingw-w64-gcc
+gcc-mingw-w64       -
+g++-mingw-w64       -
+# Arch has no ARM (Linux), MIPS or PowerPC cross binutils; arm-none-eabi reads ARM objects
+binutils-multiarch  aarch64-linux-gnu-binutils riscv64-linux-gnu-binutils arm-none-eabi-binutils
+# Arch's gdb is built for every target
+gdb-multiarch       gdb
+lib32gcc-s1         lib32-gcc-libs
+qemu-utils          qemu-img
+ovmf                edk2-ovmf
+# wine holds 32- and 64-bit; rr is in the AUR only
+wine64              -
+rr                  -
+linux-perf          perf

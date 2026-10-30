@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# rea-suite: set up, update and repair the whole suite (Debian/Ubuntu/WSL, Fedora/RHEL, macOS).
+# rea-suite: set up, update and repair the whole suite (Debian/Ubuntu/WSL, Fedora/RHEL, Arch, macOS).
 #
 #   rea-suite setup   [--no-apt|--no-brew]  install / repair; safe to re-run (runtimes in
 #                                            .runtime/ come from platforms/<os>/bootstrap.sh)
@@ -27,7 +27,7 @@
 #                                            and inactive tool versions; without an
 #                                            argument only shows the sizes
 #
-#   --no-apt / --no-dnf  skip system packages (no sudo); --no-brew  skip Homebrew (macOS)
+#   --no-apt/--no-dnf/--no-pacman  skip system packages (no sudo); --no-brew  skip Homebrew (macOS)
 set -euo pipefail
 
 # macOS: Homebrew's bash (platforms/macos/Brewfile), not the bundled 3.2
@@ -433,8 +433,8 @@ cmd_doctor() {
     step "system packages ($manager)"
     mapfile -t pkgs < <(linux_package_names)
     while read -r pkg; do
-      # on dnf a package this system does not carry at all is information, not a fault
-      if [[ "$manager" == dnf ]] && ! dnf -q info "$pkg" >/dev/null 2>&1; then absent+=("$pkg")
+      # on dnf and pacman a package this system does not carry at all is information, not a fault
+      if [[ "$manager" != apt ]] && ! pkg_available "$pkg"; then absent+=("$pkg")
       else missing+=("$pkg"); fi
     done < <(pkg_missing "${pkgs[@]}")
     if ((${#missing[@]})); then bad "$manager" "missing: ${missing[*]}; run rea-suite setup"
@@ -493,7 +493,7 @@ cmd="${1:-}"
 args=()
 for arg in "$@"; do
   case "$arg" in
-    --no-apt | --no-dnf | --no-brew) SYSTEM=0 ;;
+    --no-apt | --no-dnf | --no-pacman | --no-brew) SYSTEM=0 ;;
     *) args+=("$arg") ;;
   esac
 done

@@ -6,8 +6,8 @@
 #   3. the components marked `default: true`
 #
 # A component can bring:
-#   apt / brew / winget:  system packages (apt: Debian names, translated for Fedora/RHEL by
-#                  platforms/linux/dnf-names.txt; platforms/linux/apt-packages.txt,
+#   apt / brew / winget:  system packages (apt: Debian names, translated for Fedora/RHEL and
+#                  Arch by platforms/linux/dnf-names.txt and pacman-names.txt; apt-packages.txt,
 #                  platforms/macos/Brewfile, platforms/windows/winget.json);
 #                  a brew cask is written `cask:<name>`
 #   uv-groups:     dependency groups from pyproject.toml

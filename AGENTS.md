@@ -20,9 +20,10 @@ installation.
 * **One source per tool, updatable by the suite.** Every tool comes from exactly one of:
   `pyproject.toml` (uv), `common/uv-tools.txt`, `package.json`, `common/tools.yml` (GitHub release,
   direct URL or dotnet tool), `platforms/linux/apt-packages.txt` (Debian names; Fedora/RHEL
-  names that differ go in `platforms/linux/dnf-names.txt`), `platforms/macos/Brewfile`,
-  `platforms/windows/winget.json`, or a component in `common/components.yml`. Prefer them in that
-  order. Nothing is installed by a one-off download or `curl | sh`.
+  names that differ go in `platforms/linux/dnf-names.txt`, Arch names in `pacman-names.txt`),
+  `platforms/macos/Brewfile`, `platforms/windows/winget.json`, or a component in
+  `common/components.yml`. Prefer them in that order. Nothing is installed by a one-off
+  download or `curl | sh`.
 * **Every platform.** A change to one platform's script has its counterparts: `bin/rea-suite`
   (Linux and macOS) and `platforms/windows/rea-suite.ps1`; `platforms/linux/bootstrap.sh`,
   `platforms/macos/bootstrap.sh` and `bootstrap.ps1`; `common/env.sh` and `env.ps1`; a tool in
