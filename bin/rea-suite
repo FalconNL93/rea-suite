@@ -466,7 +466,8 @@ cmd_doctor() {
   fi
   if [[ -e /proc/sys/fs/binfmt_misc/WSLInterop ]]; then
     local bridged
-    bridged="$(grep -l "through WSL interop" tools/bin/* 2>/dev/null | xargs -r -n1 basename | xargs)"
+    # no bridged tool yet is no failure: grep's exit 1 would end the doctor here, silently (set -e, pipefail)
+    bridged="$({ grep -l "through WSL interop" tools/bin/* 2>/dev/null || true; } | xargs -r -n1 basename | xargs)"
     if [[ -n "$bridged" ]]; then ok "wsl interop" "Windows tools: $bridged"
     else info "wsl interop" "no Windows checkout found; set REA_SUITE_WINDOWS_ROOT, then rea-tools wsl-bridge"; fi
   fi
