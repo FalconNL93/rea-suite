@@ -1,6 +1,7 @@
 # Load the rea-suite environment (counterpart of common/env.sh):
 #   . .\platforms\windows\env.ps1      (or . .\activate.ps1 from the repo root)
 # Runtimes and caches live in .runtime\ (platforms\windows\bootstrap.ps1).
+#Requires -Version 7
 $Root = (Resolve-Path "$PSScriptRoot\..\..").Path
 $Runtime = "$Root\.runtime"
 $env:REA_SUITE_ROOT = $Root

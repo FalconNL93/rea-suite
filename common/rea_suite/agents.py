@@ -39,7 +39,7 @@ WINDOWS = sys.platform == "win32"
 if WINDOWS:
     REA = ["node", str(ROOT / "node_modules" / "rea-agents" / "scripts" / "rea.mjs")]
     LAUNCHER = [
-        "powershell",
+        "pwsh",
         "-NoProfile",
         "-ExecutionPolicy",
         "Bypass",

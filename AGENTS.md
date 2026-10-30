@@ -68,8 +68,9 @@ installation.
 ## Python and shell
 
 * Python runs through uv (`uv run`); `ruff check` and `ruff format` are clean.
-* Shell scripts start with `set -euo pipefail` and pass `shellcheck`; PowerShell keeps
-  `$ErrorActionPreference = 'Stop'` and parses in `pwsh`.
+* Shell scripts start with `set -euo pipefail` and pass `shellcheck`; PowerShell scripts are
+  for PowerShell 7 (`#Requires -Version 7`, started with `pwsh`, never Windows PowerShell 5.1),
+  keep `$ErrorActionPreference = 'Stop'` and parse in `pwsh`.
 * `rea-suite lint` checks all of the above; the pre-commit hook runs it on staged files.
 * Generated files (`tools/bin/*` launchers, `tools/state.json`) are never edited by hand.
 

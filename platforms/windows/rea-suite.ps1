@@ -17,6 +17,7 @@
 .NOTES
     Not tested on Windows yet.
 #>
+#Requires -Version 7
 param(
     [Parameter(Position = 0)][ValidateSet('setup', 'select', 'winget', 'update', 'reinstall', 'agents', 'doctor', 'status', 'tools', 'clean', 'lint')][string]$Command = 'setup',
     [Parameter(Position = 1, ValueFromRemainingArguments)][string[]]$Rest = @()
@@ -81,7 +82,8 @@ function Uv-Tools([switch]$Upgrade) {
 }
 function Node-Env([switch]$Upgrade) {
     Step "Node $Node + rea-agents (fnm/npm)"; Need fnm
-    Invoke-Checked fnm install $Node
+    fnm install $Node 2>&1 | ForEach-Object { "$_" } | Where-Object { $_ -notmatch '^warning: Version already installed' }
+    if ($LASTEXITCODE) { throw "fnm install failed ($LASTEXITCODE)" }
     if ($Upgrade) {
         Invoke-Checked fnm exec --using=$Node -- npm install rea-agents@latest
         Invoke-Checked fnm exec --using=$Node -- npm update  # the other tools in package.json

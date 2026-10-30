@@ -108,9 +108,12 @@ with `/opt/homebrew/bin/bash`) and `common/env.sh` puts the GNU `gnubin` directo
 ahead of the BSD tools, so the shell code is the same as on Linux. Intel Macs are not
 supported: the `macos` assets in `tools.yml` are arm64 builds.
 
-Windows (PowerShell; untested so far):
+Windows (untested so far) needs PowerShell 7 (`pwsh`), not the Windows PowerShell 5.1
+that ships with Windows; the scripts refuse to start in 5.1. Install it once, then run
+the rest from `pwsh` (winget keeps it up to date from then on):
 
 ```powershell
+winget install --id Microsoft.PowerShell --source winget
 Copy-Item .env.example .env             # optional, as above
 .\platforms\windows\bootstrap.ps1       # .runtime\, component menu, winget, setup
 . .\activate.ps1
@@ -545,7 +548,7 @@ Windows PATH (Sysinternals, `notepad.exe`) work from WSL without any of this.
 ```sh
 x64dbg work/sample.exe            # interop launcher (see above)
 cmd.exe /c 'C:\Users\<user>\rea-suite\tools\bin\x64dbg.cmd' "$(wslpath -w work/sample.exe)"  # by hand
-powershell.exe -File 'C:\Users\<user>\rea-suite\platforms\windows\rea-suite.ps1' doctor
+pwsh.exe -File 'C:\Users\<user>\rea-suite\platforms\windows\rea-suite.ps1' doctor
 wslpath -w work/sample.exe        # Linux path -> Windows path (and `wslpath -u` back)
 ```
 

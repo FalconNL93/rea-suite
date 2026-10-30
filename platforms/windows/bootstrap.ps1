@@ -18,6 +18,7 @@
 .PARAMETER RuntimesOnly
     Stop after step 1 (used by rea-suite.ps1 update).
 #>
+#Requires -Version 7
 param([switch]$NoWinget, [switch]$Update, [switch]$RuntimesOnly, [switch]$Select)
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue' # Invoke-WebRequest is very slow with progress
@@ -72,7 +73,8 @@ if (Wanted 'fnm' $have $tag) {
     Expand-Archive "$Runtime\cache\fnm.zip" "$Runtime\bin" -Force
     Note "fnm $tag"
 }
-& "$Runtime\bin\fnm.exe" install $node
+& "$Runtime\bin\fnm.exe" install $node 2>&1 | ForEach-Object { "$_" } | Where-Object { $_ -notmatch '^warning: Version already installed' }
+if ($LASTEXITCODE) { throw "fnm install failed ($LASTEXITCODE)" }
 
 Step "Temurin JDK $JdkMajor"
 $meta = (Invoke-RestMethod "https://api.adoptium.net/v3/assets/latest/$JdkMajor/hotspot?architecture=x64&image_type=jdk&os=windows&vendor=eclipse")[0]
