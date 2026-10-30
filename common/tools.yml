@@ -500,6 +500,43 @@ tools:
       windows:
         ilspy: '**/ILSpy.exe'
 
+  # --- component: porting ---
+
+  # GUI for perf recordings (flame graphs, callers/callees, timeline). Linux only:
+  # it reads perf.data, and perf exists only there.
+  hotspot:
+    github: KDAB/hotspot
+    version: latest
+    assets:
+      linux: '^hotspot-v[\d.]+-x86_64\.AppImage$'
+    bin:
+      linux:
+        hotspot: {path: 'hotspot-*.AppImage', env: {APPIMAGE_EXTRACT_AND_RUN: '1'}}
+
+  # Frame profiler for code you instrument (the native rewrite, the recompiled game):
+  # the profiler GUI and the capture/export tools. The client library goes into the
+  # instrumented program from Tracy's source at the same tag.
+  tracy:
+    github: wolfpld/tracy
+    version: latest
+    assets:
+      linux: '^linux-[\d.]+\.zip$'
+      macos: '^macos-[\d.]+\.zip$'
+      windows: '^windows-[\d.]+\.zip$'
+    bin:
+      linux:
+        tracy-profiler: {path: 'tracy-profiler-*.AppImage', env: {APPIMAGE_EXTRACT_AND_RUN: '1'}}
+        tracy-capture: tracy-capture
+        tracy-csvexport: tracy-csvexport
+      macos:
+        tracy-profiler: tracy-profiler.app/Contents/MacOS/tracy-profiler
+        tracy-capture: tracy-capture
+        tracy-csvexport: tracy-csvexport
+      windows:
+        tracy-profiler: tracy-profiler.exe
+        tracy-capture: tracy-capture.exe
+        tracy-csvexport: tracy-csvexport.exe
+
   # --- component: steam ---
 
   # Valve's SteamCMD; updates itself in place on first run

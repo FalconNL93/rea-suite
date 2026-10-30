@@ -58,6 +58,15 @@ components:
     apt: [lib32gcc-s1]
     tools: [steamcmd, steamless]
 
+  # Wine alone is over 1 GB installed, so this is not part of the default install.
+  # macOS has no Wine here (Homebrew disabled its casks), rr and perf are Linux-only:
+  # see the README's "Porting old games".
+  porting:
+    description: Porting old Windows games - Wine with winedbg (run and trace the original binary), rr (record and replay) and perf + hotspot (sampling profiles) on Linux, Tracy (instrumented profiles), WinDbg with Time Travel Debugging on Windows
+    apt: [wine, wine64, rr, linux-perf]
+    winget: [Microsoft.WinDbg]
+    tools: [hotspot, tracy]
+
   vm:
     description: Virtual machines for running untrusted samples (QEMU + OVMF on Linux, VirtualBox on Windows; UTM on macOS)
     apt: [qemu-system-x86, qemu-utils, ovmf]

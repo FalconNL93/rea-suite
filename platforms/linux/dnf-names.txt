@@ -22,5 +22,8 @@ qemu-system-x86     qemu-system-x86|qemu-kvm
 ovmf                edk2-ovmf
 # Rust for source builds: rustup (Fedora: rustup-init), else the distribution's cargo (RHEL)
 rustup              rustup|cargo
+# Fedora's wine holds 32- and 64-bit; perf has no linux- prefix there
+wine64              -
+linux-perf          perf
 # scrcpy is in COPR only (zeno/scrcpy)
 scrcpy              -
