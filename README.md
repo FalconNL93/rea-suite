@@ -129,7 +129,7 @@ REA_SUITE_COMPONENTS="build steam"
 | --- | --- | --- |
 | `build` | yes | compilers and build tools, Rust, foreign-architecture binutils/gdb/qemu-user, and the tools that only exist as source ([Build toolchains](#build-toolchains)) |
 | `browser` | yes | Chromium for REA's browser captures and web module tracing (~300 MB) |
-| `mobile` | yes | scrcpy, apkeep, uber-apk-signer (adb, Frida and frida-server are always there) |
+| `mobile` | no | scrcpy, apkeep, uber-apk-signer (adb, Frida and frida-server are always there) |
 | `hardware` | no | sigrok-cli for logic analyzer recordings (Linux, macOS) |
 | `angr` | no | the angr framework (~1 GB) |
 | `steam` | no | SteamCMD and Steamless (Windows) |
