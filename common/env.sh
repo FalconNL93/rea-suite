@@ -34,9 +34,14 @@ _rea_default() {
   REA_SUITE_COMPUTED="$REA_SUITE_COMPUTED $1"
 }
 
+# _rea_path_prepend dir: put dir first in PATH, also when it is already further back (a
+# shell profile that prepends its own entries after direnv must not win over the suite)
 _rea_path_prepend() {
   [ -d "$1" ] || return 0
-  case ":$PATH:" in *":$1:"*) ;; *) PATH="$1:$PATH" ;; esac
+  PATH=":$PATH:"
+  PATH="${PATH//:$1:/:}"
+  PATH="${PATH#:}"
+  PATH="$1:${PATH%:}"
 }
 
 # macOS: GNU coreutils, sed, grep, find, tar and awk from Homebrew ahead of the
