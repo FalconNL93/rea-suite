@@ -63,6 +63,7 @@ installation.
 | `platforms/linux/`, `platforms/macos/`, `platforms/windows/` | Bootstrap, system package lists (apt, Brewfile, winget), Windows equivalents of the shell scripts. |
 | `.agents/skills/` | Process skills (see its README). |
 | `work/` | Targets, captures, Ghidra projects (`rea-ghidra` uses `work/ghidra/`). Ignored. |
+| `TODO.md` | Tools still to add, one line each on why; an entry leaves it when the tool is added or dropped. |
 
 ## Python and shell
 
