@@ -151,10 +151,28 @@ node_env() { # [--upgrade]
 # playwright-core: it downloads only a build it does not have yet and drops old ones.
 browsers() {
   local browser
+  local system=""
   for browser in $(components values playwright); do
     step "$browser for REA (Playwright, .runtime/ms-playwright)"
-    fnm exec --using="$NODE_VERSION" -- node node_modules/playwright-core/cli.js install "$browser"
+    fnm exec --using="$NODE_VERSION" -- node node_modules/playwright-core/cli.js install "$browser" && continue
+    # Playwright publishes builds for the distributions it supports (not Ubuntu 26.04 yet): a system Chrome or
+    # Chromium serves REA instead, rather than setup failing on it.
+    [ "$browser" = chromium ] || { warn "$browser: Playwright has no build for this system"; continue; }
+    local candidate
+    for candidate in google-chrome chromium chromium-browser google-chrome-stable; do
+      system="$(command -v "$candidate" || true)"
+      [ -z "$system" ] || break
+    done
+    if [ -n "$system" ]; then
+      warn "chromium: Playwright has no build for this system; REA uses $system"
+    else
+      warn "chromium: Playwright has no build for this system and none is installed (apt: chromium); REA's browser tools stay off"
+    fi
   done
+  if [ -n "$system" ]; then
+    printf '%s\n' "$system" >"$REA_RUNTIME/chromium-path"
+    return
+  fi
   # REA_BROWSER_EXECUTABLE (common/env.sh) reads this
   fnm exec --using="$NODE_VERSION" -- node -e '
     import("playwright-core").then(({ chromium }) => {
