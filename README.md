@@ -168,6 +168,12 @@ release notes, and shows a plan of what goes to which version and what is held b
 why. Nothing changes until you approve; afterwards it runs `doctor` and commits as
 `AGENTS.md` says.
 
+`rea doctor` (rea-agents' own) calls the bin/rea registration stale and suggests
+`rea setup`, which registers node_modules/.bin/rea without the suite environment (Ghidra,
+the JDK, the tools on PATH). Use `rea-suite doctor` instead: it reads rea doctor's
+failures and judges the registrations itself. A `rea setup` run through bin/rea points
+the agents back at it afterwards.
+
 The caches (uv, npm, NuGet, Gradle) live in `.runtime/cache/` and only speed up the next
 install; `clean caches` is always safe. `clean builds` removes the sources and build trees of
 source-built tools and Ghidra extensions (`.runtime/build/`; each tool keeps only its newest
