@@ -14,7 +14,8 @@ activate, activate.ps1  load the environment without direnv
 .githooks/              pre-commit (lint + gitleaks) and pre-push (gitleaks) hooks, lint.sh
 .forgejo/workflows/     server-side gitleaks scan and lint
 .env.example            copy to .env: component selection, GITHUB_TOKEN
-.node-version           Node for fnm (rea-agents has a strict engines range)
+.node-version           Node for fnm (rea-agents has a strict engines range; 24 because the Playwright
+                        1.58 that rea-agents 6.8 pins hangs downloading Chromium on Node 26)
 .python-version         Python for uv
 pyproject.toml/uv.lock  Python tools & libraries (uv)
 package.json            rea-agents (npm)
