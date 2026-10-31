@@ -330,7 +330,7 @@ cmd_status() {
 # update --ai: an agent plans the update (what to which version, what to hold back)
 # with the updating-the-suite skill, and applies it after the user agrees
 cmd_update_ai() {
-  local prompt="Plan and run an update of this rea-suite checkout. Follow .agents/skills/updating-the-suite/SKILL.md step by step; present the plan and wait for my approval before changing anything."
+  local prompt="Plan and run an update of this rea-suite checkout, including a fresh review of the offline analysis workflow and its examples. Follow .agents/skills/updating-the-suite/SKILL.md step by step; present the plan and wait for my approval before changing anything."
   ((SYSTEM)) || prompt+=" Skip system packages (--no-apt/--no-brew)."
   agents launch "$prompt"
 }

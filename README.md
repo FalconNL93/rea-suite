@@ -200,6 +200,12 @@ release notes, and shows a plan of what goes to which version and what is held b
 why. Nothing changes until you approve; afterwards it runs `doctor` and commits as
 `AGENTS.md` says.
 
+Each `update --ai` run also researches the offline analysis workflow against current official
+documentation and the installed/target tool versions. It reviews presets, CLI contracts,
+better approaches, limitations and the short game examples, then includes proposed code
+and documentation changes in the same update plan. Checks and unresolved gaps are recorded
+in `work/update/workflow-review.md`, including when no package upgrade is needed.
+
 `rea doctor` (rea-agents' own) calls the bin/rea registration stale and suggests
 `rea setup`, which registers node_modules/.bin/rea without the suite environment (Ghidra,
 the JDK, the tools on PATH). Use `rea-suite doctor` instead: it reads rea doctor's

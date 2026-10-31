@@ -1,6 +1,6 @@
 ---
 name: updating-the-suite
-description: Planned update of rea-suite: check compatibility first, propose which version each part goes to and what holds back, apply after approval. Use when asked to update the suite or its tools, or when started by `rea-suite update --ai`.
+description: "Planned update and workflow maintenance of rea-suite: research compatibility and offline analysis methods, propose tool/code/documentation changes, apply after approval. Use for suite updates, analysis-workflow upkeep, or `rea-suite update --ai`."
 ---
 
 # Updating the suite
@@ -64,11 +64,46 @@ A pinned tool moves to exactly the version the target rea-agents verifies, never
 - **npm, uv tools, system packages, runtimes**: majors and release notes only; minor updates
   go ahead without research.
 
+### Offline analysis workflow
+
+Review this on every run, including when no package has a newer version. Read
+`common/rea_suite/analyze.py`, its tests, the README's offline analysis section and
+`docs/ANALYZE-EXAMPLES.md`; inspect `rea-suite analyze --help` and `--examples`.
+Use the implementation and installed command schemas to establish current behavior.
+
+Research current official REA documentation, workflow instructions and release notes, then
+relevant Ghidra, Kuna, Rizin/Cutter, capa, FLOSS, ILSpy and JADX documentation. Compare the
+installed version and proposed target separately; upstream main can describe features the
+installed release does not have. Revisit the README's research links and look for simpler
+supported methods, new capabilities, deprecated flags/APIs and changed platform limits.
+Consider new automation tools or upstream workflows; compare their concrete benefit,
+platform support and integration/maintenance cost before proposing adoption.
+
+Write `work/update/workflow-review.md`: checked date, installed/target versions, sources,
+and one decision per area: retain, improve, replace, or hold with the missing evidence.
+Cover:
+
+- Presets and format routing; literal queries, function dossiers and IDE-readable output.
+- CLI/Evidence contracts, optional engine settings, target identity, cache invalidation,
+  export resume, resource bounds, failure/partial-result reporting and annotation preservation.
+- Current advice for patch investigation: address spaces/file offsets, ABI, instruction
+  boundaries and runtime verification; distinguish static candidates from validated behavior.
+- All documented format/provider lanes and host claims. Verify support on the actual host;
+  analyzing another platform's file does not verify execution on that platform.
+- Short game recipes: validate available paths and CLI syntax, preserve one goal and one
+  command per example, and update the checked date only for paths actually rechecked.
+  Use `--plan` for recipe validation; full game analysis needs the user's requested scope.
+
+Done when every area has a source-backed decision and every stale claim has a proposed
+correction or an explicit unresolved gap. Put actionable changes in the update plan even
+when they require no package upgrade; retain an existing working path when it still fits.
+
 ## 3. Plan
 
 Write `work/update/plan.md` and show it as a table: part, current, target, decision, reason
 (with the source). Every hold names what unblocks it ("Ghidra 12.2 once kaiju has a release for
-it"). End with the exact commands you will run, in order.
+it"). Include the workflow review's proposed preset, implementation, test and documentation changes.
+End with the exact commands you will run, in order.
 
 **Stop here.** Done when the user has approved the plan or changed it; apply what they approved,
 nothing more.
@@ -97,8 +132,25 @@ updated tool starts (`<tool> --version`), and `rea-tools rea-pins` is green. A n
 fixed or rolled back (`rea-tools use <tool> <old>`, `git checkout` of the lockfile) before you
 report.
 
+For workflow changes, run `rea-suite lint` and
+`uv run --no-sync python -m unittest rea_suite.test_analyze`. When an analysis engine,
+command contract, cache or export behavior changes, also run the applicable real-provider
+smoke tests with benign fixtures: on Linux/macOS run
+`REA_ANALYZE_INTEGRATION=1 uv run --no-sync python -m unittest rea_suite.test_analyze`.
+Exercise first export and resume, queries, function output and saved search; keep fixtures in
+`work/` and leave the analyzed programs unexecuted. For REA upgrades, also check the
+registration adapter's imported APIs with `node --test common/agent-registration.test.mjs`
+and `uv run --no-sync python -m unittest rea_suite.test_agents`.
+
+Update the README and short recipes to match verified behavior. Record untested provider
+lanes/hosts and failed checks in the workflow review; preserve those limitations in user
+documentation. Done when approved changes pass their checks and the review accounts for
+every proposed correction, alternative and remaining gap.
+
 ## 6. Report and commit
 
 Report per part: from, to, verified by what (command and result); what was held and why.
+Summarize workflow and documentation corrections, alternatives considered and unresolved
+coverage from `work/update/workflow-review.md`.
 Commit as `AGENTS.md` says: lockfile changes (`uv.lock`, `package-lock.json`) on their own, pin
 changes in `tools.yml` and the bootstraps with the reason in the body. Ask before pushing.

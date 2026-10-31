@@ -169,7 +169,7 @@ switch ($Command) {
     'update' {
         if ($Rest -contains '--ai') {
             # an agent plans the update with the updating-the-suite skill (counterpart of bin/rea-suite)
-            Agents launch 'Plan and run an update of this rea-suite checkout (Windows: platforms\windows\rea-suite.ps1). Follow .agents/skills/updating-the-suite/SKILL.md step by step; present the plan and wait for my approval before changing anything.'
+            Agents launch 'Plan and run an update of this rea-suite checkout, including a fresh review of the offline analysis workflow and its examples (Windows: platforms\windows\rea-suite.ps1). Follow .agents/skills/updating-the-suite/SKILL.md step by step; present the plan and wait for my approval before changing anything.'
             exit $LASTEXITCODE
         }
         Components adopt
