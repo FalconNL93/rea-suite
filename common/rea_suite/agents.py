@@ -6,7 +6,7 @@
 Runs standalone (`uv run common/rea_suite/agents.py ...`) from bin/rea-suite and
 platforms/windows/rea-suite.ps1, with the suite environment loaded.
 
-  list                 detected agents: name, state (ok | missing | foreign), command
+  list                 detected agents: name, state (ok | missing | foreign | stale), command
   register [agent...]  point the rea MCP server at the suite launcher and refresh the
                        REA skill; default: every detected agent
   skills               refresh the REA skill for every detected agent
@@ -26,7 +26,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 import shlex
 import shutil
 import subprocess
@@ -63,9 +62,6 @@ AGENT_CLIS = [
     ["gemini", "-i", "{prompt}"],
 ]
 
-# what rea setup gives Codex (rea-agents mcpStartupPolicy); Ghidra starts slowly
-CODEX_TIMEOUTS = "startup_timeout_sec = 30\ntool_timeout_sec = 450\n"
-
 
 def run(*args: str, check: bool = True) -> subprocess.CompletedProcess:
     return subprocess.run(args, check=check, text=True, capture_output=True)
@@ -81,6 +77,13 @@ def agents() -> list[dict]:
     """Detected agents with their rea registration (command [] when there is none)."""
     p = plan()
     registrations = {r["client"]: r for r in p["doctor"]["identity"]["registrations"]}
+    environment = {
+        key: value
+        for provider in p["doctor"].get("providerInspections", [])
+        for key, value in provider["registrationEnvironment"].items()
+    }
+    if hopper := p["doctor"].get("hopperPath"):
+        environment["HOPPER_LAUNCHER_PATH"] = hopper
     found = []
     for state in p["clientStates"]:
         if not state["detected"]:
@@ -94,78 +97,61 @@ def agents() -> list[dict]:
                 "config": reg.get("config_path") or client["configPath"],
                 "command": reg.get("command") or [],
                 "quit_first": bool(client.get("quitBeforeSetup")),
+                "definition": {
+                    **client,
+                    "configPath": reg.get("config_path") or client["configPath"],
+                },
+                "environment": environment,
             }
         )
+    if found:
+        current = registration("inspect", found)
+        for agent in found:
+            agent["current"] = current[agent["name"]]
     return found
 
 
 def state(agent: dict) -> str:
     if not agent["command"]:
         return "missing"
-    return "ok" if agent["command"] == LAUNCHER else "foreign"
+    if agent["command"] != LAUNCHER:
+        return "foreign"
+    return "ok" if agent["current"] else "stale"
 
 
 def step(msg: str) -> None:
     print(f"\n\033[1;34m==> {msg}\033[0m", flush=True)
 
 
-def rewrite_command(agent: dict, old: list[str]) -> bool:
-    """Replace the rea command in the agent's configuration, keeping its format.
-
-    rea setup writes [launcher, "mcp"] on Linux/macOS; only that shape is rewritten.
-    """
-    if WINDOWS or len(old) != 2 or old[1] != "mcp":
-        return False
-    path = Path(agent["config"])
-    text = path.read_text()
-    # the path appears as a JSON/TOML string; / needs no escaping in either
-    quoted = json.dumps(old[0])
-    if text.count(quoted) != 1:
-        return False
-    path.write_text(text.replace(quoted, json.dumps(LAUNCHER[0])))
-    return True
-
-
-def register_cli(agent: dict) -> None:
-    """Claude Code and Codex: through their own CLI."""
-    name = agent["name"]
-    if name == "claude_code":
-        run("claude", "mcp", "remove", "--scope", "user", "rea", check=False)
-        run("claude", "mcp", "add", "--scope", "user", "rea", "--", *LAUNCHER)
-        return
-    run("codex", "mcp", "remove", "rea", check=False)
-    run("codex", "mcp", "add", "rea", "--", *LAUNCHER)
-    config = Path(agent["config"])
-    text = config.read_text()
-    head = "[mcp_servers.rea]\n"
-    section = re.search(r"^\[mcp_servers\.rea\]\n(?:(?!\[).*\n?)*", text, re.MULTILINE)
-    if section and "startup_timeout_sec" not in section.group(0):
-        config.write_text(text.replace(head, head + CODEX_TIMEOUTS, 1))
-
-
-CLI = {"claude_code": "claude", "codex": "codex"}
+def registration(operation: str, selected: list[dict]) -> dict[str, bool]:
+    """Use REA's complete registration check and transactional writer on every OS."""
+    out = subprocess.run(
+        ["node", str(ROOT / "common" / "agent-registration.mjs")],
+        input=json.dumps(
+            {
+                "operation": operation,
+                "clients": [a["definition"] for a in selected],
+                "command": LAUNCHER,
+                "environment": selected[0]["environment"],
+            }
+        ),
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    return {result["name"]: result["current"] for result in json.loads(out.stdout)}
 
 
 def register(agent: dict, named: bool) -> str | None:
     """Register rea for one agent; returns a note when it needs the user."""
     if state(agent) == "ok":
-        print(f"  {agent['name']}: already on the suite launcher")
+        print(f"  {agent['name']}: suite registration current (command, settings, environment)")
         return None
     if agent["quit_first"] and not named:
         return f"{agent['display']}: quit it fully, then run rea-suite agents {agent['name']}"
-    cli = CLI.get(agent["name"])
-    if cli and shutil.which(cli):
-        register_cli(agent)
-    else:
-        if state(agent) == "missing":
-            # rea writes the entry in the agent's own format; then point it at the launcher
-            run(*REA, "setup", "--yes", "--client", agent["name"], "--format", "json")
-            agent = next(a for a in agents() if a["name"] == agent["name"])
-        if not rewrite_command(agent, agent["command"]):
-            return (
-                f"{agent['display']}: set the rea MCP command in {agent['config']} "
-                f"to {' '.join(LAUNCHER)}"
-            )
+    if agent["definition"]["format"] == "unsupported":
+        return f"{agent['display']}: manual registration required"
+    registration("configure", [agent])
     print(f"  {agent['name']}: rea now starts {' '.join(LAUNCHER)}")
     if agent["quit_first"]:
         return f"{agent['display']}: restart it to load rea"

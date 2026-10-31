@@ -206,6 +206,13 @@ the JDK, the tools on PATH). Use `rea-suite doctor` instead: it reads rea doctor
 failures and judges the registrations itself. A `rea setup` run through bin/rea points
 the agents back at it afterwards.
 
+`rea-suite agents` checks the complete registration against the suite launcher, including
+provider paths, client settings and Codex timeouts. It repairs missing or outdated settings
+through REA's configuration writer, preserving unrelated settings and creating recovery
+backups. A second run leaves current registrations unchanged. Upstream `rea doctor` can
+still report the suite launcher as stale; that alone does not mean it needs repair.
+Claude Desktop must be fully quit before running `rea-suite agents claude_desktop`.
+
 The caches (uv, npm, NuGet, Gradle) live in `.runtime/cache/` and only speed up the next
 install; `clean caches` is always safe. `clean builds` removes the sources and build trees of
 source-built tools and Ghidra extensions (`.runtime/build/`; each tool keeps only its newest

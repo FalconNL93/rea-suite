@@ -143,6 +143,7 @@ function Doctor {
         switch ($state) {
             'ok' { Ok $client 'rea via platforms\windows\rea.ps1' }
             'missing' { Write-Host ('  info  {0,-18} rea not registered; rea-suite.ps1 agents {0}' -f $client) -ForegroundColor Yellow }
+            'stale' { Bad $client 'suite registration settings or environment need refresh; run rea-suite.ps1 agents' }
             default { Bad $client "rea starts $cmd, not rea.ps1; run rea-suite.ps1 agents" }
         }
     }

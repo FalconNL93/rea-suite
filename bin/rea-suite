@@ -450,6 +450,7 @@ cmd_doctor() {
     case "$state" in
       ok) ok "$client" "rea via bin/rea" ;;
       missing) info "$client" "rea not registered; rea-suite agents $client" ;;
+      stale) bad "$client" "suite registration settings or environment need refresh; run rea-suite agents" ;;
       *) bad "$client" "rea starts $command, not bin/rea; run rea-suite agents" ;;
     esac
   done < <(agents list)
