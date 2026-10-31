@@ -124,9 +124,9 @@ done
   _rea_default REA_WABT_BIN_DIRECTORY "$REA_SUITE_ROOT/tools/wabt/current/bin"
 [ ! -x "$REA_SUITE_ROOT/.venv/bin/python" ] ||
   _rea_default REA_PWNTOOLS_PYTHON "$REA_SUITE_ROOT/.venv/bin/python"
-for _f in "$GHIDRA_INSTALL_DIR"/Ghidra/Extensions/nativeaot/lib/*.jar; do
-  [ ! -f "$_f" ] || _rea_default REA_GHIDRA_NATIVEAOT_JAR "$_f"
-done
+# REA's NativeAOT adapter is opt-in, Linux/x64-only, and requires its own facade
+# JAR, not the installed upstream GUI extension. An automatic setting blocks
+# ordinary native targets. Explicit .env/run configuration is retained above.
 _pwndbg="$REA_SUITE_ROOT/tools/pwndbg/current"
 if [ -x "$_pwndbg/bin/gdb" ]; then
   _rea_default REA_PWNDBG_GDB "$_pwndbg/bin/gdb"

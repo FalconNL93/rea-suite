@@ -19,6 +19,7 @@
 #   rea-suite agents [client...]            register (or repair) the rea MCP server via
 #                                            bin/rea and install/refresh the REA skill;
 #                                            default: every agent rea-agents detects
+#   rea-suite analyze [paths...] [options]  offline analysis projects; --examples for workflows
 #   rea-suite tools <args...>               tools.yml manager (= rea-tools)
 #   rea-suite lint [file...]                ruff, shellcheck and a PowerShell parse check on
 #                                            this repository (.githooks/lint.sh)
@@ -34,6 +35,7 @@ set -euo pipefail
 ((BASH_VERSINFO[0] >= 4)) || exec /opt/homebrew/bin/bash "$0" "$@"
 
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+CALLER_CWD="$PWD"
 cd "$ROOT"
 export REA_SUITE_ROOT="$ROOT"
 # shellcheck source=common/box.sh disable=SC1091
@@ -509,6 +511,7 @@ case "$cmd" in
   status) cmd_status ;;
   doctor) cmd_doctor ;;
   agents) agents register "${args[@]}" ;;
+  analyze) uv run --offline --no-sync common/rea_suite/analyze.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   tools) rea-tools "${args[@]}" ;;
   clean) cmd_clean "${args[@]}" ;;
   lint) exec .githooks/lint.sh "${args[@]}" ;;

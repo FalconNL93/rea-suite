@@ -230,6 +230,118 @@ tools.yml lookups use the GitHub API (60 requests/hour anonymously) and fall bac
 to the github.com release pages once that is exhausted. `GITHUB_TOKEN` in `.env`
 avoids the fallback; a fine-grained token without any permissions is enough.
 
+## Offline analysis projects
+
+`rea-suite analyze` drives the installed tools without an agent or remote model. It accepts
+several files or directories, keeps an incremental research project, and prepares results
+to read from an IDE. It performs static analysis; it does not launch, inject into, or patch
+the supplied application. `rea-suite analyze --help` lists switches, and `--examples` shows
+complete workflows. On Windows use `rea-suite.cmd analyze` or `rea-suite.ps1 analyze`.
+For short copy-and-run recipes using this machine's CoD1, R6BO and ETLegacy files, see
+[game examples (Dutch)](docs/ANALYZE-EXAMPLES.md).
+
+```sh
+# First inspect the selected targets and tool commands; creates no project/output.
+rea-suite analyze ./game.exe ./plugins ./another-game --project ./research --plan
+
+# Analyze matching binaries recursively; repeat/add inputs to extend the same project.
+rea-suite analyze ./game.exe ./plugins --project ./research
+
+# Follow a literal string or symbol through native references, then inspect one function.
+rea-suite analyze --project ./research --select game.exe --query ServerList
+rea-suite analyze --project ./research --select game.exe --function 0x401230
+
+# Local report/source search, without starting a decompiler.
+rea-suite analyze --project ./research --search connect
+rea-suite analyze --project ./research --list
+
+# Explicit, bounded pseudocode export, with optional capability/string tools.
+rea-suite analyze ./game.exe --project ./research --preset decompile --max-functions 200
+rea-suite analyze ./game.exe --project ./research --preset triage --extra capa --extra floss
+
+# An extracted JavaScript/Electron application is an application root, not a binary tree.
+rea-suite analyze ./extracted-app --kind javascript --project ./app-research
+```
+
+Paths are resolved from the calling directory, even though the suite loads its own environment.
+Choose a separate output directory, not the input directory. Without `--project`, output goes
+under the suite's ignored `work/analysis/default/`. Directory scans skip `.git`, `.venv`,
+`node_modules`, `.runtime`, output directories and nested symbolic links. `--max-files`
+bounds the inventory and fails rather than silently truncating it. Auto detection reads
+headers: native PE/ELF/Mach-O, PE/CLI assemblies, APK/DEX/JAR and ASAR are supported lanes.
+Use `--kind` to select a format explicitly. `--plan` shows the targets actually selected.
+
+| Preset | Work performed |
+| --- | --- |
+| `triage` | Literal strings with original file offsets, format-appropriate metadata/imports/exports; no native auto-analysis |
+| `analyze` (default) | REA native overview, managed member metadata, archive metadata or JavaScript application analysis |
+| `decompile` | Above, plus resumable native pseudocode export, ILSpy C# export or JADX Java export |
+
+Native analysis selects Ghidra explicitly; `--provider kuna` opts into Kuna. `--query` and
+`--function` are repeatable native selectors; they are literal text/names/addresses, not
+natural-language questions. A function dossier retains pseudocode, assembly, calls and
+references supplied by the selected engine; `.c` and `.asm` views are written next to it.
+For managed/Android projects, use `--preset decompile` followed by saved `--search` instead.
+Capability matches from `--extra capa` can suggest areas to investigate; FLOSS can recover
+some obfuscated strings. Tool/target limitations and failures remain visible.
+
+Open `REPORT.md` in your IDE. `project.json` records target hashes, exact tool commands,
+stage exit codes and report digests; `artifacts/<sha256>/` retains original tool JSON,
+stderr, snapshots and exported code. Different files with the same basename stay separate.
+Successful stages are reused only when inputs, settings, tool fingerprints and saved
+report digests match. `--refresh` reruns selected stages, retaining earlier reports.
+Directory/application analyses are always rerun because a path is not a content digest.
+Native export resumes verified files under a tool-specific export directory. ILSpy/JADX
+use fresh export directories so an existing export is never overwritten.
+
+The string preview examines at most 8 MiB and retains at most 5,000 literal strings, with
+per-string display capped at 2,000 characters; `triage.json` records this coverage. Native
+export attempts at most `--max-functions` per run; repeating it continues the matching
+export. Neither a successful command nor reaching that limit means the whole program was
+recovered. Work on your implementation separately from generated analysis output.
+
+### Workflow and research notes
+
+The pipeline follows REA's existing CLI rather than implementing another decompiler:
+inventory, inspect identity, collect a focused result, follow references, retain Evidence,
+then implement and test your changes separately. REA documents that CLI and MCP use the
+[same workflows](https://github.com/morluto/rea#how-rea-works). Its
+[noninteractive analysis example](https://github.com/morluto/rea/blob/main/docs/ci-analysis.md)
+retains JSON, diagnostics and exit statuses, and distinguishes success from full coverage.
+
+- Start with triage and a concrete question; decompile selected functions before requesting
+  a full export. Prefer existing extension/plugin APIs when the application exposes them.
+- Keep original bytes, hashes, tool versions/settings and raw evidence. Treat names/types
+  inferred by a decompiler as hypotheses; check callers, instructions and runtime behavior.
+- Preserve hand-written names/comments/types. REA
+  [snapshots cache exact answers, not provider databases](https://github.com/morluto/rea/blob/main/docs/cli.md#save-and-reuse-analysis-snapshots).
+  This command creates research workspaces; it does not attach to an existing `.gpr`/Cutter
+  database or import its annotations. For that, Ghidra's
+  [headless `-process`, `-noanalysis`, `-readOnly` workflow](https://github.com/NationalSecurityAgency/ghidra/blob/master/Ghidra/RuntimeScripts/support/analyzeHeadlessREADME.md)
+  is the appropriate next integration; importing again with `-overwrite` can discard work.
+- A useful static cross-reference is a candidate for investigation, not a verified hook
+  location. Distinguish file offset, image-relative address and runtime address/ASLR.
+  Verify instruction boundaries, moved instructions, ABI, stack alignment and register
+  preservation. Microsoft's
+  [Detours usage](https://github.com/microsoft/Detours/wiki/Using-Detours) requires matching
+  signatures/calling conventions; its
+  [interception description](https://github.com/microsoft/Detours/wiki/OverviewInterception)
+  explains why displaced instructions need a trampoline. Those Windows rules do not imply
+  that the same patch bytes work on another architecture or OS.
+- Keep absent observations and unsupported formats explicit. For example,
+  [capa documents limitations](https://github.com/mandiant/capa/blob/master/doc/limitations.md)
+  for packed applications and wrapper functions; no match does not establish no capability.
+  [JADX likewise documents incomplete decompilation](https://github.com/skylot/jadx#readme).
+- For a new build, re-check identities and function correspondence rather than copying old
+  addresses. The installed [ghidriff](https://github.com/clearbluejar/ghidriff) can compare
+  functions and produce JSON/Markdown reports; automatic transfer of annotations or patches
+  is not part of this first pipeline.
+
+Verification: unit tests use `uv run --no-sync python -m unittest rea_suite.test_analyze`.
+Opt into real local JavaScript/Ghidra smoke tests with `REA_ANALYZE_INTEGRATION=1`; they
+build a benign fixture but never execute the analyzed target. Native smoke tests have
+been run on macOS arm64; Windows and Linux execution remain unverified.
+
 ## Tools by task
 
 ### Agent front door
@@ -339,8 +451,13 @@ radare2 is deliberately left out: Rizin is its fork with the same feature set,
 and REA integrates Rizin (`REA_RIZIN_COMMAND`, Cutter bridge).
 
 `common/env.sh` exports the absolute paths REA expects (`REA_KUNA_COMMAND`,
-`REA_JADX_MCP_JAR`, `REA_PWNDBG_*`, `REA_GHIDRA_NATIVEAOT_JAR`, ...) for every
+`REA_JADX_MCP_JAR`, `REA_PWNDBG_*`, ...) for every
 tool it finds, so `rea doctor` picks them up through `bin/rea`.
+
+`REA_GHIDRA_NATIVEAOT_JAR` is explicitly opt-in through `.env` or the launch environment.
+REA's optional adapter requires its own facade JAR and a supported Linux/x64 target;
+the installed upstream Ghidra extension is not that adapter. Automatically enabling it
+would block ordinary native analysis on unsupported hosts/targets.
 
 ## Porting old games
 
@@ -469,7 +586,7 @@ checks that they are on. Findings are shown redacted (rule, file, line). Tokens 
 | Kaiju (CERT/CC) | Function hashing across binaries, OOAnalyzer C++ class recovery | prebuilt or built (Z3 from its release, as upstream's CI does) |
 | XEXLoaderWV | Load Xbox 360 XEX executables | prebuilt or built |
 | ghidra-firmware-utils | Load UEFI images, PCI option ROMs and other firmware formats | prebuilt or built |
-| ghidra-nativeaot | Recover .NET Native AOT binaries; REA loads its jar | prebuilt or built |
+| ghidra-nativeaot | Recover .NET Native AOT binaries in Ghidra; REA's optional adapter is configured separately | prebuilt or built |
 
 Ghidra extensions only load in the exact Ghidra version they were built for, so
 `rea-tools` resolves them again for every Ghidra install (`ghidra-extensions` in
