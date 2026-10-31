@@ -202,7 +202,8 @@ why. Nothing changes until you approve; afterwards it runs `doctor` and commits 
 
 Each `update --ai` run also researches the offline analysis workflow against current official
 documentation and the installed/target tool versions. It reviews presets, CLI contracts,
-better approaches, limitations and the short game examples, then includes proposed code
+better approaches, limitations, the short game examples, and the
+[self-hosted model guide](docs/LOCAL-MODELS.md) (VRAM, fit and practical usefulness), then includes proposed code
 and documentation changes in the same update plan. Checks and unresolved gaps are recorded
 in `work/update/workflow-review.md`, including when no package upgrade is needed.
 
@@ -235,6 +236,12 @@ JDK with what the installed rea-agents verifies (`rea-tools rea-pins`) and say w
 tools.yml lookups use the GitHub API (60 requests/hour anonymously) and fall back
 to the github.com release pages once that is exhausted. `GITHUB_TOKEN` in `.env`
 avoids the fallback; a fine-grained token without any permissions is enough.
+
+## Self-hosted models
+
+See [local models by VRAM](docs/LOCAL-MODELS.md) for model/quant candidates, memory estimates,
+practical cutoffs, and REA integration requirements. Recommendations are researched, not locally
+benchmarked. `update --ai` reviews them on every run.
 
 ## Offline analysis projects
 

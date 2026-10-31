@@ -1,6 +1,6 @@
 ---
 name: updating-the-suite
-description: "Planned update and workflow maintenance of rea-suite: research compatibility and offline analysis methods, propose tool/code/documentation changes, apply after approval. Use for suite updates, analysis-workflow upkeep, or `rea-suite update --ai`."
+description: "Planned update and workflow maintenance of rea-suite: research compatibility, offline analysis methods and local models, propose tool/code/documentation changes, apply after approval. Use for suite updates, analysis-workflow or local-model upkeep, or `rea-suite update --ai`."
 ---
 
 # Updating the suite
@@ -97,6 +97,28 @@ Cover:
 Done when every area has a source-backed decision and every stale claim has a proposed
 correction or an explicit unresolved gap. Put actionable changes in the update plan even
 when they require no package upgrade; retain an existing working path when it still fits.
+
+### Self-hosted models
+
+On every run, also read `docs/LOCAL-MODELS.md` and review its recommendations against current
+original model cards, release notes, runtime documentation, and quant publishers' file listings.
+Record findings in a local-model section of `work/update/workflow-review.md`, even when no
+package update is needed. Cover:
+
+- New candidates and retired recommendations for RE interpretation, tool use, and repository edits.
+- ChatGPT/Claude reference names, availability and task roles from official provider documentation;
+  keep approximate task overlap separate from measured capability or claims of local equivalence.
+- Exact publisher, revision, quant filename, combined shard size, and original/derivative licenses.
+- Architecture support, chat/reasoning templates, tool parsers, context/KV-cache costs, and host limits.
+- Every VRAM row: weight size versus total allocation, initial context, practical usefulness, and
+  whether setup effort is justified. Preserve the distinction between loading and completing tasks.
+- Evidence quality: publisher benchmarks, calculated fit estimates, and actual local task results
+  stay labeled separately. Coding scores alone do not establish reverse-engineering accuracy.
+
+Done when each row and alternative has a retain/change/hold decision with current primary sources.
+Update checked dates only for claims actually rechecked; include stale claims and evidence gaps
+in the plan. Keep the guide in concise US English. Downloading weights or running hardware
+benchmarks needs user-authorized scope; a documentation review does not require either.
 
 ## 3. Plan
 
