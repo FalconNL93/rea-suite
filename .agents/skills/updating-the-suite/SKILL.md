@@ -51,8 +51,8 @@ A pinned tool moves to exactly the version the target rea-agents verifies, never
 
 ### The other parts
 
-- **Ghidra**: a new Ghidra version needs every extension in `tools.yml` (`ghidra-extensions`)
-  released for it, or buildable (`build: true`). Check each extension's releases; one that would
+- **Ghidra**: a new Ghidra version needs every selected extension in `tools.yml`
+  (`ghidra.selected_specs`, including optional components) released for it, or buildable (`build: true`). Check each extension's releases; one that would
   go missing holds Ghidra back, unless the user accepts losing it.
 - **Python**: `uv lock --upgrade --dry-run` shows what moves. Watch majors of the packages REA
   drives (pwntools, mitmproxy, frida-tools/objection) and the angr group's pins. frida-server
@@ -119,6 +119,20 @@ Done when each row and alternative has a retain/change/hold decision with curren
 Update checked dates only for claims actually rechecked; include stale claims and evidence gaps
 in the plan. Keep the guide in concise US English. Downloading weights or running hardware
 benchmarks needs user-authorized scope; a documentation review does not require either.
+
+### Console and game archive workflows
+
+On every run, review `docs/PLAYSTATION.md` and `docs/GAME-ARCHIVES.md`, the `playstation`
+command/tests, optional component selection, and their tool/extension manifests. Check official
+releases, host architectures, exact Ghidra compatibility, mutable QuickBMS downloads, source-build
+dependencies/licenses, and held tools. Recheck installed REA profiles before claiming PS-X EXE,
+R5900, or XEX support; distinguish direct Ghidra imports from MCP support. Record source-backed
+retain/change/hold decisions in the workflow review. When behavior changes, run
+`uv run --no-sync python -m unittest rea_suite.test_playstation`; on a provisioned host also run
+`REA_PLAYSTATION_INTEGRATION=1 uv run --no-sync python -m unittest rea_suite.test_playstation`.
+Use synthetic images/executables; verify real loaders/mappings and exported code, not just exit
+status or project existence. Keep untested hosts, analyzer warnings, game-specific formats, and
+emulator integration limits explicit. Done when every documented tool/platform lane has a decision.
 
 ## 3. Plan
 

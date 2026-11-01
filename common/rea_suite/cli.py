@@ -463,7 +463,7 @@ def cmd_status(args: argparse.Namespace) -> None:
         dest = TOOLS_DIR / tool.name / installed
         if tool.ghidra_extensions and dest.is_dir():
             present = ghidra.installed(dest)
-            for name in tool.ghidra_extensions:
+            for name in ghidra.selected_specs(tool.ghidra_extensions):
                 info = present.get(name)
                 text = f"{info['tag']} ({info['source']})" if info else "MISSING"
                 print(f"  + {name:16} {text}")
@@ -496,7 +496,11 @@ def cmd_check(args: argparse.Namespace) -> None:
         absent = [n for n in names if not (BIN_DIR / f"{n}{suffix}").exists()]
         if tool.ghidra_extensions:
             present = ghidra.installed(dest)
-            absent += [f"extension:{n}" for n in tool.ghidra_extensions if n not in present]
+            absent += [
+                f"extension:{n}"
+                for n in ghidra.selected_specs(tool.ghidra_extensions)
+                if n not in present
+            ]
         if tool.name == "ghidra" and PLATFORM == "macos" and not ghidra.native_decompiler(dest):
             absent.append("natives (rea-tools reinstall ghidra)")
         if absent:

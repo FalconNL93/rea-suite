@@ -27,3 +27,6 @@ wine64              -
 linux-perf          perf
 # scrcpy is in COPR only (zeno/scrcpy)
 scrcpy              -
+
+# ZArchive native source build (component game-archives)
+libzstd-dev         libzstd-devel

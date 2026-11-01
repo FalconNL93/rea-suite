@@ -46,6 +46,7 @@
 #              `deps` copies files of other releases into the source first:
 #              `{github, version, assets: {<platform>: regex}, copy: {<glob>: <dir>}}`,
 #              `{os}` in a dir is Ghidra's native directory name).
+#              Optional extensions set `component: <name>`; deselection leaves installed copies.
 # plugins:     files from another release copied into the install dir:
 #              `copy: {<glob in archive>: <dir in install>}`.
 
@@ -103,11 +104,101 @@ tools:
         github: al3xtjames/ghidra-firmware-utils
         asset: '^ghidra_{ghidra}_PUBLIC_\d+_ghidra-firmware-utils\.zip$'
         build: true
+      # Optional console loaders; require exact-version release assets (no source fallback).
+      psx:
+        component: playstation
+        github: lab313ru/ghidra_psx_ldr
+        asset: '^ghidra_{ghidra}_PUBLIC_\d+_ghidra_psx_ldr\.zip$'
+      emotionengine:
+        component: playstation
+        github: chaoticgd/ghidra-emotionengine-reloaded
+        asset: '^ghidra_{ghidra}_PUBLIC_\d+_ghidra-emotionengine-reloaded\.zip$'
       # .NET Native AOT analysis; rea uses its jar (REA_GHIDRA_NATIVEAOT_JAR)
       nativeaot:
         github: Washi1337/ghidra-nativeaot
         asset: '^ghidra_{ghidra}_PUBLIC_\d+_ghidra-nativeaot\.zip$'
         build: true
+
+  # CD extraction and layout-aware rebuilding; PS2 DVDs use 7-Zip instead.
+  mkpsxiso:
+    github: Lameguy64/mkpsxiso
+    version: latest
+    assets:
+      linux: '^mkpsxiso-[\d.]+-Linux\.zip$'
+      macos: '^mkpsxiso-[\d.]+-Darwin\.zip$'
+      windows: '^mkpsxiso-[\d.]+-win64\.zip$'
+    strip: 1
+    bin:
+      linux: &mkpsxiso-unix
+        dumpsxiso: bin/dumpsxiso
+        mkpsxiso: bin/mkpsxiso
+      macos: *mkpsxiso-unix
+      windows:
+        dumpsxiso: dumpsxiso.exe
+        mkpsxiso: mkpsxiso.exe
+
+  # Java CLI/GUI for PS1 audio/video/TIM assets; optional playstation component.
+  jpsxdec:
+    github: m35/jpsxdec
+    version: latest
+    assets:
+      linux: '^jpsxdec_v[\d.]+(?:-beta)?\.zip$'
+      macos: '^jpsxdec_v[\d.]+(?:-beta)?\.zip$'
+      windows: '^jpsxdec_v[\d.]+(?:-beta)?\.zip$'
+    bin:
+      linux: &jpsxdec-bin
+        jpsxdec: {path: '**/jpsxdec.jar', jar: true}
+      macos: *jpsxdec-bin
+      windows: *jpsxdec-bin
+
+  # Original upstream publishes Windows CLI binaries; Linux/macOS builds are not configured.
+  xgdtool:
+    github: wiredopposite/XGDTool
+    version: latest
+    assets:
+      windows: '^XGDTool-v[\d.]+-win-x64-CLI\.exe$'
+    bin:
+      windows:
+        XGDTool: 'XGDTool-*-CLI.exe'
+
+  # Windows release binary; native Linux/macOS source builds need zstd development files.
+  zarchive:
+    github: Exzap/ZArchive
+    version: latest
+    assets:
+      windows: '^zarchive\.exe$'
+    build: {cmake: true}
+    bin:
+      linux: &zarchive-unix
+        zarchive: zarchive
+      macos: *zarchive-unix
+      windows:
+        zarchive: zarchive.exe
+
+  extract-xiso:
+    github: XboxDev/extract-xiso
+    version: latest
+    assets:
+      linux: '^extract-xiso_Linux\.zip$'
+      macos: '^extract-xiso_macOS\.zip$'
+      windows: '^extract-xiso-Win64_Release\.zip$'
+    bin:
+      linux: &extract-xiso-unix
+        extract-xiso: '**/extract-xiso'
+      macos: *extract-xiso-unix
+      windows:
+        extract-xiso: '**/extract-xiso.exe'
+
+  # Author-maintained mirror. Label follows the version inside the mutable download;
+  # update --ai checks it. No old 32-bit Linux/Intel macOS binary on modern hosts.
+  quickbms:
+    version: '0.12.0'
+    url:
+      windows: https://mirror.aluigi.org/papers/quickbms.zip
+    bin:
+      windows:
+        quickbms: quickbms.exe
+        quickbms-4gb: quickbms_4gb_files.exe
 
   jadx:
     github: skylot/jadx

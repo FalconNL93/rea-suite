@@ -18,7 +18,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from . import build, github
+from . import build, components, github
 from .archive import extract
 
 MARKER = ".rea-suite.json"
@@ -37,7 +37,9 @@ def installed(install: Path) -> dict[str, dict]:
     """Extensions managed by rea-suite in this Ghidra install: name -> marker."""
     result = {}
     for marker in extensions_dir(install).glob(f"*/{MARKER}"):
-        result[marker.parent.name] = json.loads(marker.read_text())
+        info = json.loads(marker.read_text())
+        info["directory"] = marker.parent.name
+        result[info.get("name", marker.parent.name)] = info
     return result
 
 
@@ -70,6 +72,42 @@ def build_natives(install: Path) -> bool:
     return True
 
 
+def module_name(directory: Path) -> str:
+    """Ghidra discovers extension classes only when the module/JAR names agree."""
+    text = (directory / "extension.properties").read_text()
+    match = re.search(r"^name=(.+)$", text, re.MULTILINE)
+    name = match[1].strip() if match else ""
+    # extension.properties may contain a display name (e.g. "CERT Kaiju").
+    # Prefer the real module/JAR basename; compare spelling exactly even on macOS.
+    jars = {p.stem for p in (directory / "lib").glob("*.jar")}
+    if directory.name in jars:
+        name = directory.name
+    if not re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_.-]*", name):
+        raise LookupError(f"invalid Ghidra module name in {directory}")
+    return name
+
+
+def normalize_location(install: Path, name: str, marker: dict) -> dict:
+    """Migrate owned legacy aliases without changing extension contents or versions."""
+    root = extensions_dir(install)
+    old = root / marker.get("directory", name)
+    dest = root / module_name(old)
+    if old != dest:
+        if dest.exists() and (dest.is_symlink() or not old.samefile(dest)):
+            raise LookupError(f"cannot migrate {old}: {dest} already exists")
+        old.rename(dest)
+        print(f"  ghidra extension {name}: preserve module directory {dest.name}")
+    info = {**marker, "name": name, "directory": dest.name}
+    (dest / MARKER).write_text(json.dumps(info, indent=2) + "\n")
+    return info
+
+
+def selected_specs(specs: dict[str, dict]) -> dict[str, dict]:
+    """Choose required extensions; deselection leaves existing copies installed."""
+    chosen = set(components.selected())
+    return {n: s for n, s in specs.items() if not s.get("component") or s["component"] in chosen}
+
+
 def sync(install: Path, specs: dict[str, dict], force: bool = False) -> list[str]:
     """Install/update the configured extensions; returns names that failed."""
     version = ghidra_version(install)
@@ -79,10 +117,10 @@ def sync(install: Path, specs: dict[str, dict], force: bool = False) -> list[str
 
     for name in set(current) - set(specs):
         print(f"  ghidra extension {name}: no longer configured, removing")
-        shutil.rmtree(target_root / name)
+        shutil.rmtree(target_root / current[name]["directory"])
 
     failed = []
-    for name, spec in specs.items():
+    for name, spec in selected_specs(specs).items():
         try:
             _sync_one(install, version, name, spec, current.get(name), force)
         except (OSError, subprocess.CalledProcessError, LookupError) as exc:
@@ -94,6 +132,8 @@ def sync(install: Path, specs: dict[str, dict], force: bool = False) -> list[str
 def _sync_one(
     install: Path, version: str, name: str, spec: dict, marker: dict | None, force: bool
 ) -> None:
+    if marker and marker["ghidra"] == version:
+        marker = normalize_location(install, name, marker)
     repo = spec["github"]
     pinned = str(spec.get("version", "latest"))
     pattern = re.compile(spec["asset"].replace("{ghidra}", re.escape(version)))
@@ -142,8 +182,12 @@ def _sync_one(
         props = next((work / "unpacked").rglob("extension.properties"), None)
         if props is None:
             raise LookupError(f"{archive.name} contains no extension.properties")
-        dest = extensions_dir(install) / name
+        dest = extensions_dir(install) / module_name(props.parent)
         if dest.exists():
+            owned = dest / MARKER
+            info = json.loads(owned.read_text()) if owned.is_file() else {}
+            if not owned.is_file() or info.get("name", dest.name) != name:
+                raise LookupError(f"extension destination belongs to another module: {dest}")
             shutil.rmtree(dest)
         props.parent.rename(dest)
         if source == "built":
@@ -154,7 +198,14 @@ def _sync_one(
                 r"^version=.*$", f"version={version}", props.read_text(), flags=re.MULTILINE
             )
             props.write_text(text)
-        marker = {"tag": tag, "ghidra": version, "source": source, "repo": repo}
+        marker = {
+            "name": name,
+            "directory": dest.name,
+            "tag": tag,
+            "ghidra": version,
+            "source": source,
+            "repo": repo,
+        }
         (dest / MARKER).write_text(json.dumps(marker, indent=2) + "\n")
 
 

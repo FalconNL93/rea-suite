@@ -8,6 +8,7 @@
     .\platforms\windows\rea-suite.ps1 update         # runtimes, winget, uv.lock, rea-agents, tools.yml, REA skill
     .\platforms\windows\rea-suite.ps1 update --ai    # an agent checks compatibility, proposes the plan, applies it
     .\platforms\windows\rea-suite.ps1 agents [agent...]  # rea MCP + REA skill for every detected agent
+    .\platforms\windows\rea-suite.ps1 playstation [options]  # prepare PS1/PS2 projects
     .\platforms\windows\rea-suite.ps1 analyze [paths...] [options]  # offline analysis; --examples
     .\platforms\windows\rea-suite.ps1 doctor         # check the installation
     .\platforms\windows\rea-suite.ps1 reinstall runtime|python|node|tools|all|<tool>
@@ -183,6 +184,7 @@ switch ($Command) {
         Agents skills
     }
     'agents' { Agents register @Rest }
+    'playstation' { & uv run --offline --no-sync common\rea_suite\playstation.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'analyze' { & uv run --offline --no-sync common\rea_suite\analyze.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'reinstall' {
         foreach ($what in $Rest) {

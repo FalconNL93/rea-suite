@@ -31,3 +31,6 @@ ovmf                edk2-ovmf
 wine64              -
 rr                  -
 linux-perf          perf
+
+# ZArchive native source build (component game-archives)
+libzstd-dev         zstd

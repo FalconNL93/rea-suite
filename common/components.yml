@@ -71,3 +71,14 @@ components:
     apt: [qemu-system-x86, qemu-utils, ovmf]
     winget: [Oracle.VirtualBox]
     brew: [qemu, "cask:utm"]
+
+  playstation:
+    description: PS1/PS2 disc preparation (dumpsxiso/mkpsxiso) and PS1 media (jPSXdec); also enables exact-version PSX and Emotion Engine Ghidra loaders
+    tools: [mkpsxiso, jpsxdec]
+
+  game-archives:
+    description: Game archives and Xbox discs (extract-xiso, ZArchive; Windows also XGDTool and QuickBMS); ZArchive builds from source on Linux/macOS
+    # System zstd headers/library are required for native ZArchive builds.
+    apt: [libzstd-dev]
+    brew: [zstd]
+    tools: [extract-xiso, zarchive, xgdtool, quickbms]

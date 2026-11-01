@@ -164,6 +164,8 @@ REA_SUITE_COMPONENTS="build steam"
 | `angr` | no | the angr framework (~1 GB) |
 | `steam` | no | SteamCMD and Steamless (Windows) |
 | `porting` | no | porting old Windows games: Wine + winedbg, rr, perf + hotspot (Linux), Tracy, WinDbg (Windows) ([Porting old games](#porting-old-games); Wine is over 1 GB) |
+| `playstation` | no | PS1/PS2 disc preparation, Ghidra console loaders and jPSXdec ([workflow](docs/PLAYSTATION.md)) |
+| `game-archives` | no | extract-xiso, ZArchive; Windows also XGDTool and QuickBMS ([platform limits](docs/GAME-ARCHIVES.md)) |
 | `vm` | no | QEMU + OVMF (Linux) or VirtualBox (Windows); UTM on macOS |
 
 Change it with `rea-suite select` (menu, then setup), by editing `.env`, or per run
@@ -242,6 +244,13 @@ avoids the fallback; a fine-grained token without any permissions is enough.
 See [local models by VRAM](docs/LOCAL-MODELS.md) for model/quant candidates, memory estimates,
 practical cutoffs, and REA integration requirements. Recommendations are researched, not locally
 benchmarked. `update --ai` reviews them on every run.
+
+## Console games and disc images
+
+[PS1/PS2 workflow](docs/PLAYSTATION.md): `rea-suite playstation game.cue --project work/game --ghidra`
+extracts the image, resolves its boot program and creates an editable Ghidra project with initial exports.
+Enable the optional `playstation` component first. This uses Ghidra directly; REA's console profiles
+remain limited. [Game archive tools](docs/GAME-ARCHIVES.md) cover Xbox images, ZAR/WUA and QuickBMS.
 
 ## Offline analysis projects
 
@@ -405,6 +414,12 @@ been run on macOS arm64; Windows and Linux execution remain unverified.
 | asar | List and extract Electron `app.asar` archives | npm `@electron/asar` |
 | pyinstxtractor-ng | Unpack PyInstaller executables into their .pyc files | uv tool |
 | pycdc, pycdas | Decompile and disassemble Python bytecode (.pyc) | tools.yml, built from source (component `build`) |
+| dumpsxiso, mkpsxiso | Extract/rebuild PS1 and PS2 CD images with layout XML (component `playstation`) | tools.yml, release binaries |
+| jPSXdec | PS1 media indexing/conversion, CLI and GUI (component `playstation`) | tools.yml, Java JAR |
+| extract-xiso | List/extract/create Xbox XISO images (component `game-archives`) | tools.yml, release binaries |
+| ZArchive | Read/create ZAR/WUA (component `game-archives`) | tools.yml; source build with zstd on Linux/macOS, EXE on Windows |
+| XGDTool | Xbox/360 disc format conversion (component `game-archives`) | tools.yml, Windows CLI only |
+| QuickBMS | Script-driven game archive extraction/reimport (component `game-archives`) | tools.yml, author's Windows ZIP; scripts selected separately |
 | WABT (`wasm2wat`, `wasm-objdump`, ...) | Read and disassemble WebAssembly modules | tools.yml |
 
 ### Dynamic analysis: debug, instrument, emulate
@@ -593,10 +608,16 @@ checks that they are on. Findings are shown redacted (rule, file, line). Tokens 
 
 ## Ghidra and its extensions
 
+Setup preserves upstream module/JAR directory names so Java loaders are discoverable. Existing
+suite aliases are migrated in place, retaining their versions and logical status IDs. Custom
+absolute paths to extension JARs must follow the preserved module directory.
+
 | Extension | What it is for | Source |
 | --- | --- | --- |
 | FindCrypt | Label crypto constants (AES S-boxes, hash IVs, ...) during analysis | prebuilt per Ghidra version |
 | Kaiju (CERT/CC) | Function hashing across binaries, OOAnalyzer C++ class recovery | prebuilt or built (Z3 from its release, as upstream's CI does) |
+| ghidra_psx_ldr | PS-X EXE and PSX GTE support (component `playstation`) | exact-version prebuilt |
+| Emotion Engine: Reloaded | PS2 R5900/MMI/VU0 macro support (component `playstation`) | exact-version prebuilt |
 | XEXLoaderWV | Load Xbox 360 XEX executables | prebuilt or built |
 | ghidra-firmware-utils | Load UEFI images, PCI option ROMs and other firmware formats | prebuilt or built |
 | ghidra-nativeaot | Recover .NET Native AOT binaries in Ghidra; REA's optional adapter is configured separately | prebuilt or built |

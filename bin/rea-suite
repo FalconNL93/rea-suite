@@ -19,6 +19,7 @@
 #   rea-suite agents [client...]            register (or repair) the rea MCP server via
 #                                            bin/rea and install/refresh the REA skill;
 #                                            default: every agent rea-agents detects
+#   rea-suite playstation [options]         prepare PS1/PS2 disc images or extracted trees
 #   rea-suite analyze [paths...] [options]  offline analysis projects; --examples for workflows
 #   rea-suite tools <args...>               tools.yml manager (= rea-tools)
 #   rea-suite lint [file...]                ruff, shellcheck and a PowerShell parse check on
@@ -512,6 +513,7 @@ case "$cmd" in
   doctor) cmd_doctor ;;
   agents) agents register "${args[@]}" ;;
   analyze) uv run --offline --no-sync common/rea_suite/analyze.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
+  playstation) uv run --offline --no-sync common/rea_suite/playstation.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   tools) rea-tools "${args[@]}" ;;
   clean) cmd_clean "${args[@]}" ;;
   lint) exec .githooks/lint.sh "${args[@]}" ;;
