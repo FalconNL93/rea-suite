@@ -54,6 +54,9 @@ A pinned tool moves to exactly the version the target rea-agents verifies, never
 - **Ghidra**: a new Ghidra version needs every selected extension in `tools.yml`
   (`ghidra.selected_specs`, including optional components) released for it, or buildable (`build: true`). Check each extension's releases; one that would
   go missing holds Ghidra back, unless the user accepts losing it.
+  `xexloaderwv` is pinned (`version:`): move it to the release for the new Ghidra (or keep the
+  pin to build its source), then `rea-suite xbox360 check` and the opt-in Xbox 360 tests
+  (README, "Console games and disc images") before committing.
 - **Python**: `uv lock --upgrade --dry-run` shows what moves. Watch majors of the packages REA
   drives (pwntools, mitmproxy, frida-tools/objection) and the angr group's pins. frida-server
   follows the frida package by itself (`version: pip:frida`).

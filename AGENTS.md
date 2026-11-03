@@ -42,7 +42,9 @@ installation.
 * **Pinned versions say why.** A pin in `tools.yml` (`ghidra`, `jadx-headless-mcp`, `kuna`,
   `pwndbg`) is there because REA verifies that version; the comment names it. The Ghidra pin and
   the JDK major in the bootstraps follow rea-agents' `GhidraReleasePolicy.js`; `rea-tools rea-pins`
-  (run by `update` and `doctor`) says when a new rea-agents moves them.
+  (run by `update` and `doctor`) says when a new rea-agents moves them. The `xexloaderwv`
+  extension pin is the release `rea-suite xbox360` was verified with; it moves with the Ghidra pin,
+  after `rea-suite xbox360 check` and the opt-in Xbox 360 tests pass.
 
 ## Adding a tool
 

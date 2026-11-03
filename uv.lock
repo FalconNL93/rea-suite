@@ -1952,6 +1952,7 @@ source = { editable = "." }
 dependencies = [
     { name = "capstone" },
     { name = "cmake" },
+    { name = "cryptography" },
     { name = "die-python", marker = "platform_machine != 'arm64' or sys_platform != 'darwin'" },
     { name = "flare-floss" },
     { name = "frida-tools" },
@@ -1982,6 +1983,7 @@ dev = [
 requires-dist = [
     { name = "capstone", specifier = ">=5" },
     { name = "cmake", specifier = ">=3.30" },
+    { name = "cryptography", specifier = ">=44" },
     { name = "die-python", marker = "platform_machine != 'arm64' or sys_platform != 'darwin'", specifier = ">=0.5" },
     { name = "flare-floss", specifier = ">=3" },
     { name = "frida-tools", specifier = ">=14" },

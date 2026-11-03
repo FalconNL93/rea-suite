@@ -252,6 +252,54 @@ extracts the image, resolves its boot program and creates an editable Ghidra pro
 Enable the optional `playstation` component first. This uses Ghidra directly; REA's console profiles
 remain limited. [Game archive tools](docs/GAME-ARCHIVES.md) cover Xbox images, ZAR/WUA and QuickBMS.
 
+Xbox 360: `rea-suite xbox360` runs the suite's Ghidra headless on an XEX (by its `XEX2` magic,
+through the XEXLoaderWV extension) or on the PE image extracted from one (COFF machine 0x01f2),
+both as `PowerPC:BE:64:A2ALT-32addr` (big-endian 64-bit with Altivec, 32-bit addresses). REA
+itself does not open either (its PowerPC lane is ELF32 only). The Ghidra project is yours: pass
+its folder; the suite keeps nothing in `work/`.
+
+```sh
+rea-suite xbox360 analyze game/default.xex --project re/ghidra-project --name game  # once
+rea-suite xbox360 decomp --project re/ghidra-project -o out.c 0x82514710 0x8234e2e8
+rea-suite xbox360 xrefs --project re/ghidra-project "connect"   # functions using strings
+rea-suite xbox360 functions --project re/ghidra-project -o functions.tsv
+rea-suite xbox360 check                     # XEXLoaderWV installed and loading (doctor runs it)
+```
+
+The queries open the project read-only and take `--program` when it holds more than one; Ghidra's
+logs go to `<project>/logs/`. `common/ghidra_scripts/XenonHelpers.java` runs before analysis
+and before every query: it finds the register save/restore helpers (`__savegprlr_*`,
+`__restgprlr_*`, `__savefpr_*`, `__restfpr_*`, `__savevmx_*`, `__restvmx_*`) by their instruction
+pattern, names them and gives them a call-fixup without effect, so Ghidra's "Non-Returning
+Functions - Discovered" analyzer leaves them alone. Without it they are marked non-returning and
+every caller is cut off after its prologue; projects analyzed before are repaired in memory.
+An image extracted from an XEX is laid out as loaded while its section table still gives the
+linker's file offsets: `analyze` imports a copy whose section table matches. Each command ends with
+`Limit:` lines: instructions Ghidra cannot decode (VMX128 is missing from Ghidra's PowerPC
+language; disassembly and decompiles stop there), and for a PE image the XEX import names it lacks.
+
+Without Ghidra, on an XEX, its extracted image or a raw dump (`--base`, default 0x82000000):
+
+| Command | Gives |
+| --- | --- |
+| `info <xex>` | the XEX2 headers as JSON: format, execution info, libraries, resources, security info |
+| `extract <xex> -o image.bin` | the decrypted (retail or devkit key) image as loaded; basic compression only |
+| `imports <xex>` | import thunks with their names (Xenia's export tables, `common/rea_suite/data/`) |
+| `icon <xex> -o title.png\|.ico` | the dashboard title image from the title's XDBF resource |
+| `pdata <image> [address...]` | the `.pdata` function table, or the functions containing the addresses |
+| `callers <image> <address>...` | `b`/`bl` instructions to the addresses |
+| `refs <image> <text\|0xaddr>...` | `lis` + `addi`/load/store pairs building the address of a string or value, which Ghidra often leaves unresolved on 360 code |
+| `rtti <image> <Class>...` | MSVC RTTI: type descriptor, complete object locators, vtables |
+| `helpers <image>` | the save/restore helpers' first entries, as XenonRecomp's config keys |
+| `disasm <image> <address> [count]` | Capstone disassembly; undecoded words are marked (VMX128) |
+
+`extract` refuses LZX-compressed XEX files (normal and delta compression) with that reason;
+`analyze` reads them through XEXLoaderWV. XEXLoaderWV is pinned in `common/tools.yml`;
+`rea-suite tools reinstall ghidra` puts it back when doctor reports it missing. Tests:
+`uv run --no-sync python -m unittest rea_suite.test_xex rea_suite.test_xbox360` in `common/`
+(synthetic samples); opt-in with Ghidra: `REA_XBOX360_INTEGRATION=1` (a synthetic PE) and
+`REA_XBOX360_SAMPLE=<file>` with `REA_XBOX360_ADDRESS=<hex>` (a real executable, read-only).
+
 ## Offline analysis projects
 
 `rea-suite analyze` drives the installed tools without an agent or remote model. It accepts
@@ -629,7 +677,7 @@ absolute paths to extension JARs must follow the preserved module directory.
 | Kaiju (CERT/CC) | Function hashing across binaries, OOAnalyzer C++ class recovery | prebuilt or built (Z3 from its release, as upstream's CI does) |
 | ghidra_psx_ldr | PS-X EXE and PSX GTE support (component `playstation`) | exact-version prebuilt |
 | Emotion Engine: Reloaded | PS2 R5900/MMI/VU0 macro support (component `playstation`) | exact-version prebuilt |
-| XEXLoaderWV | Load Xbox 360 XEX executables | prebuilt or built |
+| XEXLoaderWV | Load Xbox 360 XEX executables (`rea-suite xbox360`; pinned, checked by doctor) | prebuilt or built |
 | ghidra-firmware-utils | Load UEFI images, PCI option ROMs and other firmware formats | prebuilt or built |
 | ghidra-nativeaot | Recover .NET Native AOT binaries in Ghidra; REA's optional adapter is configured separately | prebuilt or built |
 

@@ -20,6 +20,9 @@
 #                                            bin/rea and install/refresh the REA skill;
 #                                            default: every agent rea-agents detects
 #   rea-suite playstation [options]         prepare PS1/PS2 disc images or extracted trees
+#   rea-suite xbox360 <command> [options]   Xbox 360 XEX or PE image in a Ghidra project of yours:
+#                                            analyze, decomp, xrefs, functions, check, and
+#                                            Ghidra-free info, extract, imports, refs, ... (--help)
 #   rea-suite analyze [paths...] [options]  offline analysis projects; --examples for workflows
 #   rea-suite tools <args...>               tools.yml manager (= rea-tools)
 #   rea-suite lint [file...]                ruff, shellcheck and a PowerShell parse check on
@@ -416,6 +419,12 @@ cmd_doctor() {
   step "tools.yml"
   rea-tools check || problems=$((problems + 1))
   rea-tools rea-pins || problems=$((problems + 1))
+  local xex
+  if xex="$(uv run --offline --no-sync common/rea_suite/xbox360.py check 2>&1)"; then
+    ok "xexloaderwv" "$xex"
+  else
+    bad "xexloaderwv" "$xex"
+  fi
 
   step "git"
   if [[ "$(git config core.hooksPath 2>/dev/null)" == .githooks ]]; then
@@ -518,6 +527,7 @@ case "$cmd" in
   agents) agents register "${args[@]}" ;;
   analyze) uv run --offline --no-sync common/rea_suite/analyze.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   playstation) uv run --offline --no-sync common/rea_suite/playstation.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
+  xbox360) uv run --offline --no-sync common/rea_suite/xbox360.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   tools) rea-tools "${args[@]}" ;;
   clean) cmd_clean "${args[@]}" ;;
   lint) exec .githooks/lint.sh "${args[@]}" ;;

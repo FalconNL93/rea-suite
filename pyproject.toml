@@ -27,6 +27,8 @@ dependencies = [
     "objection>=1.12",
     # Binary diffing on top of Ghidra/pyghidra (CLI: ghidriff)
     "ghidriff>=1",
+    # AES for decrypting Xbox 360 XEX images (rea-suite xbox360; also a mitmproxy dependency)
+    "cryptography>=44",
     # Disassembler / CPU emulator / assembler engines
     "capstone>=5",
     "unicorn>=2.1",

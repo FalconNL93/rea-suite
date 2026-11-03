@@ -9,6 +9,7 @@
     .\platforms\windows\rea-suite.ps1 update --ai    # an agent checks compatibility, proposes the plan, applies it
     .\platforms\windows\rea-suite.ps1 agents [agent...]  # rea MCP + REA skill for every detected agent
     .\platforms\windows\rea-suite.ps1 playstation [options]  # prepare PS1/PS2 projects
+    .\platforms\windows\rea-suite.ps1 xbox360 <command> [options]  # Xbox 360 XEX/PE in your Ghidra project
     .\platforms\windows\rea-suite.ps1 analyze [paths...] [options]  # offline analysis; --examples
     .\platforms\windows\rea-suite.ps1 doctor         # check the installation
     .\platforms\windows\rea-suite.ps1 reinstall runtime|python|node|tools|all|<tool>
@@ -21,7 +22,7 @@
 #>
 #Requires -Version 7
 param(
-    [Parameter(Position = 0)][ValidateSet('setup', 'select', 'winget', 'update', 'reinstall', 'agents', 'analyze', 'playstation', 'doctor', 'status', 'tools', 'clean', 'lint')][string]$Command = 'setup',
+    [Parameter(Position = 0)][ValidateSet('setup', 'select', 'winget', 'update', 'reinstall', 'agents', 'analyze', 'playstation', 'xbox360', 'doctor', 'status', 'tools', 'clean', 'lint')][string]$Command = 'setup',
     [Parameter(Position = 1, ValueFromRemainingArguments)][string[]]$Rest = @()
 )
 $ErrorActionPreference = 'Stop'
@@ -136,6 +137,8 @@ function Doctor {
     Step 'tools.yml'
     uv run rea-tools check; if ($LASTEXITCODE) { $script:problems++ }
     uv run rea-tools rea-pins; if ($LASTEXITCODE) { $script:problems++ }
+    $xex = uv run --offline --no-sync common\rea_suite\xbox360.py check
+    if ($LASTEXITCODE) { Bad 'xexloaderwv' "$xex" } else { Ok 'xexloaderwv' "$xex" }
     Step 'system (winget)'
     foreach ($p in Winget-Ids) {
         winget list --id $p --exact --accept-source-agreements *> $null
@@ -189,6 +192,7 @@ switch ($Command) {
     }
     'agents' { Agents register @Rest }
     'playstation' { & uv run --offline --no-sync common\rea_suite\playstation.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
+    'xbox360' { & uv run --offline --no-sync common\rea_suite\xbox360.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'analyze' { & uv run --offline --no-sync common\rea_suite\analyze.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'reinstall' {
         foreach ($what in $Rest) {
