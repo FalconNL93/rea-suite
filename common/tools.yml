@@ -104,7 +104,7 @@ tools:
         github: al3xtjames/ghidra-firmware-utils
         asset: '^ghidra_{ghidra}_PUBLIC_\d+_ghidra-firmware-utils\.zip$'
         build: true
-      # Optional console loaders; require exact-version release assets (no source fallback).
+      # Optional console loaders; exact-version release assets only (the psx source lacks its PsyQ submodule).
       psx:
         component: playstation
         github: lab313ru/ghidra_psx_ldr
@@ -190,7 +190,7 @@ tools:
         extract-xiso: '**/extract-xiso.exe'
 
   # Author-maintained mirror. Label follows the version inside the mutable download;
-  # update --ai checks it. No old 32-bit Linux/Intel macOS binary on modern hosts.
+  # update --ai checks it. The 0.12.0 Linux (static i386) and macOS (x86_64) builds are not configured.
   quickbms:
     version: '0.12.0'
     url:

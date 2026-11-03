@@ -17,3 +17,9 @@ with the reason when it is dropped.
 - **Kaitai Struct (compiler and visualizer)**: describe a game's file formats once and get
   parsers and a structure viewer from the description.
 - **DOSBox-X with its debugger**: run and debug DOS-era games and their installers.
+
+## Console games
+
+- **ghidra-allegrex (PSP)**: REA 6.8.0 has a PSP Allegrex profile that expects this Ghidra
+  extension; kotcrab/ghidra-allegrex publishes exact-version builds (12.1.4 in v21.4). Needs a
+  check of its license and REA's expectations before it joins a component.

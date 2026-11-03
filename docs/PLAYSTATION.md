@@ -1,21 +1,22 @@
 # PS1 / PS2 workflow
 
-Checked: **2026-11-01**. Static preparation; games and emulators are not started.
+Checked: **2026-11-03**. Static preparation; games and emulators are not started.
 
 ## Install
 
 Run `rea-suite select`, enable **playstation**, and keep your other components selected.
 Selection runs setup. The component adds:
 
-| Tool | Purpose | Linux / macOS ARM / Windows |
+| Tool | Purpose | Linux x86_64 / macOS ARM / Windows x64 |
 |---|---|---|
 | dumpsxiso / mkpsxiso | Extract 2352-byte CD BIN/CUE; preserve an XML layout for rebuilding | Release binaries |
 | ghidra_psx_ldr | PS-X EXE loader, PSX processor/GTE support, PsyQ recognition | Exact-version Ghidra extension |
-| Emotion Engine: Reloaded | PS2 EE R5900/MMI/VU0 macro instructions, STABS, savestate import | Exact-version Ghidra extension |
+| Emotion Engine: Reloaded | PS2 EE R5900/MMI/VU0 macro instructions, STABS (bundled x86_64 `stdump`), PCSX2 savestate import | Exact-version Ghidra extension |
 | jPSXdec | PS1 audio/video and supported image assets; CLI and GUI | Java JAR; current release is beta and has non-commercial terms |
 | 7-Zip | Extract ordinary 2048-byte ISO9660 images, including PS2 DVD data | Already in the base suite |
 
-Loaders use prebuilt releases matching the installed Ghidra. No source fallback is enabled.
+Loaders use prebuilt releases matching the installed Ghidra; there is no source fallback (the PSX
+source lacks its PsyQ signature submodule). Without a matching release, setup reports the loader as FAILED.
 Setup preserves upstream module directory names and migrates previously renamed suite extensions.
 Deselecting the component stops updates/checks; already installed tools and loaders remain.
 Use `rea-suite tools check ghidra mkpsxiso jpsxdec` after setup.
@@ -79,7 +80,7 @@ or make `rea-suite analyze` support these formats. Track [REA #6746](https://git
 | Candidate | Use next | Integration status |
 |---|---|---|
 | [PCSX-Redux](https://github.com/pcsx-redux/pcsx-redux) | PS1 breakpoints, RAM, GPU/debugging, runtime validation | External; not installed or launched |
-| [PCSX2](https://github.com/PCSX2/pcsx2) | PS2 runtime debugging and savestates | External; not installed or launched; savestate format must match the loader |
+| [PCSX2](https://github.com/PCSX2/pcsx2) | PS2 runtime debugging and savestates | External; not installed or launched; save states for the EE importer must use Deflate64 (PCSX2 2.1.178+ defaults to zstd) |
 | [splat](https://github.com/ethteck/splat) | Split PSX/PS2 code/data into a decompilation project | External; needs per-game configuration and a suitable compiler/linker |
 | [armips](https://github.com/Kingcom/armips) | Assemble console-specific patches | External; patch layout and ABI remain project-specific |
 
@@ -89,7 +90,9 @@ macOS ARM: real release installers in an isolated work directory; synthetic PS1 
 ISO extraction; actual Ghidra 12.1.4 imports with console languages; function/pseudocode exports;
 jPSXdec CLI startup and synthetic-disc indexing. Console imports disable CERT Kaiju Function Hashing, which throws on these processors;
 other analyzer/script errors remain explicit warnings.
-Linux/Windows execution, commercial games, dual-layer DVDs, mixed-mode audio roundtrips, and
+Linux x86_64 (WSL2, 2026-11-03): unit tests only; the component was not provisioned and no tool or
+loader ran. The EE STABS analyzer's `stdump` is x86_64-only (macOS ARM relies on Rosetta 2; unverified).
+Linux/Windows tool execution, commercial games, dual-layer DVDs, mixed-mode audio roundtrips, and
 emulator integration are **not tested**. The active tool installation was left unchanged.
 
 Upstream: [mkpsxiso](https://github.com/Lameguy64/mkpsxiso),
