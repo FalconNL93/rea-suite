@@ -534,6 +534,7 @@ been run on macOS arm64 and Linux x86_64 (WSL2, 2026-11-03); Windows execution r
 | Tracy (`tracy-profiler`, `tracy-capture`) | Frame profiler for code you instrument: the native rewrite or the recompiled game (component `porting`) | tools.yml |
 | Ghidra FunctionID for old MSVC | Names the C runtime's functions in old games; Ghidra ships Visual C++ 4.2 and 2003-2010, VC6 you build from your own copy ([below](#functionid-for-visual-c-60)) | Ghidra (built in) |
 | `rea-suite functions` | A port's index of identified functions (no game bytes) and the gate that checks the executable still matches it; x86/x64 PE and Xbox 360 images ([below](#function-index-and-gate)) | this repo |
+| `rea-suite steamstub` | Detect Steam's DRM wrapper before analysis; Steamless removes it ([below](#steamstub)) | this repo |
 
 radare2 is deliberately left out: Rizin is its fork with the same feature set,
 and REA integrates Rizin (`REA_RIZIN_COMMAND`, Cutter bridge).
@@ -646,6 +647,65 @@ fits), and `check` then also says when no function starts at an entry. `signatur
 (default: the first 32 bytes, 12 hex digits) or `body` (from the entry to the next function
 start, at most 64 KiB, 16 hex digits; it notices a change anywhere in the function). Tests:
 `uv run --no-sync python -m unittest rea_suite.test_functions` in `common/` (synthetic images).
+
+### Imports by ordinal (MFC42 and others)
+
+REA's Ghidra sessions name an import `<DLL>::<function>`: `KERNEL32.DLL::CreateFileA`,
+`MFC42.DLL::CDialog::OnInitDialog`. An import by ordinal carries no name; Ghidra names it from
+its ordinal tables in `$GHIDRA_INSTALL_DIR/Ghidra/Features/Base/data/symbols/win32/` (MFC 4.2 to
+14.0 in `mfc*.exports`, both ANSI and Unicode) and from the user's tables in
+`~/.config/ghidra/<version>/symbols/win32/`. For a DLL in neither it shows `Ordinal_<n>`
+(`OLDLIB.DLL::Ordinal_4710`). To name those:
+
+- One ordinal by hand: `grep 'ORDINAL="4710"' "$GHIDRA_INSTALL_DIR"/Ghidra/Features/Base/data/symbols/win32/mfc42.exports`,
+  and `llvm-undname '<the NAME>'` (component `build`) for the C++ signature.
+- A DLL that exports by name too (the game's own engine DLLs): import it once without analysis
+  and let Ghidra write its table, then analyze the executable again (a fresh REA session, or a
+  new `rea-ghidra` project: names come from the tables at import):
+
+  ```sh
+  "$GHIDRA_INSTALL_DIR/support/analyzeHeadless" work/exports dlls -import game/Engine.dll \
+    -noanalysis -readOnly -postScript CreateExportFileForDLL.java
+  ```
+
+  The script prints the `.exports` file it wrote under `~/.config/ghidra/`.
+- A DLL that exports by ordinal only (MFC42 exports all of its functions so): the names are in
+  the import library's `.DEF` (Visual C++ 6.0's `MFC42.DEF`, from your own copy) or Ghidra's
+  table; use them to cross-check, they cannot come from the DLL.
+
+Checked 2026-11-03 with Ghidra 12.1.4 and synthetic executables importing `MFC42.DLL` and an
+unknown DLL by ordinal: REA gave `MFC42.DLL::AfxWinMain` and `Ordinal_4710`, and after
+`CreateExportFileForDLL.java` on that DLL, Ghidra gave its name.
+
+### SteamStub
+
+Steam's DRM wrapper encrypts the code and moves the entry point into a stub, so analysis of
+the wrapped file sees nothing useful. Check first, from the file alone:
+
+```sh
+rea-suite steamstub game/Game.exe          # exit 0 none, 1 SteamStub or possibly, 2 not a PE
+```
+
+It reports a `.bind` section (where the stub lives), the entry point in it, a code section near
+random (entropy over 7.2 bits a byte: encrypted), and a header timestamp in the future or
+different from the debug directory's (the file was rewritten after linking; on its own this is no proof, patched
+retail executables show it too), with the file's SHA-256. `.bind` with the entry point in it is
+SteamStub. Tests: `uv run --no-sync python -m unittest rea_suite.test_steamstub` in `common/`.
+
+Removing it is Steamless (component `steam`, Windows; from WSL through the interop launcher):
+
+```sh
+steamless-cli --quiet game/Game.exe        # writes game/Game.exe.unpacked.exe; Game.exe stays
+rea-suite steamstub game/Game.exe.unpacked.exe   # none: .bind gone, code readable
+sha256sum game/Game.exe game/Game.exe.unpacked.exe
+```
+
+Unwrapping a game's executable needs the owner's permission, per game, each time a new
+executable is unwrapped. Record in the port, next to the files: the wrapped file's SHA-256 and
+version, the Steamless version (or its commit), the date of the permission, and the unwrapped
+file's SHA-256, which the port's build then checks. Steamless rebuilds the headers, so the
+result is not byte-identical to a retail executable even when its code is. Steamless names
+the variant (SteamStub 1.0 to 3.1) in its log.
 
 ### FunctionID for Visual C++ 6.0
 
