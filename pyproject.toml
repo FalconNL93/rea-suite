@@ -68,3 +68,5 @@ module-root = "common"
 
 [tool.ruff]
 line-length = 100
+# Vendored from games/ci-images (skills/templates/git-guardrails), kept as a copy and linted there.
+extend-exclude = [".agents/skills/git-guardrails/scripts"]

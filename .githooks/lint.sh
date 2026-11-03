@@ -32,8 +32,8 @@ done
 
 status=0
 if ((${#py[@]})); then
-  "$venv/ruff" check --quiet "${py[@]}" || status=1
-  "$venv/ruff" format --check --quiet "${py[@]}" || status=1
+  "$venv/ruff" check --quiet --force-exclude "${py[@]}" || status=1
+  "$venv/ruff" format --check --quiet --force-exclude "${py[@]}" || status=1
 fi
 if ((${#sh[@]})); then
   "$venv/shellcheck" "${sh[@]}" || status=1
