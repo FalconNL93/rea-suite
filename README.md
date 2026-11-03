@@ -533,6 +533,7 @@ been run on macOS arm64 and Linux x86_64 (WSL2, 2026-11-03); Windows execution r
 | hotspot | View perf recordings: flame graphs, callers and callees, timeline (Linux; component `porting`) | tools.yml (AppImage) |
 | Tracy (`tracy-profiler`, `tracy-capture`) | Frame profiler for code you instrument: the native rewrite or the recompiled game (component `porting`) | tools.yml |
 | Ghidra FunctionID for old MSVC | Names the C runtime's functions in old games; Ghidra ships Visual C++ 4.2 and 2003-2010, VC6 you build from your own copy ([below](#functionid-for-visual-c-60)) | Ghidra (built in) |
+| `rea-suite functions` | A port's index of identified functions (no game bytes) and the gate that checks the executable still matches it; x86/x64 PE and Xbox 360 images ([below](#function-index-and-gate)) | this repo |
 
 radare2 is deliberately left out: Rizin is its fork with the same feature set,
 and REA integrates Rizin (`REA_RIZIN_COMMAND`, Cutter bridge).
@@ -611,6 +612,40 @@ macOS has no Wine in the suite: Homebrew disabled its Wine casks on 2026-09-01 b
 they fail the Gatekeeper check, and the remaining builds (Gcenx's, CrossOver) are
 unsigned or commercial. rr is Linux-only (it relies on Linux's perf events and ptrace),
 and hotspot reads Linux perf data only.
+
+### Function index and gate
+
+A port keeps the functions it has identified in a table of its own: game, address, name, what
+it does, where the port uses it, a signature and the date it was checked. The signature is a
+truncated SHA-256 over the function's bytes, so the table holds no game bytes; the gate says
+whether the executable in front of it still has those functions there.
+
+```sh
+rea-suite functions re/functions.json add pc 0x0040b980 QuitGame "ends the game" src/app.cpp
+rea-suite functions re/functions.json find quit
+rea-suite functions re/functions.json check     # exit 1 on a mismatch, 2 when the table is empty
+rea-suite functions re/functions.json convert pc re/old-functions.tsv   # address/name/hash/what
+```
+
+The JSON config is the one of the Xbox 360 gate in games/rexglue-sdk
+(`scripts/xbox360/function_index.py`); its configs work unchanged, and both write the same table:
+
+```json
+{"index": "functions.tsv",
+ "games": {"pc": {"image": "${GAME_DIR:-../game}/Game.exe", "signature": "body",
+                  "entries": "function_entries.tsv"},
+           "sp": {"image": "xex/default.bin", "base": "0x82000000",
+                  "partition": "../src/generated/codegen.partition.json"}}}
+```
+
+Paths are relative to the config, `${NAME:-default}` takes the environment, and `--image
+GAME=PATH` overrides one. With `base` the image is a flat memory image (`rea-suite xbox360
+extract`); without it a PE (x86, x64), read through its section table. The function starts come
+from codegen's `partition` or an `entries` TSV (first column; `rea-ghidra functions` output
+fits), and `check` then also says when no function starts at an entry. `signature` is `head`
+(default: the first 32 bytes, 12 hex digits) or `body` (from the entry to the next function
+start, at most 64 KiB, 16 hex digits; it notices a change anywhere in the function). Tests:
+`uv run --no-sync python -m unittest rea_suite.test_functions` in `common/` (synthetic images).
 
 ### FunctionID for Visual C++ 6.0
 

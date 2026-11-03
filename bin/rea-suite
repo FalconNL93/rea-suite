@@ -23,6 +23,9 @@
 #   rea-suite xbox360 <command> [options]   Xbox 360 XEX or PE image in a Ghidra project of yours:
 #                                            analyze, decomp, xrefs, functions, check, and
 #                                            Ghidra-free info, extract, imports, refs, ... (--help)
+#   rea-suite functions <config> check|add|find|convert  a port's index of identified
+#                                            functions (no game bytes) and its gate; x86/x64 PE,
+#                                            Xbox 360 images (--help)
 #   rea-suite analyze [paths...] [options]  offline analysis projects; --examples for workflows
 #   rea-suite tools <args...>               tools.yml manager (= rea-tools)
 #   rea-suite lint [file...]                ruff, shellcheck and a PowerShell parse check on
@@ -528,6 +531,7 @@ case "$cmd" in
   analyze) uv run --offline --no-sync common/rea_suite/analyze.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   playstation) uv run --offline --no-sync common/rea_suite/playstation.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   xbox360) uv run --offline --no-sync common/rea_suite/xbox360.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
+  functions) uv run --offline --no-sync common/rea_suite/functions.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   tools) rea-tools "${args[@]}" ;;
   clean) cmd_clean "${args[@]}" ;;
   lint) exec .githooks/lint.sh "${args[@]}" ;;
