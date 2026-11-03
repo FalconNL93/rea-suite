@@ -76,11 +76,15 @@ function Python-Env([switch]$Upgrade) {
 }
 function Uv-Tools([switch]$Upgrade) {
     Step 'isolated CLI tools (common/uv-tools.txt)'
+    # Launchers used to live in .runtime\uv-tools\bin; recreate them in UV_TOOL_BIN_DIR once.
+    $reinstall = Test-Path "$Root\.runtime\uv-tools\bin"
+    if ($reinstall) { Remove-Item -Recurse -Force "$Root\.runtime\uv-tools\bin" }
     foreach ($line in Get-Content "$Root\common\uv-tools.txt") {
         $line = ($line -replace '#.*', '').Trim()
         if (-not $line -or ($line -match ' @(\w+)$' -and $Matches[1] -ne 'windows')) { continue }
         $spec = $line -replace ' @\w+$', ''
-        if ($Upgrade) { Invoke-Checked uv tool install --upgrade $spec } else { Invoke-Checked uv tool install $spec }
+        if ($reinstall) { Invoke-Checked uv tool install --reinstall $spec }
+        elseif ($Upgrade) { Invoke-Checked uv tool install --upgrade $spec } else { Invoke-Checked uv tool install $spec }
     }
 }
 function Node-Env([switch]$Upgrade) {
@@ -190,7 +194,7 @@ switch ($Command) {
         foreach ($what in $Rest) {
             switch ($what) {
                 'runtime' { Remove-Item -Recurse -Force .runtime -ErrorAction SilentlyContinue; & "$PSScriptRoot\bootstrap.ps1" -RuntimesOnly -NoWinget }
-                'python' { Remove-Item -Recurse -Force .venv -ErrorAction SilentlyContinue; Python-Env }
+                'python' { Remove-Item -Recurse -Force .venv, .runtime\uv-tools, .runtime\uv-tools-bin -ErrorAction SilentlyContinue; Python-Env; Uv-Tools }
                 'node' { Remove-Item -Recurse -Force node_modules -ErrorAction SilentlyContinue; Node-Env }
                 'tools' { Invoke-Checked uv run rea-tools reinstall }
                 'all' { & $PSCommandPath reinstall runtime python node tools }

@@ -1,5 +1,5 @@
 # CLI tools installed with `uv tool install` into their own environments under
-# .runtime/uv-tools (launchers in .runtime/uv-tools/bin), because their
+# .runtime/uv-tools (launchers in .runtime/uv-tools-bin), because their
 # dependencies clash with the main environment. One requirement per line;
 # `@linux` / `@windows` limits a tool to one platform.
 

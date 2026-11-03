@@ -57,7 +57,8 @@ export UV_PYTHON_INSTALL_DIR="$REA_RUNTIME/python"
 export UV_PYTHON_PREFERENCE=only-managed
 export UV_CACHE_DIR="$REA_RUNTIME/cache/uv"
 export UV_TOOL_DIR="$REA_RUNTIME/uv-tools"
-export UV_TOOL_BIN_DIR="$REA_RUNTIME/uv-tools/bin"
+# Launchers live beside, not inside, UV_TOOL_DIR: uv treats every subdirectory there as a tool.
+export UV_TOOL_BIN_DIR="$REA_RUNTIME/uv-tools-bin"
 export FNM_DIR="$REA_RUNTIME/fnm"
 export npm_config_cache="$REA_RUNTIME/cache/npm"
 export DOTNET_ROOT="$REA_RUNTIME/dotnet"

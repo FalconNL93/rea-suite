@@ -28,7 +28,8 @@ $env:UV_PYTHON_INSTALL_DIR = "$Runtime\python"
 $env:UV_PYTHON_PREFERENCE = 'only-managed'
 $env:UV_CACHE_DIR = "$Runtime\cache\uv"
 $env:UV_TOOL_DIR = "$Runtime\uv-tools"
-$env:UV_TOOL_BIN_DIR = "$Runtime\uv-tools\bin"
+# Launchers live beside, not inside, UV_TOOL_DIR: uv treats every subdirectory there as a tool.
+$env:UV_TOOL_BIN_DIR = "$Runtime\uv-tools-bin"
 $env:FNM_DIR = "$Runtime\fnm"
 $env:npm_config_cache = "$Runtime\cache\npm"
 $env:DOTNET_ROOT = "$Runtime\dotnet"
