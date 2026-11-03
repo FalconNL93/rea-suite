@@ -21,7 +21,7 @@
 #>
 #Requires -Version 7
 param(
-    [Parameter(Position = 0)][ValidateSet('setup', 'select', 'winget', 'update', 'reinstall', 'agents', 'analyze', 'doctor', 'status', 'tools', 'clean', 'lint')][string]$Command = 'setup',
+    [Parameter(Position = 0)][ValidateSet('setup', 'select', 'winget', 'update', 'reinstall', 'agents', 'analyze', 'playstation', 'doctor', 'status', 'tools', 'clean', 'lint')][string]$Command = 'setup',
     [Parameter(Position = 1, ValueFromRemainingArguments)][string[]]$Rest = @()
 )
 $ErrorActionPreference = 'Stop'

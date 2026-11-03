@@ -123,6 +123,21 @@ class ProjectTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "chdman"):
             playstation.image_kind(self.root / "disc.chd")
 
+    def test_missing_extractor_names_the_right_fix(self):
+        for size, offset, hint in [(2048, 0, "7-Zip"), (2352, 24, "select playstation")]:
+            image = self.root / f"disc{size}.bin"
+            data = bytearray(17 * size)
+            data[16 * size + offset : 16 * size + offset + 7] = b"\x01CD001\x01"
+            image.write_bytes(data)
+            project = self.root / f"project{size}"
+            with (
+                patch.object(playstation.shutil, "which", return_value=None),
+                patch.object(playstation.os, "name", "posix"),
+                self.assertRaisesRegex(ValueError, hint),
+            ):
+                playstation.prepare(self.args(input=image, project=project))
+            self.assertFalse(project.exists())
+
     def test_tool_timeout(self):
         with (
             (self.root / "timeout.log").open("w") as log,

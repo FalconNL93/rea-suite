@@ -222,7 +222,8 @@ def prepare(args: argparse.Namespace) -> dict:
             "writes": False,
         }
     if command and not (Path(command[0]).is_file() or shutil.which(command[0])):
-        raise ValueError(f"{command[0]} missing; select playstation and run rea-suite setup")
+        hint = "select playstation" if kind == "cd" else "7-Zip is part of the base suite"
+        raise ValueError(f"{command[0]} missing; {hint} and run rea-suite setup")
     project.mkdir(parents=True)
     for name in ("logs", "notes", "patches", "analysis", "ghidra"):
         (project / name).mkdir()
