@@ -734,8 +734,27 @@ not ship a VC6 set: build one from your own Visual C++ 6.0 installation:
 4. Tools > Function ID > Attach existing FidDb picks it up for the GUI; it stays attached
    for that Ghidra version. In an analyzed program, run Analysis > One Shot > Function ID.
 
-Keep the `.fidb` in `work/` (ignored): it is derived from Microsoft's libraries and does
-not go into git.
+Steps 1 and 2 run headless too, which suits a whole installation. With your copy in
+`~/Dev/libs/vc6` (any folder holding `VC98/`), one folder per variant in the project:
+
+```sh
+vc6=~/Dev/libs/vc6/VC98 fid=work/fid headless="$GHIDRA_INSTALL_DIR/support/analyzeHeadless"
+mkdir -p "$fid"
+for lib in LIBC LIBCMT MSVCRT; do       # the release libraries; ...D for Debug, MFC/LIB/*.LIB for MFC
+  "$headless" "$fid" vc6/VisualStudio/6.0/Release -import "$vc6/Lib/$lib.LIB" -recursive -noanalysis \
+    > "$fid/import-$lib.log" 2>&1
+done
+"$headless" "$fid" vc6 -process -recursive > "$fid/analyze.log" 2>&1   # analyzes every .obj
+```
+
+`-recursive` opens each archive and imports its members (`LIBC.LIB` gives about a thousand
+`.obj`), under the folder after the project name. That folder layout (family, version, variant)
+is the one `CreateMultipleLibraries.java` expects at depth 3; step 3 then picks the project's
+root. Checked 2026-11-03 with Ghidra 12.1.4 on `LIBC.LIB`: 1,076 objects imported and analyzed
+in about 3 minutes, no errors. Steps 3 and 4 were not run here.
+
+Keep the `.fidb` and the project in `work/` (ignored): they are derived from Microsoft's
+libraries and do not go into git.
 
 ## Linting the suite's own code
 
