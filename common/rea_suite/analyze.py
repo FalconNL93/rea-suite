@@ -203,7 +203,9 @@ def fingerprint(command: list[str]) -> dict:
         "environment": {
             k: v
             for k, v in os.environ.items()
-            if k.startswith("REA_") or k in {"JAVA_HOME", "GHIDRA_INSTALL_DIR"}
+            # REA_SUITE_* describe the suite's caller (agent or terminal), not the analysis.
+            if (k.startswith("REA_") and not k.startswith("REA_SUITE_"))
+            or k in {"JAVA_HOME", "GHIDRA_INSTALL_DIR"}
         },
     }
 
@@ -219,8 +221,16 @@ def steps(
             with path.open("rb") as stream:
                 header = stream.read(4)
             pe = header[:2] == b"MZ"
-            operation = "inspect-native-exports" if pe or header == b"\x7fELF" else "inspect-macho"
-            result.append(("metadata", REA + [operation, *base, "--json"]))
+            if pe or header == b"\x7fELF":
+                result.append(("metadata", REA + ["inspect-native-exports", *base, "--json"]))
+            elif sys.platform == "darwin":
+                result.append(("metadata", REA + ["inspect-macho", *base, "--json"]))
+            else:
+                # REA's Mach-O inspector uses macOS utilities; Rizin reads Mach-O on every host.
+                for label, command in (("metadata", "iIj"), ("imports", "iij"), ("exports", "iEj")):
+                    result.append(
+                        (label, REA + ["execute-rizin-command", *base, command, "--json"])
+                    )
             if pe:
                 result.append(("imports", REA + ["inspect-pe-imports", *base, "--json"]))
         else:
@@ -308,7 +318,11 @@ def run_step(
     print(f"  run   {label}", flush=True)
     with report.open("wb") as output, stderr.open("wb") as errors:
         try:
-            process = subprocess.run(command, stdout=output, stderr=errors, check=False)
+            # Resolve launchers first: Windows starts a .cmd/.bat only by its full name.
+            executable = shutil.which(command[0]) or command[0]
+            process = subprocess.run(
+                [executable, *command[1:]], stdout=output, stderr=errors, check=False
+            )
             code = process.returncode
         except OSError as error:
             errors.write(str(error).encode())
@@ -321,15 +335,21 @@ def run_step(
         "stderr": stderr.name,
         "output_sha256": digest(report),
     }
-    if code == 0 and command[:2] == REA[:2] and report.stat().st_size <= 32 * 1024 * 1024:
+    if command[:2] == REA[:2] and report.stat().st_size <= 32 * 1024 * 1024:
         # A producer error is never a successful stage, even with an incorrect exit status.
         try:
-            value = json.loads(report.read_text())
+            value = json.loads(report.read_text()) if report.stat().st_size else None
             if isinstance(value, dict) and (
                 value.get("ok") is False or ("code" in value and "category" in value)
             ):
+                code = state[signature]["exit_code"] = code or 1
+                body = value["error"] if isinstance(value.get("error"), dict) else value
+                error = {k: body[k] for k in ("code", "category", "message") if k in body}
+                if error:
+                    state[signature]["error"] = error
+            elif code == 0 and value is None:
                 code = state[signature]["exit_code"] = 1
-            if isinstance(value, dict):
+            if code == 0 and isinstance(value, dict):
                 normalized = value.get("normalized_result", {})
                 if isinstance(normalized, dict) and "counts" in normalized:
                     state[signature]["counts"] = normalized["counts"]
@@ -339,12 +359,42 @@ def run_step(
                     for line in summary:
                         print(f"  {line}")
         except (ValueError, UnicodeError):
-            code = state[signature]["exit_code"] = 1
-    if code:
+            code = state[signature]["exit_code"] = code or 1
+    if partial_export(command, code):
+        # Output was written, but the decompiler reported classes or members it could not handle.
+        state[signature]["status"] = "partial"
+        print(f"  PART  {label}: exit {code}; output written, some code failed; see {stderr}")
+    elif code:
+        state[signature]["status"] = "failed"
         print(f"  FAIL {label}: exit {code}; see {report} and {stderr}", file=sys.stderr)
+        if "error" in state[signature]:
+            print(f"        {failure(state[signature])}", file=sys.stderr)
     elif label == "function":
         function_views(report)
     return code == 0
+
+
+def export_directory(command: list[str]) -> Path | None:
+    """The output directory of a decompile step: REA --output, JADX -d or ILSpy -o."""
+    for flag in ("--output", "-d", "-o"):
+        if flag in command[:-1]:
+            return Path(command[command.index(flag) + 1])
+    return None
+
+
+def partial_export(command: list[str], code: int) -> bool:
+    """JADX exits 3 and ILSpy nonzero when some code failed, after writing the rest."""
+    tool = Path(command[0]).stem.lower()
+    if code == 0 or tool not in {"jadx", "ilspycmd"} or (tool == "jadx" and code != 3):
+        return False
+    directory = export_directory(command)
+    return bool(directory and directory.is_dir() and any(directory.rglob("*.*")))
+
+
+def failure(step: dict) -> str:
+    error = step.get("error", {})
+    text = ": ".join(str(error[k]) for k in ("code", "message") if k in error)
+    return text[:300]
 
 
 def summarize(value: dict) -> list[str]:
@@ -432,12 +482,17 @@ def report_project(project: Path, state: dict) -> None:
     ]
     for key, artifact in state["artifacts"].items():
         lines.extend([f"- `{key[:12]}` {artifact['kind']}: {artifact['path']}"])
-        lines.append(f"  - [Literal strings and byte coverage](artifacts/{key}/triage.json)")
+        if (project / "artifacts" / key / "triage.json").is_file():
+            lines.append(f"  - [Literal strings and byte coverage](artifacts/{key}/triage.json)")
         for step in artifact["steps"].values():
             location = f"artifacts/{key}/{step['output']}"
-            lines.append(
-                f"  - {step['step']}: exit {step['exit_code']}; [{step['output']}]({location})"
-            )
+            status = f"exit {step['exit_code']}"
+            if step.get("status") == "partial":
+                stderr = f"artifacts/{key}/{step['stderr']}"
+                status += f", partial: some code failed, see [stderr]({stderr})"
+            lines.append(f"  - {step['step']}: {status}; [{step['output']}]({location})")
+            if step.get("error"):
+                lines.append(f"    - Error: {failure(step)}")
             if "counts" in step:
                 lines.append(f"    - Reported coverage: `{json.dumps(step['counts'])}`")
             for summary in step.get("summary", []):
@@ -447,6 +502,8 @@ def report_project(project: Path, state: dict) -> None:
                     view = Path(location).with_suffix(suffix)
                     if (project / view).exists():
                         lines.append(f"    - [{view.name}]({view.as_posix()})")
+        for skipped in artifact.get("skipped", []):
+            lines.append(f"  - {skipped['step']}: skipped; {skipped['reason']}")
     (project / "REPORT.md").write_text("\n".join(lines) + "\n")
 
 
@@ -465,19 +522,30 @@ def search(project: Path, state: dict, query: str, select: str, limit: int) -> N
         files.append(directory / "triage.json")
         files.extend(directory.glob("*.c"))
         files.extend(directory.glob("*.asm"))
-        files.extend(
-            p
-            for p in (directory / "code").rglob("*")
-            if p.is_file() and p.suffix in {".c", ".cs", ".java", ".js", ".json"}
-        )
+        # Only the newest usable export per decompiler; older exports would repeat every hit.
+        exports: dict[str, Path] = {}
+        for step in artifact["steps"].values():
+            if step["step"] != "decompile":
+                continue
+            if step["exit_code"] != 0 and step.get("status") != "partial":
+                continue
+            if exported := export_directory(step["command"]):
+                exports[exported.name.split("-")[0]] = directory / "code" / exported.name
+        for export in exports.values():
+            files.extend(
+                p
+                for p in export.rglob("*")
+                if p.is_file() and p.suffix in {".c", ".cs", ".java", ".js", ".json"}
+            )
         for path in files:
             if not path.is_file():
                 continue
             pattern = re.compile(re.escape(query), re.IGNORECASE)
             with path.open(encoding="utf-8", errors="replace") as stream:
-                tail, consumed, lines, last_match = "", 0, 0, -1
+                tail, consumed, lines, last_match, line_start = "", 0, 0, -1, 0
                 while chunk := stream.read(65536):
                     buffer = tail + chunk
+                    buffer_start = consumed - len(tail)
                     line_base = lines - tail.count("\n")
                     for match in pattern.finditer(buffer):
                         absolute = consumed - len(tail) + match.start()
@@ -485,15 +553,20 @@ def search(project: Path, state: dict, query: str, select: str, limit: int) -> N
                             continue
                         last_match = absolute
                         number = line_base + buffer.count("\n", 0, match.start()) + 1
+                        newline = buffer.rfind("\n", 0, match.start())
+                        start = buffer_start + newline + 1 if newline >= 0 else line_start
+                        column = absolute - start + 1
                         snippet = buffer[max(0, match.start() - 100) : match.end() + 220].strip()
                         snippet = snippet.replace("\n", " ")
-                        print(f"{path}:{number}: {snippet}")
+                        print(f"{path}:{number}:{column}: {snippet}")
                         count += 1
                         if count >= limit:
                             print(
                                 f"Stopped at --limit {limit}; refine the search or increase the limit."
                             )
                             return
+                    if (newline := chunk.rfind("\n")) >= 0:
+                        line_start = consumed + newline + 1
                     consumed += len(chunk)
                     lines += chunk.count("\n")
                     tail = buffer[-max(100, len(query) - 1) :]
@@ -502,11 +575,17 @@ def search(project: Path, state: dict, query: str, select: str, limit: int) -> N
 
 def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
+        prog="rea-suite analyze",
         description=__doc__.splitlines()[0],
         epilog="Use --examples for workflows. No AI service or API key is needed.",
     )
     p.add_argument("inputs", nargs="*", help="files and/or directories to add; directories recurse")
-    p.add_argument("--project", type=Path, default=ROOT / "work/analysis/default")
+    p.add_argument(
+        "--project",
+        type=Path,
+        default=ROOT / "work/analysis/default",
+        help="output project (default: work/analysis/default under the suite)",
+    )
     p.add_argument("--preset", choices=["triage", "analyze", "decompile"], default="analyze")
     p.add_argument(
         "--kind", choices=["auto", "native", "managed", "android", "javascript"], default="auto"
@@ -551,6 +630,9 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if min(args.max_files, args.max_functions, args.limit) < 1:
         p.error("limits must be positive")
+    if args.provider == "kuna" and args.query:
+        # REA 6.8.0 reports capability_unavailable for Kuna literal traces.
+        p.error("--query needs the Ghidra provider; Kuna cannot trace literals in REA 6.8.0")
     project = (args.caller_cwd / args.project).resolve()
     state_path = project / "project.json"
     if (
@@ -649,9 +731,11 @@ def main(argv: list[str] | None = None) -> int:
                 print("  Native --query/--function do not apply here; export and use --search.")
                 failed = True
             engine_failed = False
+            artifact["skipped"] = []
             for label, command in steps(path, kind, args, out):
                 if engine_failed and label in {"trace", "function", "decompile"}:
                     print(f"  skip  {label}: native overview failed")
+                    artifact["skipped"].append({"step": label, "reason": "native overview failed"})
                     continue
                 if label == "decompile":
                     (out / "code").mkdir(exist_ok=True)

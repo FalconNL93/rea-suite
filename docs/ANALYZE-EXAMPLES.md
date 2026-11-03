@@ -1,6 +1,8 @@
 # Gamevoorbeelden: kopiëren en uitvoeren
 
-Paden gecontroleerd op deze Mac op 31 oktober 2026. Games worden niet gestart.
+Paden gecontroleerd op de Mac op 31 oktober 2026. Op Linux/WSL (3 november 2026, met `--plan`)
+staan CoD1 in `~/Games/cod1/game-stock/` en R6BO in `~/Games/Rainbow Six Black Ops/`; ETLegacy
+staat daar niet. Games worden niet gestart.
 Resultaten komen in `~/rea-notes/`. Begin met één voorbeeld.
 
 ## 1. CoD1: snel kijken wat erin zit
@@ -45,7 +47,8 @@ rea-suite analyze ~/Dev/Games/r6bo/game/R6BO.exe ~/Dev/Games/r6bo/game/ddraw.dll
 
 ## 6. Rainbow Six Black Ops: klein beginnen met decompileren
 
-Exporteert maximaal 20 functies. Open daarna `~/rea-notes/r6bo/REPORT.md` in je IDE.
+Exporteert de eerste 20 functies op adresvolgorde; gebruik `--function` voor een gerichte
+functie. Open daarna `~/rea-notes/r6bo/REPORT.md` in je IDE.
 
 ```sh
 rea-suite analyze ~/Dev/Games/r6bo/game/R6BO.exe --project ~/rea-notes/r6bo --preset decompile --max-functions 20

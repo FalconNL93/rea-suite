@@ -259,7 +259,7 @@ several files or directories, keeps an incremental research project, and prepare
 to read from an IDE. It performs static analysis; it does not launch, inject into, or patch
 the supplied application. `rea-suite analyze --help` lists switches, and `--examples` shows
 complete workflows. On Windows use `rea-suite.cmd analyze` or `rea-suite.ps1 analyze`.
-For short copy-and-run recipes using this machine's CoD1, R6BO and ETLegacy files, see
+For short copy-and-run recipes using CoD1, R6BO and ETLegacy files (paths differ per host), see
 [game examples (Dutch)](docs/ANALYZE-EXAMPLES.md).
 
 ```sh
@@ -292,6 +292,7 @@ under the suite's ignored `work/analysis/default/`. Directory scans skip `.git`,
 bounds the inventory and fails rather than silently truncating it. Auto detection reads
 headers: native PE/ELF/Mach-O, PE/CLI assemblies, APK/DEX/JAR and ASAR are supported lanes.
 Use `--kind` to select a format explicitly. `--plan` shows the targets actually selected.
+Mach-O metadata in `triage` uses REA's macOS inspector on macOS and Rizin elsewhere.
 
 | Preset | Work performed |
 | --- | --- |
@@ -299,7 +300,9 @@ Use `--kind` to select a format explicitly. `--plan` shows the targets actually 
 | `analyze` (default) | REA native overview, managed member metadata, archive metadata or JavaScript application analysis |
 | `decompile` | Above, plus resumable native pseudocode export, ILSpy C# export or JADX Java export |
 
-Native analysis selects Ghidra explicitly; `--provider kuna` opts into Kuna. `--query` and
+Native analysis selects Ghidra explicitly; `--provider kuna` opts into Kuna for ELF and thin
+Mach-O only (no PE, no Windows host). With REA 6.8.0 Kuna cannot answer `--query`; use Ghidra
+for literal traces. Kuna and Ghidra can report different addresses for the same function. `--query` and
 `--function` are repeatable native selectors; they are literal text/names/addresses, not
 natural-language questions. A function dossier retains pseudocode, assembly, calls and
 references supplied by the selected engine; `.c` and `.asm` views are written next to it.
@@ -314,12 +317,15 @@ Successful stages are reused only when inputs, settings, tool fingerprints and s
 report digests match. `--refresh` reruns selected stages, retaining earlier reports.
 Directory/application analyses are always rerun because a path is not a content digest.
 Native export resumes verified files under a tool-specific export directory. ILSpy/JADX
-use fresh export directories so an existing export is never overwritten.
+use fresh export directories so an existing export is never overwritten; a JADX/ILSpy run that
+reports decompilation errors after writing output is recorded as partial, with its errors in the
+stderr file, and the run still exits 1. Saved `--search` reads only the newest usable export per
+decompiler and prints `path:line:column`. Skipped stages and REA error messages appear in `REPORT.md`.
 
 The string preview examines at most 8 MiB and retains at most 5,000 literal strings, with
 per-string display capped at 2,000 characters; `triage.json` records this coverage. Native
-export attempts at most `--max-functions` per run; repeating it continues the matching
-export. Neither a successful command nor reaching that limit means the whole program was
+export attempts at most `--max-functions` per run, in address order (so the first ones are often
+import stubs); repeating it continues the matching export. Neither a successful command nor reaching that limit means the whole program was
 recovered. Work on your implementation separately from generated analysis output.
 
 ### Workflow and research notes
@@ -343,6 +349,9 @@ retains JSON, diagnostics and exit statuses, and distinguishes success from full
   is the appropriate next integration; importing again with `-overwrite` can discard work.
 - A useful static cross-reference is a candidate for investigation, not a verified hook
   location. Distinguish file offset, image-relative address and runtime address/ASLR.
+  `rea address-to-file-offset <file> <address> --provider ghidra --json` maps one analysis
+  address to its original file byte; it does not prove a whole table is contiguous, and loader
+  fixups can make analysis bytes differ from file bytes.
   Verify instruction boundaries, moved instructions, ABI, stack alignment and register
   preservation. Microsoft's
   [Detours usage](https://github.com/microsoft/Detours/wiki/Using-Detours) requires matching
@@ -355,14 +364,16 @@ retains JSON, diagnostics and exit statuses, and distinguishes success from full
   for packed applications and wrapper functions; no match does not establish no capability.
   [JADX likewise documents incomplete decompilation](https://github.com/skylot/jadx#readme).
 - For a new build, re-check identities and function correspondence rather than copying old
-  addresses. The installed [ghidriff](https://github.com/clearbluejar/ghidriff) can compare
-  functions and produce JSON/Markdown reports; automatic transfer of annotations or patches
-  is not part of this first pipeline.
+  addresses. The installed [ghidriff](https://github.com/clearbluejar/ghidriff) (release 1.0.0
+  targets Ghidra 11.4; a two-binary diff ran with the suite's 12.1.4 on Linux, 2026-11-03) can
+  compare functions and produce JSON/Markdown reports. A second copy of an extension in
+  `~/.config/ghidra/<version>/Extensions/` stops it from starting. Automatic transfer of
+  annotations or patches is not part of this first pipeline.
 
 Verification: unit tests use `uv run --no-sync python -m unittest rea_suite.test_analyze`.
 Opt into real local JavaScript/Ghidra smoke tests with `REA_ANALYZE_INTEGRATION=1`; they
 build a benign fixture but never execute the analyzed target. Native smoke tests have
-been run on macOS arm64; Windows and Linux execution remain unverified.
+been run on macOS arm64 and Linux x86_64 (WSL2, 2026-11-03); Windows execution remains unverified.
 
 ## Tools by task
 

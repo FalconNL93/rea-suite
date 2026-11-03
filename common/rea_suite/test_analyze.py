@@ -173,6 +173,78 @@ class AnalysisTests(unittest.TestCase):
             self.fail("entered competing project")
         self.assertEqual(lock.read_text(), "another run")
 
+    def test_suite_caller_variables_do_not_reset_cache_or_export(self):
+        before = analyze.fingerprint(analyze.REA)
+        with patch.dict(os.environ, {"REA_SUITE_AGENTS": "claude_code"}):
+            self.assertEqual(analyze.fingerprint(analyze.REA), before)
+        with patch.dict(os.environ, {"REA_ANALYSIS_PROVIDER": "kuna"}):
+            self.assertNotEqual(analyze.fingerprint(analyze.REA), before)
+
+    def test_macho_triage_uses_rizin_outside_macos(self):
+        macho = self.root / "tool"
+        macho.write_bytes(b"\xcf\xfa\xed\xfe" + bytes(60))
+        args = analyze.parser().parse_args(["--preset", "triage"])
+        for platform, operation in [
+            ("linux", "execute-rizin-command"),
+            ("darwin", "inspect-macho"),
+        ]:
+            with patch.object(analyze.sys, "platform", platform):
+                planned = analyze.steps(macho, "native", args, self.project)
+            self.assertTrue(planned)
+            self.assertTrue(all(operation in command for _, command in planned), planned)
+
+    def test_kuna_query_is_rejected_before_analysis(self):
+        with (
+            contextlib.redirect_stderr(io.StringIO()),
+            self.assertRaises(SystemExit),
+            patch.object(analyze, "run_step") as run,
+        ):
+            self.call("game", "--provider", "kuna", "--query", "ServerList")
+        run.assert_not_called()
+
+    def test_directory_report_links_no_missing_triage(self):
+        app = self.root / "app"
+        app.mkdir()
+        (app / "index.js").write_text("export const feature = 1;\n")
+        with patch.object(analyze, "run_step", return_value=True):
+            self.assertEqual(self.call(str(app), "--kind", "javascript"), 0)
+        self.assertNotIn("triage.json", (self.project / "REPORT.md").read_text())
+
+    @unittest.skipIf(sys.platform == "win32", "POSIX launcher fixture")
+    def test_partial_decompile_and_search_of_the_newest_export(self):
+        tools = self.root / "bin"
+        tools.mkdir()
+        jadx = tools / "jadx"
+        jadx.write_text(
+            f"#!{sys.executable}\n"
+            "import os, pathlib, sys\n"
+            "out = pathlib.Path(sys.argv[sys.argv.index('-d') + 1]) / 'sources'\n"
+            "out.mkdir(parents=True)\n"
+            "(out / 'Same.java').write_text('class Same { String s = \"needle\"; }\\n')\n"
+            "sys.exit(int(os.environ.get('FAKE_JADX_EXIT', '0')))\n"
+        )
+        jadx.chmod(0o755)
+        (self.root / "app.dex").write_bytes(b"dex\n035\x00" + bytes(100))
+        rea = [sys.executable, "-c", "print('{}')"]
+        path = f"{tools}{os.pathsep}{os.environ['PATH']}"
+        with patch.object(analyze, "REA", rea), patch.dict(os.environ, {"PATH": path}):
+            with patch.dict(os.environ, {"FAKE_JADX_EXIT": "3"}):
+                self.assertEqual(self.call("app.dex", "--preset", "decompile"), 1)
+            state = json.loads((self.project / "project.json").read_text())
+            steps = next(iter(state["artifacts"].values()))["steps"].values()
+            self.assertEqual(
+                [s.get("status") for s in steps if s["step"] == "decompile"], ["partial"]
+            )
+            self.assertIn("partial: some code failed", (self.project / "REPORT.md").read_text())
+            self.assertEqual(self.call("app.dex", "--preset", "decompile"), 0)
+        self.assertEqual(len(list(self.project.glob("artifacts/*/code/jadx-*"))), 2)
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            analyze.main(["--project", str(self.project), "--search", "needle"])
+        hits = [line for line in output.getvalue().splitlines() if "Same.java" in line]
+        self.assertEqual(len(hits), 1, output.getvalue())
+        self.assertIn("Same.java:1:26:", hits[0])
+
     @unittest.skipUnless(os.environ.get("REA_ANALYZE_INTEGRATION"), "real-provider smoke test")
     def test_real_javascript_pipeline_without_executing_the_target(self):
         app = self.root / "app"
