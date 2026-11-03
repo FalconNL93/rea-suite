@@ -1,14 +1,20 @@
 #!/usr/bin/env bash
 # Headless Ghidra for one binary: analyze once, then query the project.
 #
-#   rea-ghidra analyze   <binary>                    import + auto-analysis (once; --force redoes it)
-#   rea-ghidra decomp    <binary> <addr>...          decompile the functions containing the addresses
-#   rea-ghidra xrefs     <binary> <text>...          decompile functions referencing strings with the text
-#   rea-ghidra functions <binary>                    TSV: entry, size, name, thunk, callers
+#   rea-ghidra analyze   [options] <binary>             import + auto-analysis (once)
+#   rea-ghidra decomp    [options] <binary> <addr>...   decompile the functions containing the addresses
+#   rea-ghidra xrefs     [options] <binary> <text>...   decompile functions referencing strings with the text
+#   rea-ghidra functions [options] <binary>             TSV: entry, size, name, thunk, callers
 #
-# The project lives in work/ghidra/<binary name>/ (REA_GHIDRA_PROJECTS overrides
-# work/ghidra); output goes to stdout, Ghidra's log to <project>/logs/. Scripts:
-# common/ghidra_scripts/ (from the rogue-spear port's tools/ghidra).
+#   --project DIR  a Ghidra project folder of your own (a port's); default
+#                  work/ghidra/<binary name>/ (REA_GHIDRA_PROJECTS overrides work/ghidra)
+#   --name NAME    the project's name: default the folder's one .gpr, else the binary's name
+#   -o FILE        write the output there instead of stdout
+#   --force        analyze: run the auto-analysis again on the program in the project; its
+#                  names, types and comments stay (it is never imported again over them)
+#
+# The queries open the project read-only; with --project, <binary> may be the program's name
+# alone. Ghidra's logs go to <project>/logs/. Scripts: common/ghidra_scripts/.
 set -euo pipefail
 # macOS: Homebrew's bash (platforms/macos/Brewfile), not the bundled 3.2
 ((BASH_VERSINFO[0] >= 4)) || exec /opt/homebrew/bin/bash "$0" "$@"
@@ -20,41 +26,85 @@ source "$REA_SUITE_ROOT/common/box.sh" # immutable host: on inside the distrobox
 # shellcheck source=common/env.sh disable=SC1091
 source "$ROOT/common/env.sh"
 
-usage() { sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; }
 die() { echo "rea-ghidra: $*" >&2; exit 1; }
 
 cmd="${1:-}"
 [[ -n "$cmd" && "$cmd" != -h && "$cmd" != --help ]] || { usage; exit 0; }
 shift
-force=0
-if [[ "${1:-}" == --force ]]; then force=1; shift; fi
+case "$cmd" in analyze | decomp | xrefs | functions) ;; *) usage >&2; exit 2 ;; esac
+force=0 project="" name="" output="" rest=()
+while (($#)); do # options anywhere; after -- everything is an argument
+  case "$1" in
+    --force) force=1; shift ;;
+    --project) project="${2:?--project needs a folder}"; shift 2 ;;
+    --name) name="${2:?--name needs a name}"; shift 2 ;;
+    -o | --output) output="${2:?-o needs a file}"; shift 2 ;;
+    --) shift; rest+=("$@"); break ;;
+    -*) die "unknown option: $1 (put -- before a text that starts with -)" ;;
+    *) rest+=("$1"); shift ;;
+  esac
+done
+set -- "${rest[@]}"
 binary="${1:-}"
 [[ -n "$binary" ]] || die "missing <binary>"
 shift
-[[ -f "$binary" ]] || die "no such file: $binary"
 [[ -x "$GHIDRA_INSTALL_DIR/support/analyzeHeadless" ]] || die "Ghidra missing; run rea-suite setup"
+((force == 0)) || [[ "$cmd" == analyze ]] || die "--force is for analyze"
 
-name="$(basename "$binary")"
-project="${REA_GHIDRA_PROJECTS:-$ROOT/work/ghidra}/$name"
+program="$(basename "$binary")"
+if [[ -n "$project" ]]; then
+  mkdir -p "$project"
+  project="$(cd "$project" && pwd)"
+  if [[ -z "$name" ]]; then
+    shopt -s nullglob
+    gprs=("$project"/*.gpr)
+    shopt -u nullglob
+    if ((${#gprs[@]} == 1)); then
+      name="$(basename "${gprs[0]}" .gpr)"
+    elif ((${#gprs[@]} > 1)); then
+      die "$project holds several projects; pass --name"
+    fi
+  fi
+else
+  project="${REA_GHIDRA_PROJECTS:-$ROOT/work/ghidra}/$program"
+fi
+name="${name:-$program}"
 mkdir -p "$project/logs"
 headless=("$GHIDRA_INSTALL_DIR/support/analyzeHeadless" "$project" "$name")
 
+imported() { # the program is in the project's index (read without Ghidra)
+  grep -qF ":$program:" "$project/$name.rep/idata/~index.dat" 2>/dev/null
+}
+
 analyze() {
-  if [[ -d "$project/$name.rep" ]] && ((force == 0)); then return; fi
-  echo "rea-ghidra: analyzing $name (once; log: $project/logs/analyze.log)" >&2
-  "${headless[@]}" -import "$(readlink -f "$binary")" -overwrite >"$project/logs/analyze.log" 2>&1 ||
-    die "analysis failed; see $project/logs/analyze.log"
+  local log="$project/logs/analyze.log"
+  if imported; then
+    ((force)) || return 0
+    echo "rea-ghidra: analyzing $program again, its names kept (log: $log)" >&2
+    "${headless[@]}" -process "$program" >"$log" 2>&1 || die "analysis failed; see $log"
+    return 0
+  fi
+  [[ -f "$binary" ]] || die "no such file: $binary (and no program $program in $project)"
+  echo "rea-ghidra: analyzing $program (once; log: $log)" >&2
+  "${headless[@]}" -import "$(readlink -f "$binary")" >"$log" 2>&1 ||
+    die "analysis failed; see $log"
 }
 
 run_script() { # script.java args...
-  local script="$1" out
+  local script="$1" out log="$project/logs/${1%.java}.log"
   shift
   analyze
   out="$(mktemp)"
-  "${headless[@]}" -process "$name" -noanalysis -readOnly \
+  "${headless[@]}" -process "$program" -noanalysis -readOnly \
     -scriptPath "$ROOT/common/ghidra_scripts" -postScript "$script" "$out" "$@" \
-    >"$project/logs/${script%.java}.log" 2>&1 || die "$script failed; see $project/logs/${script%.java}.log"
-  cat "$out"
+    >"$log" 2>&1 || { rm -f "$out"; die "$script failed; see $log"; }
+  if [[ -n "$output" ]]; then
+    mkdir -p "$(dirname "$output")"
+    cp "$out" "$output"
+  else
+    cat "$out"
+  fi
   rm -f "$out"
 }
 
@@ -63,5 +113,4 @@ case "$cmd" in
   decomp) (($#)) || die "decomp needs addresses"; run_script DecompileAt.java "$@" ;;
   xrefs) (($#)) || die "xrefs needs texts"; run_script DecompileXrefs.java "$@" ;;
   functions) run_script ExportFunctions.java ;;
-  *) usage >&2; exit 2 ;;
 esac

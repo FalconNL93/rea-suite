@@ -706,14 +706,29 @@ Projects opened in a newer Ghidra are upgraded and no longer open in older ones.
 ### Headless Ghidra from the shell
 
 ```sh
-rea-ghidra analyze   work/target.exe                # import + analysis, once (--force redoes it)
+rea-ghidra analyze   work/target.exe                # import + analysis, once
 rea-ghidra functions work/target.exe > funcs.tsv    # entry, size, name, thunk, callers
 rea-ghidra decomp    work/target.exe 0x401000 0x4020a0 > out.c
 rea-ghidra xrefs     work/target.exe "license" "serial" > out.c
 ```
 
 Projects live in `work/ghidra/<binary name>/`, logs in its `logs/`. The scripts are in
-`common/ghidra_scripts/` (taken over from the rogue-spear port).
+`common/ghidra_scripts/` (taken over from the rogue-spear port). A port keeps its own project
+with `--project DIR` (and `--name`, default the folder's one `.gpr`); the queries then take the
+program's name alone, open the project read-only and write to `-o FILE` when given:
+
+```sh
+rea-ghidra analyze   --project ~/Games/port/ghidra --name port game/Game.exe   # once
+rea-ghidra decomp    --project ~/Games/port/ghidra Game.exe 0x0068a380 -o out.c
+rea-ghidra xrefs     --project ~/Games/port/ghidra Game.exe -o out.c -- "-server"
+rea-ghidra functions --project ~/Games/port/ghidra Game.exe | cut -f1 > re/function_entries.tsv
+```
+
+`analyze --force` runs the auto-analysis again on the program already in the project; it never
+imports over it, so names, types and comments made there stay. To start from nothing, delete the
+project folder. This is the x86/x64 PE counterpart of `rea-suite xbox360 analyze|decomp|xrefs|functions`.
+Tests: `uv run --no-sync python -m unittest rea_suite.test_rea_ghidra` in `common/` (a stand-in
+for `analyzeHeadless`).
 
 ## Build toolchains
 

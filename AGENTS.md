@@ -80,7 +80,8 @@ installation.
 ## Reverse engineering with the suite
 
 * REA is the agent's front door (`rea-suite agents` registers it); its skill covers the workflow.
-* For scripted Ghidra work use `rea-ghidra` (analyze once, then `decomp`, `xrefs`, `functions`);
+* For scripted Ghidra work use `rea-ghidra` (analyze once, then `decomp`, `xrefs`, `functions`;
+  `--project` for a port's own project, whose names `analyze --force` keeps);
   add new headless scripts to `common/ghidra_scripts/` with a usage line at the top.
 * Findings about a target belong to that target's own project, not to this repository.
 
