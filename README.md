@@ -386,6 +386,8 @@ then implement and test your changes separately. REA documents that CLI and MCP 
 [same workflows](https://github.com/morluto/rea#how-rea-works). Its
 [noninteractive analysis example](https://github.com/morluto/rea/blob/main/docs/ci-analysis.md)
 retains JSON, diagnostics and exit statuses, and distinguishes success from full coverage.
+Faults found in REA's own tools, with their workarounds, are in
+[known issues](docs/REA-KNOWN-ISSUES.md).
 
 - Start with triage and a concrete question; decompile selected functions before requesting
   a full export. Prefer existing extension/plugin APIs when the application exposes them.
