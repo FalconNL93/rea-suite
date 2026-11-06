@@ -184,7 +184,7 @@ rea-suite update               # runtimes, apt, uv.lock, uv tools, rea-agents@la
 rea-suite update --ai          # same parts, planned by an agent: compatibility first, then your approval
 rea-suite update --no-apt      # same without sudo (macOS: --no-brew skips Homebrew)
 rea-suite agents               # repair agent setup: rea MCP back on bin/rea, REA skill refreshed
-rea-suite doctor               # check everything; exit 1 on problems
+rea-suite doctor               # check everything; exit 1 on problems, each with the smallest fix
 rea-suite status               # versions and available updates
 rea-suite reinstall python     # or: runtime | node | tools | system | all | <tool from tools.yml>
 rea-suite tools prune          # drop old tool versions kept after an update
@@ -192,6 +192,8 @@ rea-suite clean                # sizes of the download caches, source builds and
 rea-suite clean caches         # or: builds | tools | all; caches refill on the next setup or build
 ```
 
+`setup` installs only the system packages that are missing, so with all of them in place it
+needs no sudo; `update` on apt passes them all, so they are upgraded.
 `update` takes every newest release (pins in `tools.yml` excepted). `update --ai` starts
 an agent with the `updating-the-suite` skill (`.agents/skills/`): the first of `claude`,
 `codex`, `copilot`, `opencode`, `gemini` it finds, or any command in `REA_SUITE_AGENT`

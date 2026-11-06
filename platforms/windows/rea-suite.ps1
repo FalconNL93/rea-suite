@@ -130,7 +130,7 @@ function Doctor {
     }
     Step 'project environments'
     $groups = "$(Components uv-args)".Split(' ', [StringSplitOptions]::RemoveEmptyEntries)
-    uv sync --check --quiet @groups 2>$null; if ($LASTEXITCODE) { Bad '.venv' 'out of sync; run rea-suite.ps1 setup' } else { Ok '.venv' 'in sync with uv.lock' }
+    uv sync --check --quiet @groups 2>$null; if ($LASTEXITCODE) { Bad '.venv' "out of sync with uv.lock; run uv sync --locked$(if ($groups) { ' ' + ($groups -join ' ') })" } else { Ok '.venv' 'in sync with uv.lock' }
     npm ls rea-agents --depth=0 *> $null; if ($LASTEXITCODE) { Bad 'node_modules' 'run rea-suite.ps1 setup' } else { Ok 'node_modules' 'rea-agents installed' }
     if ((Components values playwright) -contains 'chromium') {
         if ($env:REA_BROWSER_EXECUTABLE -and (Test-Path $env:REA_BROWSER_EXECUTABLE)) { Ok 'chromium' $env:REA_BROWSER_EXECUTABLE }

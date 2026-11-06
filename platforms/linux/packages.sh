@@ -9,7 +9,7 @@
 #   pkg_native < names          the names for this system ('-' dropped, 'a|b' resolved)
 #   pkg_missing names...        the ones not installed
 #   pkg_available name          whether the system's repositories carry it
-#   pkg_install [--reinstall] names...
+#   pkg_install [--reinstall | --upgrade] names...   (without a flag: only the missing ones)
 #   pkg_upgradable names...     the ones with a newer version
 #
 # On dnf and pacman, packages a system does not have (RHEL lacks some even with EPEL) are
@@ -85,13 +85,16 @@ pkg_missing() {
   for pkg in "$@"; do _pkg_installed "$pkg" || echo "$pkg"; done
 }
 
-pkg_install() { # [--reinstall] names...
-  local reinstall=0 manager
-  [[ "${1:-}" != --reinstall ]] || { reinstall=1; shift; }
+pkg_install() { # [--reinstall | --upgrade] names...
+  local mode="" reinstall=0 manager
+  case "${1:-}" in --reinstall | --upgrade) mode="$1"; shift ;; esac
+  [[ "$mode" != --reinstall ]] || reinstall=1
   manager="$(pkg_manager)"
-  if ((reinstall == 0)) && [[ "$manager" != apt ]]; then
+  # Only what is missing (curl vs curl-minimal), so a setup with everything in place needs no
+  # root, sudo or terminal. An upgrade on apt passes them all: apt-get install upgrades them.
+  if [[ -z "$mode" || ("$mode" == --upgrade && "$manager" != apt) ]]; then
     local wanted
-    mapfile -t wanted < <(pkg_missing "$@") # only what is missing (curl vs curl-minimal)
+    mapfile -t wanted < <(pkg_missing "$@")
     set -- "${wanted[@]}"
   fi
   (($#)) || return 0

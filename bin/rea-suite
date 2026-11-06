@@ -75,7 +75,7 @@ usage() { sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'; }
 
 system_packages() { # [--reinstall | --upgrade]
   if [[ "$OS" == macos ]]; then brew_packages "$@"
-  elif [[ "${1:-}" == --reinstall ]]; then linux_packages --reinstall
+  elif (($#)); then linux_packages "$1"
   else linux_packages; fi
 }
 
@@ -84,7 +84,7 @@ linux_package_names() {
   { sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$APT_LIST"; components packages apt; } | pkg_native
 }
 
-linux_packages() { # [--reinstall]
+linux_packages() { # [--reinstall | --upgrade]
   step "system packages ($(pkg_manager))"
   local pkgs
   mapfile -t pkgs < <(linux_package_names)
@@ -395,7 +395,7 @@ cmd_doctor() {
     local groups
     read -ra groups <<<"$(components uv-args)"
     if uv sync --check --quiet "${groups[@]}" 2>/dev/null; then ok ".venv" "in sync with uv.lock"; else
-      bad ".venv" "out of sync with uv.lock; run rea-suite setup"
+      bad ".venv" "out of sync with uv.lock; run uv sync --locked${groups[*]:+ ${groups[*]}}"
     fi
   else
     bad ".venv" "missing or not on .runtime/ Python; run rea-suite reinstall python"
