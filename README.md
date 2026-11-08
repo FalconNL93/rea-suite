@@ -265,9 +265,15 @@ rea-suite xbox360 analyze game/default.xex --project re/ghidra-project --name ga
 rea-suite xbox360 decomp --project re/ghidra-project -o out.c 0x82514710 0x8234e2e8
 rea-suite xbox360 xrefs --project re/ghidra-project "connect"   # functions using strings
 rea-suite xbox360 functions --project re/ghidra-project -o functions.tsv
+rea-suite xbox360 names --project re/ghidra-project --program mp --from re/functions.tsv --where game=mp
 rea-suite xbox360 check                     # XEXLoaderWV installed and loading (doctor runs it)
 ```
 
+`names` writes a port's map into the project (the porting rule "map the whole unit once": the names in the
+port's docs and in its Ghidra project): a TSV whose header names `address` and `name`, `what` or `comment` the
+plate comment, filtered by `--where column=value`. A name Ghidra gave (`FUN_...`) is replaced; one a person or an
+import gave, and a different plate comment, are kept and reported (`kept`), so running it again changes nothing
+(`same`); `-o` writes the per-entry report. It needs `--program` when the project holds several.
 The queries open the project read-only and take `--program` when it holds more than one; Ghidra's
 logs go to `<project>/logs/`. `common/ghidra_scripts/XenonHelpers.java` runs before analysis
 and before every query: it finds the register save/restore helpers (`__savegprlr_*`,

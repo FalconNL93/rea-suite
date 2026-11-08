@@ -5,9 +5,12 @@ image extracted from one (COFF machine 0x01f2) as PowerPC big-endian 64-bit with
   rea-suite xbox360 decomp    --project DIR [--program NAME] [-o OUT] <address>...
   rea-suite xbox360 xrefs     --project DIR [--program NAME] [-o OUT] <text>...
   rea-suite xbox360 functions --project DIR [--program NAME] [-o OUT]
+  rea-suite xbox360 names     --project DIR [--program NAME] --from MAP.tsv [--where COL=VALUE]... [-o OUT]
   rea-suite xbox360 check                                 XEXLoaderWV installed and loading
 
-`analyze` imports and analyzes once; the other commands open the project read-only. Every one
+`analyze` imports and analyzes once; `names` writes a port's map of names and comments into the project (a
+TSV whose header names `address` and `name`, `what` or `comment` the comment: a name Ghidra gave is replaced, one a
+person or an import gave is kept and reported); the other commands open the project read-only. Every one
 first repairs the register save/restore helpers (common/ghidra_scripts/XenonHelpers.java) and
 reports what Ghidra could not decode. Ghidra's logs go to DIR/logs/.
 
@@ -277,6 +280,100 @@ def program_names(project: Path, name: str) -> set[str]:
     return {line.split(":")[1] for line in lines if line.startswith("  ") and line.count(":") >= 2}
 
 
+def read_names(path: Path, where: list[str]) -> list[tuple[str, str, str]]:
+    """A port's map of names: a TSV whose header names `address` and `name` (`what` or `comment` the comment), the
+    rows matching every `column=value` of where: [(address as hex digits, name, comment)]."""
+    lines = path.read_text(encoding="utf-8").splitlines()
+    if not lines:
+        raise ValueError(f"{path}: empty")
+    header = [c.strip() for c in lines[0].split("\t")]
+    for column in ("address", "name"):
+        if column not in header:
+            raise ValueError(f"{path}: no `{column}` column in its header")
+    note = next((c for c in ("comment", "what") if c in header), None)
+    filters = []
+    for given in where:
+        column, sep, value = given.partition("=")
+        if not sep or column not in header:
+            raise ValueError(f"--where {given}: a column of {path} and its value, as game=mp")
+        filters.append((header.index(column), value))
+    rows = []
+    for number, line in enumerate(lines[1:], start=2):
+        if not line.strip() or line.startswith("#"):
+            continue
+        fields = line.split("\t") + [""] * len(header)
+        if any(fields[i].strip() != value for i, value in filters):
+            continue
+        address, name = (
+            fields[header.index("address")].strip(),
+            fields[header.index("name")].strip(),
+        )
+        try:
+            digits = f"{int(address, 16):x}"
+        except ValueError:
+            raise ValueError(f"{path}:{number}: `{address}` is no hex address") from None
+        if not name:
+            raise ValueError(f"{path}:{number}: no name")
+        comment = fields[header.index(note)].strip() if note else ""
+        rows.append((digits, name, comment))
+    return rows
+
+
+def names_command(install: Path, project: Path, name: str, program: str | None, summary: Path,
+                  given: Path, report: Path) -> list[str]:  # fmt: skip
+    """The query's command without -readOnly: the one command that writes to the project after analyze."""
+    command = query_command(
+        install, project, name, program, summary, ["ApplyNames.java", str(given), str(report)]
+    )
+    command.remove("-readOnly")
+    return command
+
+
+NAME_RESULTS = ("named", "same", "kept", "invalid", "missing")
+
+
+def names(args: argparse.Namespace, install: Path) -> int:
+    project = (args.caller_cwd / args.project).resolve()
+    name = project_name(project, args.name)
+    programs = program_names(project, name)
+    if args.program is None and len(programs) > 1:
+        raise ValueError(
+            f"the project holds {', '.join(sorted(programs))}: name one with --program"
+        )
+    rows = read_names((args.caller_cwd / args.source).resolve(), args.where)
+    with tempfile.TemporaryDirectory() as tmp:
+        given, report, summary = (
+            Path(tmp) / "names.tsv",
+            Path(tmp) / "report.tsv",
+            Path(tmp) / "summary.json",
+        )
+        given.write_text("".join(f"{a}\t{n}\t{c}\n" for a, n, c in rows), encoding="utf-8")
+        command = names_command(install, project, name, args.program, summary, given, report)
+        if args.plan:
+            print(json.dumps({"command": command, "names": len(rows)}, indent=2))
+            return 0
+        logs = project / "logs"
+        logs.mkdir(parents=True, exist_ok=True)
+        log = logs / "names.log"
+        ghidra(command, project, log, args.timeout)
+        if not report.is_file():
+            raise ValueError(f"ApplyNames.java wrote nothing; see {log}")
+        text = report.read_text(errors="replace")
+        if args.output:
+            target = (args.caller_cwd / args.output).resolve()
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(text)
+        results = [line.split("\t") for line in text.splitlines()[1:] if line.count("\t") >= 3]
+        counts = {r: sum(1 for line in results if line[1] == r) for r in NAME_RESULTS}
+        print(
+            ", ".join(f"{counts[r]} {r}" for r in NAME_RESULTS if counts[r]) or "nothing to apply"
+        )
+        for address, result, old, new in results:
+            if result in ("kept", "invalid", "missing"):
+                print(f"{result}: {address} {old or '-'} (the map says {new})", file=sys.stderr)
+    return 0
+
+
 def query(args: argparse.Namespace, install: Path) -> int:
     project = (args.caller_cwd / args.project).resolve()
     name = project_name(project, args.name)
@@ -472,7 +569,24 @@ def main(argv: list[str] | None = None) -> int:
         q.add_argument("-o", "--output", type=Path, help="write here instead of stdout")
         if name != "functions":
             q.add_argument("items", nargs="+", metavar="address" if name == "decomp" else "text")
-    for parser in [a, *(sub.choices[n] for n in ("decomp", "xrefs", "functions"))]:
+    n = sub.add_parser("names", help="write a port's map of names and comments into the project")
+    n.add_argument("--program", help="program in the project (needed when it holds several)")
+    n.add_argument(
+        "--from",
+        dest="source",
+        type=Path,
+        required=True,
+        help="the map: a TSV with address and name",
+    )
+    n.add_argument(
+        "--where",
+        action="append",
+        default=[],
+        metavar="COL=VALUE",
+        help="only the rows with this value",
+    )
+    n.add_argument("-o", "--output", type=Path, help="write the per-entry report here")
+    for parser in [a, n, *(sub.choices[c] for c in ("decomp", "xrefs", "functions"))]:
         parser.add_argument("--project", type=Path, required=True, help="Ghidra project folder")
         parser.add_argument("--name", help="project name (default: the folder's one .gpr)")
         parser.add_argument("--timeout", type=int, default=1800, help="seconds (default 1800)")
@@ -491,6 +605,8 @@ def main(argv: list[str] | None = None) -> int:
             p.error("--timeout must be positive")
         if args.command == "analyze":
             return analyze(args, install)
+        if args.command == "names":
+            return names(args, install)
         return query(args, install)
     except (OSError, ValueError, struct.error, subprocess.SubprocessError) as exc:
         p.exit(1, f"xbox360: {exc}\n")

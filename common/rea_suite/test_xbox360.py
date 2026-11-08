@@ -243,6 +243,81 @@ class ProjectTests(unittest.TestCase):
             xbox360.analyze(args, install)
 
 
+class NamesTests(unittest.TestCase):
+    """`names`: a port's map of names and comments written into its project (the RE rule "the whole unit once",
+    master-server docs/PORTING.md: the names in the REA session too)."""
+
+    MAP = (
+        "game\taddress\tname\twhat\twhere\n"
+        "mp\t0x820B00C0\tKeyHash\tkey hash h = h*33 + lower(c)\tdocs/12.md\n"
+        "# a note\n"
+        "sp\t0x8250A030\tIN_SprintDown\tbare blr in SP\tdocs/04.md\n"
+        "\n"
+    )
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        (self.root / "map.tsv").write_text(self.MAP)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_the_map_is_read_by_its_header_and_filtered(self):
+        rows = xbox360.read_names(self.root / "map.tsv", ["game=mp"])
+        self.assertEqual(rows, [("820b00c0", "KeyHash", "key hash h = h*33 + lower(c)")])
+        self.assertEqual(len(xbox360.read_names(self.root / "map.tsv", [])), 2)
+
+    def test_a_map_without_its_columns_or_with_a_bad_row_is_refused(self):
+        (self.root / "bad.tsv").write_text("addr\tname\n0x1\tx\n")
+        with self.assertRaisesRegex(ValueError, "no `address` column"):
+            xbox360.read_names(self.root / "bad.tsv", [])
+        (self.root / "bad.tsv").write_text("address\tname\nnowhere\tx\n")
+        with self.assertRaisesRegex(ValueError, "no hex address"):
+            xbox360.read_names(self.root / "bad.tsv", [])
+        with self.assertRaisesRegex(ValueError, "--where level=3"):
+            xbox360.read_names(self.root / "map.tsv", ["level=3"])
+
+    def test_names_is_the_one_query_that_writes_after_the_repair(self):
+        command = xbox360.names_command(
+            self.root, self.root, "cod3", "default.xex", self.root / "s.json",
+            self.root / "in.tsv", self.root / "out.tsv",
+        )  # fmt: skip
+        self.assertNotIn("-readOnly", command)
+        self.assertIn("-noanalysis", command)
+        scripts = [command[i + 1] for i, v in enumerate(command) if v == "-postScript"]
+        self.assertEqual(scripts, ["XenonHelpers.java", "ApplyNames.java"])
+
+    def test_a_project_of_several_programs_needs_one_named(self):
+        install = fake_ghidra(self.root)
+        (self.root / "proj").mkdir()
+        (self.root / "proj/cod3.gpr").touch()
+        index = self.root / "proj/cod3.rep/idata"
+        index.mkdir(parents=True)
+        (index / "~index.dat").write_text(
+            "VERSION=1\n/\n  00000000:sp.xex:1\n  00000001:mp.xex:2\n"
+        )
+        base = [
+            "--caller-cwd",
+            str(self.root),
+            "names",
+            "--project",
+            "proj",
+            "--from",
+            "map.tsv",
+            "--plan",
+        ]
+        with patch.dict(os.environ, {"GHIDRA_INSTALL_DIR": str(install)}):
+            with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+                xbox360.main(base)
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                self.assertEqual(
+                    xbox360.main([*base, "--program", "mp.xex", "--where", "game=mp"]), 0
+                )
+        self.assertEqual(json.loads(out.getvalue())["names"], 1)
+
+
 class LimitTests(unittest.TestCase):
     def test_undecoded_vmx128_and_the_lane_choices_are_stated(self):
         summary = {
@@ -329,6 +404,31 @@ class GhidraIntegrationTests(unittest.TestCase):
         self.assertNotIn("__savegprlr_27(", decompiled)  # the call-fixup drops the call
         self.assertIn("; 0 call sites repaired", report)  # prepare left nothing to repair
         self.assertNotIn("does not return", decompiled)
+
+    def test_names_are_written_once_and_kept_afterwards(self):
+        WORK.mkdir(exist_ok=True)
+        callee = BASE + TEXT + 0x20 * CALLERS
+        with tempfile.TemporaryDirectory(dir=WORK) as tmp:
+            target, project = Path(tmp) / "synthetic.bin", Path(tmp) / "p"
+            target.write_bytes(pe())
+            analyze_and_query(target, project, "0x82001000")
+            (Path(tmp) / "map.tsv").write_text(
+                f"address\tname\twhat\n0x{callee:08x}\tCallee_Named\tthe callers' target\n0xdead0000\tNowhere\t\n"
+            )
+            argv = ["names", "--project", str(project), "--from", str(Path(tmp) / "map.tsv")]
+            for expected in ("1 named, 1 missing", "1 same, 1 missing"):
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+                    self.assertEqual(xbox360.main(argv), 0)
+                self.assertEqual(out.getvalue().strip(), expected)
+            listing = Path(tmp) / "functions.tsv"
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(
+                    xbox360.main(["functions", "--project", str(project), "-o", str(listing)]), 0
+                )
+            functions = listing.read_text()
+        self.assertIn(f"{callee:08x}\t", functions)
+        self.assertIn("\tCallee_Named\t", functions)
 
 
 @unittest.skipUnless(os.environ.get("REA_XBOX360_SAMPLE"), "set REA_XBOX360_SAMPLE=<xex or pe>")
