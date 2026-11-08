@@ -334,7 +334,7 @@ def names_command(install: Path, project: Path, name: str, program: str | None, 
     return command
 
 
-NAME_RESULTS = ("named", "same", "kept", "invalid", "missing")
+NAME_RESULTS = ("named", "created", "same", "kept", "invalid", "missing")
 
 
 def names(args: argparse.Namespace, install: Path) -> int:

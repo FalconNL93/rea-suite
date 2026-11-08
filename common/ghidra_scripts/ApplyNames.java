@@ -1,8 +1,8 @@
 // Applies a port's names and comments to the program: each line of <in.tsv> is "address<TAB>name<TAB>comment"
 // (comment may be empty). A function or label named by Ghidra (FUN_..., a default or analysis name) takes the
 // name; one a person or an import named keeps its own and is reported "kept", as is a different plate comment.
-// Writes one line per entry to <out.tsv>: address, what happened (named, same, kept, invalid, missing), the old
-// name, the new one.
+// Writes one line per entry to <out.tsv>: address, what happened (named, created, same, kept, invalid,
+// missing), the old name, the new one.
 // With "functions" as a third argument an address without a function gets one first (the map lists functions;
 // Ghidra's analysis missed it), when the code there disassembles; else it is named as a label.
 // Usage (headless post-script, without -readOnly): ApplyNames.java <in.tsv> <out.tsv> [functions]
@@ -47,12 +47,14 @@ public class ApplyNames extends GhidraScript {
       return "missing\t\t" + name;
     }
     Function fn = getFunctionAt(a);
+    boolean created = false;
     if (fn == null && functions && getFunctionContaining(a) == null) {
       if (getInstructionAt(a) == null) {
         disassemble(a);
       }
       if (getInstructionAt(a) != null) {
         fn = createFunction(a, null);
+        created = fn != null;
       }
     }
     Symbol symbol = fn != null ? fn.getSymbol() : getSymbolAt(a);
@@ -82,6 +84,7 @@ public class ApplyNames extends GhidraScript {
         result = "kept";
       }
     }
-    return result + "\t" + old + "\t" + name;
+    // A function made here is said as such, whatever the name did: the map's entry is now a function.
+    return (created && !result.equals("kept") ? "created" : result) + "\t" + old + "\t" + name;
   }
 }

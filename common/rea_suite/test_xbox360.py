@@ -323,6 +323,44 @@ class NamesTests(unittest.TestCase):
         self.assertEqual(json.loads(out.getvalue())["names"], 1)
 
 
+class NamesReportTests(unittest.TestCase):
+    def test_the_summary_counts_each_result_created_included(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            install = fake_ghidra(root)
+            (root / "proj").mkdir()
+            (root / "proj/cod3.gpr").touch()
+            (root / "map.tsv").write_text("address\tname\n0x82000000\tA\n0x82000010\tB\n0x1\tC\n")
+
+            def ghidra(command, project, log, timeout):
+                report = Path(command[command.index("ApplyNames.java") + 2])
+                report.write_text(
+                    "address\tresult\told\tnew\n82000000\tcreated\tLAB_82000000\tA\n"
+                    "82000010\tsame\tB\tB\n1\tmissing\t\tC\n"
+                )
+
+            out, err = io.StringIO(), io.StringIO()
+            with (
+                patch.dict(os.environ, {"GHIDRA_INSTALL_DIR": str(install)}),
+                patch.object(xbox360, "ghidra", ghidra),
+                contextlib.redirect_stdout(out),
+                contextlib.redirect_stderr(err),
+            ):
+                argv = [
+                    "--caller-cwd",
+                    tmp,
+                    "names",
+                    "--project",
+                    "proj",
+                    "--from",
+                    "map.tsv",
+                    "--functions",
+                ]
+                self.assertEqual(xbox360.main(argv), 0)
+        self.assertEqual(out.getvalue().strip(), "1 created, 1 same, 1 missing")
+        self.assertIn("missing: 1 - (the map says C)", err.getvalue())
+
+
 class LimitTests(unittest.TestCase):
     def test_undecoded_vmx128_and_the_lane_choices_are_stated(self):
         summary = {

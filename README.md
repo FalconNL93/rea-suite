@@ -275,7 +275,7 @@ plate comment, filtered by `--where column=value`. A name Ghidra gave (`FUN_...`
 import gave, and a different plate comment, are kept and reported (`kept`), so running it again changes nothing
 (`same`); `-o` writes the per-entry report. It needs `--program` when the project holds several. `--functions`
 says the map lists functions: where Ghidra found none and the code disassembles, one is created before it is
-named, else the name goes on a label. Not read-only, it also saves the helpers' repair (as `analyze` does).
+named (reported `created`), else the name goes on a label. Not read-only, it also saves the helpers' repair (as `analyze` does).
 The queries open the project read-only and take `--program` when it holds more than one; Ghidra's
 logs go to `<project>/logs/`. `common/ghidra_scripts/XenonHelpers.java` runs before analysis
 and before every query: it finds the register save/restore helpers (`__savegprlr_*`,
