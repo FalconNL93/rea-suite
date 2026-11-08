@@ -320,10 +320,15 @@ def read_names(path: Path, where: list[str]) -> list[tuple[str, str, str]]:
 
 
 def names_command(install: Path, project: Path, name: str, program: str | None, summary: Path,
-                  given: Path, report: Path) -> list[str]:  # fmt: skip
+                  given: Path, report: Path, extra: tuple[str, ...] = ()) -> list[str]:  # fmt: skip
     """The query's command without -readOnly: the one command that writes to the project after analyze."""
     command = query_command(
-        install, project, name, program, summary, ["ApplyNames.java", str(given), str(report)]
+        install,
+        project,
+        name,
+        program,
+        summary,
+        ["ApplyNames.java", str(given), str(report), *extra],
     )
     command.remove("-readOnly")
     return command
@@ -348,7 +353,8 @@ def names(args: argparse.Namespace, install: Path) -> int:
             Path(tmp) / "summary.json",
         )
         given.write_text("".join(f"{a}\t{n}\t{c}\n" for a, n, c in rows), encoding="utf-8")
-        command = names_command(install, project, name, args.program, summary, given, report)
+        extra = ("functions",) if args.functions else ()
+        command = names_command(install, project, name, args.program, summary, given, report, extra)
         if args.plan:
             print(json.dumps({"command": command, "names": len(rows)}, indent=2))
             return 0
@@ -586,6 +592,11 @@ def main(argv: list[str] | None = None) -> int:
         help="only the rows with this value",
     )
     n.add_argument("-o", "--output", type=Path, help="write the per-entry report here")
+    n.add_argument(
+        "--functions",
+        action="store_true",
+        help="the map lists functions: create one where Ghidra has none and the code disassembles",
+    )
     for parser in [a, n, *(sub.choices[c] for c in ("decomp", "xrefs", "functions"))]:
         parser.add_argument("--project", type=Path, required=True, help="Ghidra project folder")
         parser.add_argument("--name", help="project name (default: the folder's one .gpr)")

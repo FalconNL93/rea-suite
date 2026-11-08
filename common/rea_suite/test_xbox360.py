@@ -287,6 +287,11 @@ class NamesTests(unittest.TestCase):
         self.assertIn("-noanalysis", command)
         scripts = [command[i + 1] for i, v in enumerate(command) if v == "-postScript"]
         self.assertEqual(scripts, ["XenonHelpers.java", "ApplyNames.java"])
+        made = xbox360.names_command(
+            self.root, self.root, "cod3", None, self.root / "s.json", self.root / "in.tsv",
+            self.root / "out.tsv", ("functions",),
+        )  # fmt: skip
+        self.assertEqual(made[-1], "functions")
 
     def test_a_project_of_several_programs_needs_one_named(self):
         install = fake_ghidra(self.root)

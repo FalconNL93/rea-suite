@@ -3,7 +3,9 @@
 // name; one a person or an import named keeps its own and is reported "kept", as is a different plate comment.
 // Writes one line per entry to <out.tsv>: address, what happened (named, same, kept, invalid, missing), the old
 // name, the new one.
-// Usage (headless post-script, without -readOnly): ApplyNames.java <in.tsv> <out.tsv>
+// With "functions" as a third argument an address without a function gets one first (the map lists functions;
+// Ghidra's analysis missed it), when the code there disassembles; else it is named as a label.
+// Usage (headless post-script, without -readOnly): ApplyNames.java <in.tsv> <out.tsv> [functions]
 import ghidra.app.script.GhidraScript;
 import ghidra.program.model.address.Address;
 import ghidra.program.model.listing.Function;
@@ -15,9 +17,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class ApplyNames extends GhidraScript {
+  private boolean functions;
+
   @Override
   public void run() throws Exception {
     String[] args = getScriptArgs();
+    functions = args.length > 2 && args[2].equals("functions");
     try (PrintWriter out = new PrintWriter(args[1], "UTF-8")) {
       out.println("address\tresult\told\tnew");
       for (String line : Files.readAllLines(Path.of(args[0]), StandardCharsets.UTF_8)) {
@@ -42,6 +47,14 @@ public class ApplyNames extends GhidraScript {
       return "missing\t\t" + name;
     }
     Function fn = getFunctionAt(a);
+    if (fn == null && functions && getFunctionContaining(a) == null) {
+      if (getInstructionAt(a) == null) {
+        disassemble(a);
+      }
+      if (getInstructionAt(a) != null) {
+        fn = createFunction(a, null);
+      }
+    }
     Symbol symbol = fn != null ? fn.getSymbol() : getSymbolAt(a);
     String old = symbol != null ? symbol.getName() : "";
     String result;
