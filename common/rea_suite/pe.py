@@ -2,7 +2,9 @@
 
   rea-suite pe info <exe> [--imports] [--exports]      headers, sections, directories
   rea-suite pe sites <exe> <sites.json> | --init      check a port's declared sites
-  rea-suite pe rtti <exe> [--class REGEX] [--slots]   MSVC classes: vtables, slots, bases
+  rea-suite pe rtti <exe> [--class REGEX] [--slots] [--purecall ADDR]
+                                                      MSVC classes: vtables, slots against
+                                                      their bases' (overridden, inherited, pure)
   rea-suite pe refs <exe> (<address> | --string TEXT) instructions naming an address or string
   rea-suite pe callers <exe> <function> [--no-jumps]  E8/E9 rel32 calls and jumps to a function
   rea-suite pe strings <exe> <start> <size>           strings the code in a range loads
@@ -12,7 +14,7 @@
 
 Addresses are hexadecimal; one at or above the image base is a VA, a smaller one an RVA. Every
 command takes --json. Results name the containing function from the x64 unwind table where it
-has one. These are byte scans confirmed by decoding each hit (pemodel.py, scan.py, rtti.py);
+has one; in JSON `function` is its address or null, and `function_known` says which. These are byte scans confirmed by decoding each hit (pemodel.py, scan.py, rtti.py);
 for a full cross-reference picture use REA (`rea xrefs`, `search_strings`) or rea-ghidra.
 """
 
@@ -139,6 +141,8 @@ def cmd_sites(args, image: Image) -> int:
 
 def cmd_rtti(args, image: Image) -> int:
     found = rtti.classes(image)
+    pure = rtti.purecalls(image) | {image.address(number(a)) for a in args.purecall}
+    rtti.compare(found, pure)
     if args.cls:
         wanted = re.compile(args.cls)
         found = [c for c in found if wanted.search(c.name) or wanted.search(c.mangled)]
@@ -149,12 +153,14 @@ def cmd_rtti(args, image: Image) -> int:
         bases = ", ".join(b.name for b in c.bases[1:]) or "-"
         print(f"{c.name}  td {c.type_descriptor:#x}  bases: {bases}")
         for v in c.vtables:
+            against = f", base {v.base} {v.base_vtable:#x}" if v.base else ""
             print(
-                f"  vtable {v.rva:#x} (va {image.va(v.rva):#x}) offset {v.offset}: {len(v.slots)} slots"
+                f"  vtable {v.rva:#x} (va {image.va(v.rva):#x}) offset {v.offset}: "
+                f"{len(v.slots)} slots{against}"
             )
             if args.slots:
-                for index, slot in enumerate(v.slots):
-                    print(f"    [{index}] {slot:#x}")
+                for index, (slot, state) in enumerate(zip(v.slots, v.states, strict=True)):
+                    print(f"    [{index}] {slot:#x}  {state}")
     print(f"{len(found)} classes", file=sys.stderr)
     return 0
 
@@ -291,7 +297,15 @@ def parser() -> argparse.ArgumentParser:
     c.add_argument("--init", action="store_true", help="print a new declaration for this file")
     c = command("rtti", "MSVC RTTI: classes, vtables and slots, base classes", cmd_rtti)
     c.add_argument("--class", dest="cls", help="only classes whose name matches this regex")
-    c.add_argument("--slots", action="store_true", help="list every vtable slot")
+    c.add_argument(
+        "--slots", action="store_true", help="list every slot: overridden, inherited, pure, new"
+    )
+    c.add_argument(
+        "--purecall",
+        action="append",
+        default=[],
+        help="a statically linked _purecall stub (hex); an imported one is found; repeatable",
+    )
     c = command("refs", "instructions that name an address or a string", cmd_refs)
     c.add_argument("address", nargs="?")
     c.add_argument("--string", help="the string's text (ASCII or UTF-16, whole string)")

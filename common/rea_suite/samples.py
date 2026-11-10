@@ -181,6 +181,67 @@ def program_x86() -> tuple[bytes, dict[str, int]]:
     return pe([(".text", bytes(code)), (".rdata", bytes(data))], base=base), at
 
 
+def program_rtti() -> tuple[bytes, dict[str, int]]:
+    """An x64 program for comparing vtables with their bases': `Iface` (abstract: its first
+    slot is a thunk to VCRUNTIME140's imported `_purecall`), `Other` (whose second slot is a
+    `ret` a test can declare a static purecall stub), and `Impl : Iface, Other` with one vtable
+    per base: at offset 0 it overrides, inherits and adds a slot, at offset 8 it overrides
+    Other's first and keeps the stub. Returns the image and the RVAs a test names."""
+    base, text, rdata = 0x140000000, 0x1000, 0x2000
+    fn = {"purecall": 0x1000, "stub": 0x1010, "a": 0x1020, "other": 0x1030, "impl": 0x1040,
+          "added": 0x1050, "other2": 0x1060}  # fmt: skip
+    iat = 0x2040
+    code = bytearray(b"\xcc" * 0x70)
+    _put(code, 0, b"\xff\x25" + struct.pack("<i", iat - (fn["purecall"] + 6)))  # jmp [_purecall]
+    for name, rva in fn.items():
+        if name != "purecall":
+            _put(code, rva - text, b"\xc3")
+    data = bytearray(0x600)
+    _put(data, 0x040, struct.pack("<QQ", 0x2080, 0))  # IAT
+    _put(data, 0x060, struct.pack("<QQ", 0x2080, 0))  # lookup table
+    _put(data, 0x080, b"\0\0_purecall\0")
+    _put(data, 0x0C0, b"VCRUNTIME140.dll\0")
+    _put(data, 0x0E0, struct.pack("<5I", 0x2060, 0, 0, 0x20C0, iat))  # + zero descriptor
+    cursor = 0x2100
+
+    def put(blob: bytes) -> int:
+        nonlocal cursor
+        at = cursor
+        _put(data, at - rdata, blob)
+        cursor = align(at + len(blob), 8)
+        return at
+
+    names = ("Iface", "Other", "Impl")
+    td = {n: put(bytes(16) + f".?AV{n}@@\0".encode()) for n in names}
+    chd = {n: put(bytes(16)) for n in names}
+    hierarchy = {"Iface": [("Iface", 0, 0)], "Other": [("Other", 0, 0)],
+                 "Impl": [("Impl", 2, 0), ("Iface", 0, 0), ("Other", 0, 8)]}  # fmt: skip
+    for name, entries in hierarchy.items():
+        descriptors = [
+            put(struct.pack("<IIiiiII", td[b], contained, mdisp, -1, 0, 0x40, chd[b]))
+            for b, contained, mdisp in entries
+        ]
+        array = put(struct.pack(f"<{len(descriptors)}I", *descriptors))
+        attributes = 1 if len(entries) > 2 else 0  # multiple inheritance
+        _put(data, chd[name] - rdata, struct.pack("<4I", 0, attributes, len(entries), array))
+    at = {**fn, "iat": iat}
+    vtables = {("Iface", 0): ["purecall", "a"], ("Other", 0): ["other", "stub"],
+               ("Impl", 0): ["impl", "a", "added"], ("Impl", 8): ["other2", "stub"]}  # fmt: skip
+    for (name, offset), slots in vtables.items():
+        locator = cursor
+        put(struct.pack("<6I", 1, offset, 0, td[name], chd[name], locator))
+        table = put(struct.pack(f"<{len(slots) + 2}Q", base + locator,
+                                *(base + fn[s] for s in slots), 0)) + 8  # fmt: skip
+        at[f"vt_{name.lower()}_{offset}"] = table
+    image = pe(
+        [(".text", bytes(code)), (".rdata", bytes(data))],
+        base=base,
+        x64=True,
+        directories={1: (0x20E0, 40), 12: (iat, 16)},
+    )
+    return image, at
+
+
 def program_registry() -> tuple[bytes, dict[str, int]]:
     """x64 code that registers three settings the way an engine's option table does: strings
     loaded with RIP-relative lea, a bool's default stored to [rsp+0x30], then a call to the

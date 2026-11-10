@@ -12,6 +12,14 @@ The walk follows Microsoft's layout (the compiler's `_RTTICompleteObjectLocator`
 - A vtable is the pointer after a pointer-sized slot holding the locator's VA; its slots run
   while they point into executable sections.
 
+compare() then sets each slot against the base class's vtable for the same subobject: a
+non-virtual base whose subobject sits at `mdisp` covers the class's vtable at offset `offset`
+when the base has a vtable at `offset - mdisp`; the first such base in the hierarchy array is the
+nearest one. A slot is `pure` (the CRT's `_purecall`), `inherited` (the base's slot holds the
+same function), `overridden`, `new` (past the end of the base's vtable, or no base vtable
+covers it) or `unknown` (a vtable no base covers in a class with virtual bases, whose offsets
+come from the vbtable and not from RTTI).
+
 Nothing needs base relocations: the image is read at its preferred base, which is how a
 fixed-base image (no .reloc) runs anyway.
 """
@@ -24,12 +32,16 @@ import struct
 import subprocess
 from dataclasses import dataclass, field
 
+from . import scan
 from .pemodel import Image
 
 MAX_SLOTS = 4096
 TYPE_NAME = re.compile(rb"\.\?A[VU][\x21-\x7e]{1,4000}?@@\0")
 # _RTTIClassHierarchyDescriptor attributes
 MULTIPLE, VIRTUAL = 1, 2
+# The CRT's pure virtual stub, imported from vcruntime/msvcrt (an x86 name may keep its
+# decoration); a statically linked one is given by address (`--purecall`).
+PURECALL = {"_purecall", "__purecall"}
 
 
 @dataclass
@@ -49,6 +61,22 @@ class Vtable:
     locator: int  # RVA of the complete object locator
     offset: int  # the subobject's offset in the complete object
     slots: list[int] = field(default_factory=list)  # RVAs of the functions
+    base: str | None = None  # the base class whose vtable compare() set the slots against
+    base_vtable: int | None = None  # RVA of that vtable
+    states: list[str] = field(default_factory=list)  # per slot, after compare()
+
+    def as_json(self) -> dict:
+        found = {
+            "rva": f"{self.rva:#x}",
+            "locator": f"{self.locator:#x}",
+            "offset": self.offset,
+            "slots": [f"{s:#x}" for s in self.slots],
+        }
+        if self.states:
+            found["base"] = self.base
+            found["base_vtable"] = None if self.base_vtable is None else f"{self.base_vtable:#x}"
+            found["slot_states"] = self.states
+        return found
 
 
 @dataclass
@@ -80,15 +108,7 @@ class Class:
                 }
                 for b in self.bases[1:]
             ],
-            "vtables": [
-                {
-                    "rva": f"{v.rva:#x}",
-                    "locator": f"{v.locator:#x}",
-                    "offset": v.offset,
-                    "slots": [f"{s:#x}" for s in v.slots],
-                }
-                for v in self.vtables
-            ],
+            "vtables": [v.as_json() for v in self.vtables],
         }
 
 
@@ -269,3 +289,46 @@ class Walker:
 
 def classes(image: Image) -> list[Class]:
     return Walker(image).walk()
+
+
+def purecalls(image: Image) -> set[int]:
+    """RVAs of the `jmp [slot]` thunks to an imported `_purecall`, which is what a pure
+    virtual's vtable slot points to when the CRT is a DLL."""
+    slots = {row.slot for row in image.imports if row.name in PURECALL}
+    if not slots:
+        return set()
+    return {rva for rva, kind, _ in scan.slot_sites(image, slots) if kind == "jmp"}
+
+
+def compare(found: list[Class], pure: set[int]) -> None:
+    """Set every vtable's base, base_vtable and per-slot states (see the module's comment).
+    `found` is the whole walk: a base is looked up among those classes by its decorated name."""
+    by_name = {c.mangled: c for c in found}
+    for cls in found:
+        bases = cls.bases[1:]
+        virtual = any(b.pdisp >= 0 for b in bases)
+        for vtable in cls.vtables:
+            match = None
+            for base in bases:
+                other = by_name.get(base.mangled)
+                if base.pdisp >= 0 or other is None or other is cls:
+                    continue
+                at = vtable.offset - base.mdisp
+                match = next((v for v in other.vtables if v.offset == at), None)
+                if match is not None:
+                    vtable.base, vtable.base_vtable = other.name, match.rva
+                    break
+            vtable.states = [
+                slot_state(index, slot, match, pure, virtual)
+                for index, slot in enumerate(vtable.slots)
+            ]
+
+
+def slot_state(index: int, slot: int, base: Vtable | None, pure: set[int], virtual: bool) -> str:
+    if slot in pure:
+        return "pure"
+    if base is None:
+        return "unknown" if virtual else "new"
+    if index >= len(base.slots):
+        return "new"
+    return "inherited" if base.slots[index] == slot else "overridden"

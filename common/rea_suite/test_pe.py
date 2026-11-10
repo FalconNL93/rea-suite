@@ -161,10 +161,60 @@ class Rtti(unittest.TestCase):
         self.assertEqual(rtti.demangle(".?AV?$List@H@@"), ".?AV?$List@H@@")
 
 
+class RttiCompare(unittest.TestCase):
+    def setUp(self) -> None:
+        data, self.at = samples.program_rtti()
+        self.image = Image(data)
+        self.found = rtti.classes(self.image)
+        self.by_name = {c.name: c for c in self.found}
+
+    def compare(self, *pure: int) -> dict[tuple[str, int], rtti.Vtable]:
+        rtti.compare(self.found, rtti.purecalls(self.image) | set(pure))
+        return {(c.name, v.offset): v for c in self.found for v in c.vtables}
+
+    def test_the_imported_purecall_thunk_is_found(self) -> None:
+        self.assertEqual(rtti.purecalls(self.image), {self.at["purecall"]})
+
+    def test_each_vtable_is_set_against_the_base_at_its_mdisp(self) -> None:
+        vtables = self.compare()
+        primary, second = vtables[("Impl", 0)], vtables[("Impl", 8)]
+        self.assertEqual((primary.base, primary.base_vtable), ("Iface", self.at["vt_iface_0"]))
+        self.assertEqual(primary.states, ["overridden", "inherited", "new"])
+        self.assertEqual((second.base, second.base_vtable), ("Other", self.at["vt_other_0"]))
+        self.assertEqual(second.states, ["overridden", "inherited"])
+        self.assertEqual(vtables[("Iface", 0)].states, ["pure", "new"])
+        self.assertIsNone(vtables[("Iface", 0)].base)
+
+    def test_a_static_purecall_stub_given_by_address_is_pure(self) -> None:
+        vtables = self.compare(self.at["stub"])
+        self.assertEqual(vtables[("Impl", 8)].states, ["overridden", "pure"])
+        self.assertEqual(vtables[("Other", 0)].states, ["new", "pure"])
+
+    def test_a_vtable_no_base_covers_in_a_class_with_virtual_bases_is_unknown(self) -> None:
+        impl = self.by_name["Impl"]
+        impl.bases[2].pdisp = 0  # Other as a virtual base
+        vtables = self.compare()
+        self.assertIsNone(vtables[("Impl", 8)].base)
+        self.assertEqual(vtables[("Impl", 8)].states, ["unknown", "unknown"])
+
+
 class Scans(unittest.TestCase):
     def setUp(self) -> None:
         data, self.at = samples.program_x64()
         self.image = Image(data)
+
+    def test_every_row_says_whether_its_function_is_known(self) -> None:
+        image, at = self.image, self.at
+        inside = scan.refs(image, at["hello"])[0].as_json(image)
+        self.assertEqual((inside["function"], inside["function_known"]), ("0x1000", True))
+        # the thunk at 0x1080 has no unwind entry
+        outside = scan.callers(image, at["thunk"])[0].as_json(image)
+        self.assertEqual((outside["function"], outside["function_known"]), (None, False))
+        rows = scan.strings_in(image, 0x1000, 0x20)
+        self.assertEqual({(r["function"], r["function_known"]) for r in rows}, {("0x1000", True)})
+        (exits,) = [r for r in scan.import_calls(image) if r["name"] == "ExitProcess"]
+        self.assertEqual([u["function_known"] for u in exits["sites"]], [False, False])
+        self.assertEqual(exits["functions"], [])
 
     def test_rip_relative_references_to_a_string(self) -> None:
         (site,) = scan.refs(self.image, self.at["hello"])
@@ -256,6 +306,30 @@ class Cli(unittest.TestCase):
         (cls,) = json.loads(out)
         self.assertEqual(cls["bases"][0]["name"], "Base")
         self.assertEqual(cls["vtables"][0]["slots"], ["0x1070", "0x1060"])
+
+    def test_rtti_slots_text_and_json(self) -> None:
+        data, at = samples.program_rtti()
+        self.exe.write_bytes(data)
+        code, out = run("rtti", str(self.exe), "--class", "^Impl$", "--slots",
+                        "--purecall", f"{0x140000000 + at['stub']:#x}")  # fmt: skip
+        self.assertEqual(code, 0)
+        self.assertIn(f"offset 0: 3 slots, base Iface {at['vt_iface_0']:#x}", out)
+        self.assertIn(f"[1] {at['a']:#x}  inherited", out)
+        self.assertIn(f"[1] {at['stub']:#x}  pure", out)
+        code, out = run("rtti", str(self.exe), "--json", "--class", "Iface")
+        (iface,) = json.loads(out)
+        self.assertEqual(iface["vtables"][0]["slot_states"], ["pure", "new"])
+        self.assertIsNone(iface["vtables"][0]["base"])
+
+    def test_refs_json_rows_sort_by_function(self) -> None:
+        code, out = run("callers", str(self.exe), "0x1080", "--json")
+        self.assertEqual(code, 0)
+        rows = json.loads(out)
+        self.assertEqual([(r["function"], r["function_known"]) for r in rows], [(None, False)])
+        code, out = run("refs", str(self.exe), "0x2000", "--json")
+        rows = json.loads(out)
+        self.assertTrue(all("function_known" in r for r in rows))
+        rows.sort(key=lambda r: (not r["function_known"], int(r["function"] or "0", 16)))
 
     def test_refs_by_string_and_callers_by_va(self) -> None:
         code, out = run("refs", str(self.exe), "--string", "hello world")

@@ -21,7 +21,11 @@ at or above the image base a VA, below it an RVA. Every hit is a byte pattern co
 decoding the instruction with Capstone; a linear scan sees code a decompiler would not reach
 and misses references computed at run time, so treat a hit as a lead and an empty answer as no
 proof. Where the x64 unwind table covers an address, the result names the function it lies in
-(chained unwind entries followed to their primary function).
+(chained unwind entries followed to their primary function). Every JSON row of `refs`,
+`callers`, `strings` and `imports` carries `function` (that address, or `null`) and
+`function_known` (`false` in x86 images and for code without an unwind entry, such as leaf
+functions and thunks), so rows sort with a key like
+`(not r["function_known"], int(r["function"] or "0", 16))`.
 
 ### The image: `info`
 
@@ -68,6 +72,7 @@ all agree.
 ```sh
 rea-suite pe rtti game/Game.exe                       # every class: vtables and slot counts, bases
 rea-suite pe rtti game/Game.exe --class 'Renderer$' --slots   # one class, every slot's target
+rea-suite pe rtti game/Game.exe --slots --purecall 0x140a1b2c0   # a statically linked _purecall
 rea-suite pe rtti game/Game.exe --json > work/game-rtti.json
 ```
 
@@ -80,6 +85,24 @@ has one vtable per base subobject, each with its `offset`. Relocations are not n
 fixed-base image (no `.reloc`) works the same. Names demangle without a tool when simple
 (`.?AVWidget@ui@@` is `ui::Widget`); templates go through `llvm-undname` when it is on PATH
 (component `build`), otherwise they stay decorated.
+
+Each vtable is set against its base's: the first non-virtual base in the hierarchy array whose
+own vtables include one at the vtable's `offset` minus the base's `mdisp` (so with multiple
+inheritance each vtable finds the base of its own subobject). `--slots` marks every slot, and
+the JSON always carries `base`, `base_vtable` and `slot_states` (one per slot):
+
+| State | Meaning |
+|---|---|
+| `pure` | the slot is the CRT's `_purecall`: the thunk to the import found by itself, a statically linked stub given with `--purecall` (repeatable) |
+| `inherited` | the base's vtable holds the same function at that index |
+| `overridden` | it holds another one |
+| `new` | past the end of the base's vtable, or no base vtable covers this one (a root class, or a base with no RTTI in the image) |
+| `unknown` | no base covers it and the class has virtual bases, whose offsets live in the vbtable rather than in RTTI |
+
+Identical functions folded by the linker (`/OPT:ICF`) share an address, so an override that
+compiles to the base's code reads as `inherited`. Checked 2026-11-10 on a 61 MB x64 retail
+executable: 3,148 of 5,132 vtables matched a base, 715 pure slots through one `_purecall`
+thunk, in under two seconds.
 
 Checked 2026-11-10 on a 61 MB x64 retail executable: 5,112 classes with their vtables in under a
 second; and on a 12 MB fixed-base x64 executable (no `.reloc`): 1,313 classes, 13,342 slots, 95

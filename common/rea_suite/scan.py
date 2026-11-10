@@ -38,8 +38,23 @@ class Site:
             "va": f"{image.va(self.rva):#x}",
             "instruction": self.text,
             "target": f"{self.target:#x}",
-            "function": None if self.function is None else f"{self.function:#x}",
+            **function_fields(self.function),
         }
+
+
+def function_fields(function: int | None) -> dict:
+    """The containing function as every scan's JSON names it: its address when the x64 unwind
+    table covers the site, else null, with `function_known` saying which (x86 images and leaf
+    functions have no unwind entry), so a reader can sort without guessing."""
+    return {
+        "function": None if function is None else f"{function:#x}",
+        "function_known": function is not None,
+    }
+
+
+def containing(image: Image, rva: int) -> int | None:
+    function = image.function_at(rva)
+    return function[0] if function else None
 
 
 def disassembler(image: Image) -> Cs:
@@ -85,8 +100,7 @@ def text(insn) -> str:
 
 
 def site(image: Image, rva: int, insn, target: int) -> Site:
-    function = image.function_at(rva)
-    return Site(rva, text(insn), target, function[0] if function else None)
+    return Site(rva, text(insn), target, containing(image, rva))
 
 
 def refs(image: Image, target: int) -> list[Site]:
@@ -193,6 +207,7 @@ def strings_in(image: Image, start: int, size: int, min_length: int = 4) -> list
                         "string": f"{va - image.base:#x}",
                         "encoding": found[0],
                         "text": found[1],
+                        **function_fields(containing(image, rva)),
                     }
                 )
     return result
@@ -289,13 +304,12 @@ def import_calls(image: Image, dll: str | None = None, name: str | None = None) 
 
     def add(rva: int, kind: str, slot: int, thunk: int | None = None) -> None:
         insn = decode(image, cs, rva)
-        function = image.function_at(rva)
         by_slot.setdefault(slot, []).append(
             {
                 "rva": f"{rva:#x}",
                 "kind": kind,
                 "instruction": text(insn) if insn else "?",
-                "function": f"{function[0]:#x}" if function else None,
+                **function_fields(containing(image, rva)),
                 **({"thunk": f"{thunk:#x}"} if thunk is not None else {}),
             }
         )
@@ -317,7 +331,9 @@ def import_calls(image: Image, dll: str | None = None, name: str | None = None) 
                 "slot": f"{row.slot:#x}",
                 "delay": row.delay,
                 "sites": uses,
-                "functions": sorted({u["function"] for u in uses if u["function"]}),
+                "functions": sorted(
+                    {u["function"] for u in uses if u["function_known"]}, key=lambda f: int(f, 16)
+                ),
             }
         )
     return result
