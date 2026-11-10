@@ -47,11 +47,11 @@ second.
 ### References, callers, strings
 
 ```sh
-rea-suite pe refs game/Game.exe --string skipsplashscreen   # where the string is, and who loads it
-rea-suite pe refs game/Game.exe 0x14032d15d8                # instructions naming an address
-rea-suite pe callers game/Game.exe 0x21581a0                # E8 calls and E9 jumps to a function
-rea-suite pe callers game/Game.exe 0x21581a0 --no-jumps
-rea-suite pe strings game/Game.exe 0x1ee300 0x500           # strings the code in a range loads
+rea-suite pe refs game/Game.exe --string skipintro          # where the string is, and who loads it
+rea-suite pe refs game/Game.exe 0x1406f2340                 # instructions naming an address
+rea-suite pe callers game/Game.exe 0x4a8f20                 # E8 calls and E9 jumps to a function
+rea-suite pe callers game/Game.exe 0x4a8f20 --no-jumps
+rea-suite pe strings game/Game.exe 0x2a1000 0x400           # strings the code in a range loads
 ```
 
 `refs` covers x64 RIP-relative operands (`lea`, `mov`, `cmp` with an immediate after the
@@ -62,7 +62,7 @@ and jumps only; calls through a register or a vtable need `rea-suite pe rtti` or
 ### Every call site of an import DLL
 
 ```sh
-rea-suite pe imports game/Game.exe --dll EOSSDK-Win64-Shipping.dll   # each function: sites, functions
+rea-suite pe imports game/Game.exe --dll steam_api64.dll            # each function: sites, functions
 rea-suite pe imports game/Game.exe --function CreateFileW --json
 rea-suite pe imports game/Game.exe --used > work/game-imports.txt     # the whole IAT, used slots only
 ```
@@ -88,14 +88,14 @@ order (the last strings count), and with `--stack-byte` the byte stored to `[rsp
 call (some engines pass a bool's default there; a register's name when it is not an immediate).
 
 ```sh
-rea-suite pe registry game/Game.exe --range 0x1ee300:0x500 --range 0x1f71000:0x5800 \
-  --registrar 0x247dc90=bool:description,name \
-  --registrar 0x247daa0=string:default,hint,description,name \
+rea-suite pe registry game/Game.exe --range 0x2a1000:0x400 --range 0x2b8000:0x2000 \
+  --registrar 0x5d3100=bool:description,name \
+  --registrar 0x5d3200=string:default,hint,description,name \
   --stack-byte 0x30 --markdown > work/options.md
 rea-suite pe registry game/Game.exe --config re/option-registry.json --json
 ```
 
-The config holds the same: `{"ranges": [["0x1ee300", "0x500"]], "registrars": {"0x247dc90":
+The config holds the same: `{"ranges": [["0x2a1000", "0x400"]], "registrars": {"0x5d3100":
 {"type": "bool", "fields": ["description", "name"]}}, "stack_byte": "0x30"}`. Find the registrar
 by one setting's name (`refs --string`), the call after it, and the blocks around it. The port
 keeps its addresses and what it tested; this gives the table.
@@ -142,8 +142,8 @@ rea-suite frida common/frida/observer.js --config common/frida/examples/xinput.j
 rea-suite frida common/frida/observer.js --config common/frida/examples/raw-input.json --name Game.exe
 # Calls through two IAT slots of the main module, counted per caller every 2 s
 rea-suite frida common/frida/observer.js --name Game.exe --config-json \
-  '{"targets": [{"name": "Initialize", "iat": "0x26130a8", "mode": "count"},
-                {"name": "Tick", "iat": "0x26130d8", "mode": "count", "only_from": "Game.exe"}]}'
+  '{"targets": [{"name": "Initialize", "iat": "0x6c2010", "mode": "count"},
+                {"name": "Tick", "iat": "0x6c2018", "mode": "count", "only_from": "Game.exe"}]}'
 ```
 
 Checked 2026-11-10 on Linux (frida 17.24.3): a spawned Python's `getenv` calls with argument and

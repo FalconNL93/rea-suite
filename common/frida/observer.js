@@ -7,8 +7,8 @@
 //     "targets": [ {
 //       "name": "XInputGetState",            // label in every message
 //       "export": "xinput1_4.dll!XInputGetState",   // or a list of alternatives, each hooked when it loads
-//       "rva": "0x21581a0", "module": "Game.exe",   // or: an address in a module (default: the main one)
-//       "iat": "0x26130a8",                  // or: the function an IAT slot of the module points to
+//       "rva": "0x4a8f20", "module": "Game.exe",    // or: an address in a module (default: the main one)
+//       "iat": "0x6c2010",                   // or: the function an IAT slot of the module points to
 //       "mode": "change",                    // call: every call; change: when `key` changes; count: totals per caller
 //       "at": "leave",                       // emit on enter or leave (leave has the result)
 //       "args": 2,                           // log arg0..arg1 as pointers
