@@ -34,3 +34,8 @@ unpatched (one source per tool), so these go upstream as issues or pull requests
   "Provider startup deadline elapsed". Upstream: a default that grows with the image's size, or the
   CLI naming `REA_GHIDRA_STARTUP_TIMEOUT_MS` as the MCP error does. Workaround meanwhile:
   [known issues](docs/REA-KNOWN-ISSUES.md), item 9.
+
+- **Keep the analyzed program in a snapshot** (Alan Wake Remastered port, 2026-11-10): a CLI `--snapshot` of a long
+  Ghidra import (about 16 minutes for a 12 MB PE) does not save the analysis, so opening it in the MCP session imports
+  again from scratch. A snapshot that keeps the analyzed program (or the Ghidra project) would make a big import a
+  one-time cost.
