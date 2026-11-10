@@ -82,7 +82,9 @@ fixed-base image (no `.reloc`) works the same. Names demangle without a tool whe
 (component `build`), otherwise they stay decorated.
 
 Checked 2026-11-10 on a 61 MB x64 retail executable: 5,112 classes with their vtables in under a
-second.
+second; and on a 12 MB fixed-base x64 executable (no `.reloc`): 1,313 classes, 13,342 slots, 95
+classes with several vtables whose offsets match their bases' `mdisp`. x86 is covered by the
+tests only.
 
 ### References, callers, strings
 
