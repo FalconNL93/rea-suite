@@ -27,6 +27,8 @@
 #                                            functions (no game bytes) and its gate; x86/x64 PE,
 #                                            Xbox 360 images (--help)
 #   rea-suite steamstub <exe>...            SteamStub DRM signs (.bind, entropy, timestamps)
+#   rea-suite pe <command> <exe> ...        PE scans without a project: MSVC RTTI classes and
+#                                            vtables, references, callers, strings (--help)
 #   rea-suite analyze [paths...] [options]  offline analysis projects; --examples for workflows
 #   rea-suite tools <args...>               tools.yml manager (= rea-tools)
 #   rea-suite lint [file...]                ruff, shellcheck and a PowerShell parse check on
@@ -69,7 +71,7 @@ need() { command -v "$1" >/dev/null || { echo "missing: $1 (run $2)" >&2; exit 1
 BOOTSTRAP=platforms/$OS/bootstrap.sh
 components() { uv run --quiet common/rea_suite/components.py "$@"; }
 agents() { uv run --quiet common/rea_suite/agents.py "$@"; }
-usage() { sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,/^set -euo pipefail/{/^set /d;p}' "$0" | sed 's/^# \{0,1\}//'; }
 
 # --- components --------------------------------------------------------------
 
@@ -534,6 +536,7 @@ case "$cmd" in
   xbox360) uv run --offline --no-sync common/rea_suite/xbox360.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   functions) uv run --offline --no-sync common/rea_suite/functions.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   steamstub) uv run --offline --no-sync common/rea_suite/steamstub.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
+  pe) uv run --offline --no-sync common/rea_suite/pe.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   tools) rea-tools "${args[@]}" ;;
   clean) cmd_clean "${args[@]}" ;;
   lint) exec .githooks/lint.sh "${args[@]}" ;;

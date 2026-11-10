@@ -12,6 +12,7 @@
     .\platforms\windows\rea-suite.ps1 xbox360 <command> [options]  # Xbox 360 XEX/PE in your Ghidra project
     .\platforms\windows\rea-suite.ps1 functions <config> check|add|find|convert  # a port's function index and gate
     .\platforms\windows\rea-suite.ps1 steamstub <exe>...  # SteamStub DRM signs
+    .\platforms\windows\rea-suite.ps1 pe <command> <exe> ...  # PE scans: RTTI, references, callers, strings
     .\platforms\windows\rea-suite.ps1 analyze [paths...] [options]  # offline analysis; --examples
     .\platforms\windows\rea-suite.ps1 doctor         # check the installation
     .\platforms\windows\rea-suite.ps1 reinstall runtime|python|node|tools|all|<tool>
@@ -24,7 +25,7 @@
 #>
 #Requires -Version 7
 param(
-    [Parameter(Position = 0)][ValidateSet('setup', 'select', 'winget', 'update', 'reinstall', 'agents', 'analyze', 'playstation', 'xbox360', 'functions', 'steamstub', 'doctor', 'status', 'tools', 'clean', 'lint')][string]$Command = 'setup',
+    [Parameter(Position = 0)][ValidateSet('setup', 'select', 'winget', 'update', 'reinstall', 'agents', 'analyze', 'playstation', 'xbox360', 'functions', 'steamstub', 'pe', 'doctor', 'status', 'tools', 'clean', 'lint')][string]$Command = 'setup',
     [Parameter(Position = 1, ValueFromRemainingArguments)][string[]]$Rest = @()
 )
 $ErrorActionPreference = 'Stop'
@@ -197,6 +198,7 @@ switch ($Command) {
     'xbox360' { & uv run --offline --no-sync common\rea_suite\xbox360.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'functions' { & uv run --offline --no-sync common\rea_suite\functions.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'steamstub' { & uv run --offline --no-sync common\rea_suite\steamstub.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
+    'pe' { & uv run --offline --no-sync common\rea_suite\pe.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'analyze' { & uv run --offline --no-sync common\rea_suite\analyze.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'reinstall' {
         foreach ($what in $Rest) {
