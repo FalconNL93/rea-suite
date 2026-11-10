@@ -30,7 +30,7 @@ common/
   uv-tools.txt          CLI tools in their own uv environments
   rea_suite/            `rea-tools` (tools.yml installer), components, `diec`
   ghidra_scripts/       headless Ghidra scripts used by rea-ghidra
-  frida/                Frida scripts for `rea-suite frida`: passive observer
+  frida/                Frida scripts for `rea-suite frida`: passive observer, write guard
 platforms/
   linux/                bootstrap.sh, apt package list
   macos/                bootstrap.sh, Brewfile
@@ -548,7 +548,7 @@ been run on macOS arm64 and Linux x86_64 (WSL2, 2026-11-03); Windows execution r
 | Ghidra FunctionID for old MSVC | Names the C runtime's functions in old games; Ghidra ships Visual C++ 4.2 and 2003-2010, VC6 you build from your own copy ([below](#functionid-for-visual-c-60)) | Ghidra (built in) |
 | `rea-suite functions` | A port's index of identified functions (no game bytes) and the gate that checks the executable still matches it; x86/x64 PE and Xbox 360 images ([below](#function-index-and-gate)) | this repo |
 | `rea-suite steamstub` | Detect Steam's DRM wrapper before analysis; Steamless removes it ([below](#steamstub)) | this repo |
-| `rea-suite frida` | Run a Frida script on a process and log it as JSON lines; a passive observer for exports, addresses and IAT slots (pad state, raw input, call counts per caller) ([port tools](docs/PORT-TOOLS.md#frida-rea-suite-frida)) | this repo |
+| `rea-suite frida` | Run a Frida script on a process and log it as JSON lines; a passive observer for exports, addresses and IAT slots (pad state, raw input, call counts per caller); a write guard that keeps a Windows game's file changes inside allowed folders ([port tools](docs/PORT-TOOLS.md#frida-rea-suite-frida)) | this repo |
 | `rea-suite pe` | PE scans from the file alone, no project: MSVC RTTI classes with vtables, slots and bases; references to an address or string; callers; strings a code range loads; every call site of an import DLL's functions ([port tools](docs/PORT-TOOLS.md)) | this repo |
 
 radare2 is deliberately left out: Rizin is its fork with the same feature set,

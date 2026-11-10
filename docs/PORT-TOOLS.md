@@ -128,3 +128,38 @@ it (`REA_FRIDA_INTEGRATION=1 uv run --no-sync python -m unittest rea_suite.test_
 calls `XInputGetState` for pads 0 and 1 three times (no pad: result 1167, one message per pad)
 and registers two raw input devices: the XInput hook waited for `xinput1_4.dll` to load, and
 the registration came out as `[{page 1, usage 5}, {page 1, usage 4}]`. Not yet run against a game.
+
+### Write guard (Windows)
+
+`common/frida/write-guard.js` lets a Windows process change files only under the folders you
+allow: for running an original game, or a port's copy of it, without it writing into its install
+folder, the user's profile or anywhere else. It works at the native API (ntdll), below every
+library the game uses:
+
+- `NtCreateFile` and `NtOpenFile` for writing, deleting, changing attributes, creating or
+  delete-on-close are refused (`STATUS_ACCESS_DENIED`) unless the path is allowed. The path is
+  resolved through the kernel at its nearest existing ancestor, so a junction or symlink inside
+  an allowed folder does not reach out of it.
+- Renames (`NtSetInformationFile`) are checked by their destination; hard links are refused, since
+  one would alias an original file under an allowed folder. The information classes are filtered
+  in a CModule, so Frida's own I/O never reenters the script.
+- Starting child processes (`NtCreateUserProcess`: launchers, crash reporters) is refused unless
+  `"deny_children": false`.
+
+```sh
+rea-suite frida common/frida/write-guard.js --log work/guard.jsonl \
+  --config-json '{"allow": ["D:\\work\\run", "D:\\work\\saves"]}' --spawn 'D:\work\run\Game.exe'
+```
+
+Kernel objects that are no disk files (pipes, sockets, the console, HID and GPU devices) pass;
+`allow_devices` replaces that list of regexes. Every refusal is logged (`write-denied` with the
+path as asked and as resolved, `rename-check`, `hardlink-denied`, `child-process-denied`).
+Leave out `--seconds`, or add `--kill`: when the runner stops before the process does, it
+unloads the script and the process runs on unguarded.
+
+Checked 2026-11-10 on Windows 11 x64 (frida 17.26.2) with a spawned Python and the folder
+`allowed` allowed: a new file there and a rename within it worked; reading a file outside
+worked; writing, appending to, deleting or renaming into a file outside, a hard link to an
+outside file, a write through a junction from `allowed` to the outside folder and starting
+`cmd.exe` were all refused, and the outside file was unchanged. Not yet run against a game, and
+not on x86 (the offsets follow the pointer size; untested).
