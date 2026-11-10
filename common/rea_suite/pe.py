@@ -5,6 +5,8 @@
   rea-suite pe callers <exe> <function> [--no-jumps]  E8/E9 rel32 calls and jumps to a function
   rea-suite pe strings <exe> <start> <size>           strings the code in a range loads
   rea-suite pe imports <exe> [--dll D] [--function F] every call site of imported functions
+  rea-suite pe registry <exe> --range S:N --registrar ADDR=TYPE:FIELDS [--stack-byte OFF]
+                                                      settings a game registers, from its code
 
 Addresses are hexadecimal; one at or above the image base is a VA, a smaller one an RVA. Every
 command takes --json. Results name the containing function from the x64 unwind table where it
@@ -125,6 +127,51 @@ def cmd_imports(args, image: Image) -> int:
     return 0 if rows else 1
 
 
+def registry_input(args, image: Image) -> tuple[list, dict, int | None]:
+    """--config FILE, or --range/--registrar/--stack-byte; the file's values come first."""
+    config = json.loads((args.caller_cwd / args.config).read_text()) if args.config else {}
+    ranges = [(number(a), number(b)) for a, b in config.get("ranges", [])]
+    ranges += [tuple(number(v) for v in r.split(":", 1)) for r in args.range]
+    registrars = {
+        image.address(number(addr)): scan.Registrar(spec["type"], list(spec["fields"]))
+        for addr, spec in config.get("registrars", {}).items()
+    }
+    for text in args.registrar:
+        addr, _, rest = text.partition("=")
+        kind, _, fields = rest.partition(":")
+        registrars[image.address(number(addr))] = scan.Registrar(kind, fields.split(","))
+    byte = args.stack_byte or config.get("stack_byte")
+    ranges = [(image.address(start), size) for start, size in ranges]
+    return ranges, registrars, number(byte) if byte is not None else None
+
+
+def cmd_registry(args, image: Image) -> int:
+    ranges, registrars, byte = registry_input(args, image)
+    if not ranges or not registrars:
+        print(
+            "registry: give at least one --range and one --registrar (or --config)", file=sys.stderr
+        )
+        return 2
+    rows = scan.registry(image, ranges, registrars, byte)
+    if args.json:
+        print(json.dumps(rows, indent=1))
+    elif args.markdown:
+        fields = list(dict.fromkeys(f for r in registrars.values() for f in r.fields))
+        columns = [*fields, "type", *(["stored"] if byte is not None else []), "site"]
+        print("| " + " | ".join(columns) + " |")
+        print("|" + "---|" * len(columns))
+        for r in rows:
+            cells = ["" if r.get(c) is None else str(r[c]).replace("|", "\\|") for c in columns]
+            print("| " + " | ".join(cells) + " |")
+    else:
+        for r in rows:
+            named = "  ".join(f"{f}={r[f]!r}" for f in registrars[int(r["registrar"], 16)].fields)
+            stored = f"  stored={r['stored']!r}" if "stored" in r else ""
+            print(f"{r['site']}  {r['type']:<8} {named}{stored}")
+    print(f"{len(rows)} registrations", file=sys.stderr)
+    return 0 if rows else 1
+
+
 def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="rea-suite pe",
@@ -158,6 +205,17 @@ def parser() -> argparse.ArgumentParser:
     c.add_argument("--dll", help="one DLL (case-insensitive)")
     c.add_argument("--function", help="one function name (case-insensitive)")
     c.add_argument("--used", action="store_true", help="leave out imports no code uses")
+    c = command("registry", "settings registered by calls in a code range", cmd_registry)
+    c.add_argument("--range", action="append", default=[], help="START:SIZE (hex), repeatable")
+    c.add_argument(
+        "--registrar",
+        action="append",
+        default=[],
+        help="ADDR=TYPE:FIELD,FIELD... the strings before each call, in load order; repeatable",
+    )
+    c.add_argument("--stack-byte", help="report the byte stored to [rsp+OFF] before each call")
+    c.add_argument("--config", type=Path, help="JSON with ranges, registrars, stack_byte")
+    c.add_argument("--markdown", action="store_true", help="a Markdown table")
     return p
 
 

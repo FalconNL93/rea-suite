@@ -321,3 +321,61 @@ def import_calls(image: Image, dll: str | None = None, name: str | None = None) 
             }
         )
     return result
+
+
+@dataclass
+class Registrar:
+    """A function a game calls once per setting it registers; `fields` names the strings loaded
+    before each call, in the order the code loads them (the last ones count)."""
+
+    kind: str
+    fields: list[str]
+
+
+def registry(
+    image: Image,
+    ranges: list[tuple[int, int]],
+    registrars: dict[int, Registrar],
+    stack_byte: int | None = None,
+) -> list[dict]:
+    """Settings a game registers in straight-line code: for each call to a registrar in the
+    ranges, the strings loaded since the previous call, named by the registrar's fields. With
+    stack_byte, also the last byte stored to [rsp+stack_byte] (or [esp+...]) before the call,
+    which is where some engines pass a bool's default: a number, or the register's name."""
+    stack = "rsp" if image.x64 else "esp"
+    store = None if stack_byte is None else f"byte ptr [{stack} + {stack_byte:#x}], "
+    result = []
+    for start, size in ranges:
+        strings: list[str] = []
+        stored = None
+        for insn in instructions(image, start, size):
+            if store and insn.mnemonic == "mov" and insn.op_str.startswith(store):
+                value = insn.op_str[len(store) :]
+                stored = int(value, 0) if value[:1].isdigit() else value
+            if insn.mnemonic == "call":
+                target = None
+                op = insn.operands[0] if insn.operands else None
+                if op is not None and op.type == X86_OP_IMM:
+                    target = (op.imm & (2**64 - 1)) - image.base
+                if target in registrars:
+                    registrar = registrars[target]
+                    names = registrar.fields
+                    tail = strings[-len(names) :] if names else []
+                    tail = [None] * (len(names) - len(tail)) + tail
+                    row = {
+                        "site": f"{insn.address - image.base:#x}",
+                        "registrar": f"{target:#x}",
+                        "type": registrar.kind,
+                        **dict(zip(names, tail, strict=True)),
+                        "strings": strings,
+                    }
+                    if store:
+                        row["stored"] = stored
+                    result.append(row)
+                    strings, stored = [], None
+                    continue
+            for va in references(insn, image.x64):
+                found = string_at(image, va - image.base, 1)
+                if found:
+                    strings.append(found[1])
+    return result

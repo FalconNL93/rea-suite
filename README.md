@@ -549,7 +549,7 @@ been run on macOS arm64 and Linux x86_64 (WSL2, 2026-11-03); Windows execution r
 | `rea-suite functions` | A port's index of identified functions (no game bytes) and the gate that checks the executable still matches it; x86/x64 PE and Xbox 360 images ([below](#function-index-and-gate)) | this repo |
 | `rea-suite steamstub` | Detect Steam's DRM wrapper before analysis; Steamless removes it ([below](#steamstub)) | this repo |
 | `rea-suite frida` | Run a Frida script on a process and log it as JSON lines; a passive observer for exports, addresses and IAT slots (pad state, raw input, call counts per caller); a write guard that keeps a Windows game's file changes inside allowed folders ([port tools](docs/PORT-TOOLS.md#frida-rea-suite-frida)) | this repo |
-| `rea-suite pe` | PE scans from the file alone, no project: MSVC RTTI classes with vtables, slots and bases; references to an address or string; callers; strings a code range loads; every call site of an import DLL's functions ([port tools](docs/PORT-TOOLS.md)) | this repo |
+| `rea-suite pe` | PE scans from the file alone, no project: MSVC RTTI classes with vtables, slots and bases; references to an address or string; callers; strings a code range loads; every call site of an import DLL's functions; a game's option registry ([port tools](docs/PORT-TOOLS.md)) | this repo |
 
 radare2 is deliberately left out: Rizin is its fork with the same feature set,
 and REA integrates Rizin (`REA_RIZIN_COMMAND`, Cutter bridge).

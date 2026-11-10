@@ -78,6 +78,31 @@ Checked 2026-11-10 on a 61 MB x64 retail executable: 1,089 imports, 43,209 sites
 second; for its 42 EOS imports the sites agree exactly with the call map that port had built by
 hand with REA and Rizin.
 
+### A game's option registry
+
+Many engines register their settings (command-line switches, config keys, console variables)
+in long straight-line blocks: per setting, the strings are loaded, then a registrar function for
+the setting's type is called. `registry` reads such blocks back: per call to a registrar in the
+given ranges, the strings loaded since the previous call, named by the fields you give in load
+order (the last strings count), and with `--stack-byte` the byte stored to `[rsp+OFF]` before the
+call (some engines pass a bool's default there; a register's name when it is not an immediate).
+
+```sh
+rea-suite pe registry game/Game.exe --range 0x1ee300:0x500 --range 0x1f71000:0x5800 \
+  --registrar 0x247dc90=bool:description,name \
+  --registrar 0x247daa0=string:default,hint,description,name \
+  --stack-byte 0x30 --markdown > work/options.md
+rea-suite pe registry game/Game.exe --config re/option-registry.json --json
+```
+
+The config holds the same: `{"ranges": [["0x1ee300", "0x500"]], "registrars": {"0x247dc90":
+{"type": "bool", "fields": ["description", "name"]}}, "stack_byte": "0x30"}`. Find the registrar
+by one setting's name (`refs --string`), the call after it, and the blocks around it. The port
+keeps its addresses and what it tested; this gives the table.
+
+Checked 2026-11-10 on a 61 MB x64 retail executable: the 97 options of its two blocks, with the
+same names, types, sites and string defaults as the table that port generated with its own tool.
+
 Tests: `uv run --no-sync python -m unittest rea_suite.test_pe` in `common/` (synthetic x64 and
 x86 programs from `samples.py`, no game bytes).
 

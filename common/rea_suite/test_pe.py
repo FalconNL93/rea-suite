@@ -143,6 +143,29 @@ class ImportCalls(unittest.TestCase):
         self.assertEqual(scan.import_calls(Image(data), dll="user32.dll"), [])
 
 
+class Registry(unittest.TestCase):
+    def test_settings_with_their_strings_and_stored_defaults(self) -> None:
+        data, at = samples.program_registry()
+        rows = scan.registry(
+            Image(data),
+            [(at["start"], at["size"])],
+            {
+                at["bool"]: scan.Registrar("bool", ["description", "name"]),
+                at["string"]: scan.Registrar("string", ["default", "hint", "description", "name"]),
+            },
+            stack_byte=0x30,
+        )
+        self.assertEqual(
+            [(r["name"], r["type"], r["description"], r.get("default"), r["stored"]) for r in rows],
+            [
+                ("fog", "bool", "Enables fog", None, 1),
+                ("language", "string", "Interface language", "en", None),
+                ("skipintro", "bool", "Skips intros", None, "r14b"),
+            ],
+        )
+        self.assertEqual([r["site"] for r in rows], [f"{s:#x}" for s in at["sites"][:3]])
+
+
 class Cli(unittest.TestCase):
     def setUp(self) -> None:
         tmp = tempfile.TemporaryDirectory()
@@ -169,6 +192,28 @@ class Cli(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("KERNEL32.dll!GetTickCount  slot 0x2040: 1 sites in 1 functions", out)
         self.assertIn("0x100c  call", out)
+
+    def test_registry_markdown_from_a_config(self) -> None:
+        data, at = samples.program_registry()
+        self.exe.write_bytes(data)
+        config = self.exe.with_name("registry.json")
+        config.write_text(
+            json.dumps(
+                {
+                    "ranges": [[f"{at['start']:#x}", f"{at['size']:#x}"]],
+                    "registrars": {
+                        f"{at['bool']:#x}": {"type": "bool", "fields": ["description", "name"]}
+                    },
+                    "stack_byte": "0x30",
+                }
+            )
+        )
+        code, out = run("registry", str(self.exe), "--config", str(config), "--markdown",
+                        "--registrar", f"{at['string']:#x}=string:default,hint,description,name")  # fmt: skip
+        self.assertEqual(code, 0)
+        lines = out.splitlines()
+        self.assertEqual(lines[0], "| description | name | default | hint | type | stored | site |")
+        self.assertIn("| Interface language | language | en | language code | string |  |", out)
 
     def test_a_missing_string_and_a_non_pe(self) -> None:
         self.assertEqual(run("refs", str(self.exe), "--string", "absent")[0], 1)

@@ -179,3 +179,45 @@ def program_x86() -> tuple[bytes, dict[str, int]]:
     _put(data, 0x180, struct.pack("<5I", 0, 0, 0, base + 0x2100, base + 0x2170))
     _put(data, 0x1A0, struct.pack("<4I", base + 0x2180, base + 0x1010, base + 0x1020, 0))
     return pe([(".text", bytes(code)), (".rdata", bytes(data))], base=base), at
+
+
+def program_registry() -> tuple[bytes, dict[str, int]]:
+    """x64 code that registers three settings the way an engine's option table does: strings
+    loaded with RIP-relative lea, a bool's default stored to [rsp+0x30], then a call to the
+    registrar for the type. Assembled with Keystone (a suite dependency)."""
+    from keystone import KS_ARCH_X86, KS_MODE_64, Ks
+
+    base, start = 0x140000000, 0x1000
+    names = ["Enables fog", "fog", "en", "language code", "Interface language", "language",
+             "Skips intros", "skipintro"]  # fmt: skip
+    strings, at, data = {}, 0x2000, b""
+    for text in names:
+        strings[text] = at + len(data)
+        data += text.encode() + b"\0"
+    reg_bool, reg_string, other = 0x1200, 0x1210, 0x1220
+    lines = [
+        ("lea", "rcx", "Enables fog"), ("lea", "rdx", "fog"), "mov byte ptr [rsp + 0x30], 1",
+        f"call {reg_bool:#x}",
+        ("lea", "r8", "en"), ("lea", "r9", "language code"), ("lea", "rcx", "Interface language"),
+        ("lea", "rdx", "language"), f"call {reg_string:#x}",
+        "xor r14d, r14d", ("lea", "rcx", "Skips intros"), ("lea", "rdx", "skipintro"),
+        "mov byte ptr [rsp + 0x30], r14b", f"call {reg_bool:#x}", f"call {other:#x}", "ret",
+    ]  # fmt: skip
+    ks = Ks(KS_ARCH_X86, KS_MODE_64)
+    code, sites = b"", []
+    for line in lines:
+        address = start + len(code)
+        if isinstance(line, tuple):
+            _, register, text = line
+            line = f"lea {register}, [rip + {strings[text] - (address + 7):#x}]"
+        encoded = bytes(ks.asm(line, address)[0])
+        if line.startswith("call"):
+            sites.append(address)
+        code += encoded
+    end = len(code)
+    code = code.ljust(reg_bool - start, b"\xcc")
+    for _ in range(3):
+        code += b"\xc3".ljust(0x10, b"\xcc")
+    image = pe([(".text", code), (".rdata", data)], base=base, x64=True)
+    return image, {"start": start, "size": end, "bool": reg_bool, "string": reg_string,
+                   "sites": sites}  # fmt: skip
