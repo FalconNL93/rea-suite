@@ -121,6 +121,28 @@ class Scans(unittest.TestCase):
         self.assertEqual((site.rva, site.text), (at["push"], "push 0x402000"))
 
 
+class ImportCalls(unittest.TestCase):
+    def test_direct_calls_thunks_and_calls_through_thunks(self) -> None:
+        data, at = samples.program_x64()
+        rows = {r["name"]: r for r in scan.import_calls(Image(data), dll="kernel32.DLL")}
+        tick = rows["GetTickCount"]
+        self.assertEqual(tick["slot"], f"{at['iat_tick']:#x}")
+        self.assertEqual(
+            [(u["rva"], u["kind"], u["function"]) for u in tick["sites"]],
+            [("0x100c", "call", "0x1000")],
+        )
+        self.assertEqual(tick["functions"], ["0x1000"])
+        exits = rows["ExitProcess"]["sites"]
+        self.assertEqual(
+            [(u["rva"], u["kind"]) for u in exits], [("0x1080", "jmp"), ("0x1090", "via-thunk")]
+        )
+        self.assertEqual(exits[1]["thunk"], "0x1080")
+
+    def test_a_filter_that_matches_nothing(self) -> None:
+        data, _ = samples.program_x64()
+        self.assertEqual(scan.import_calls(Image(data), dll="user32.dll"), [])
+
+
 class Cli(unittest.TestCase):
     def setUp(self) -> None:
         tmp = tempfile.TemporaryDirectory()
@@ -141,6 +163,12 @@ class Cli(unittest.TestCase):
         self.assertIn("0x1000  lea rax", out)
         code, out = run("callers", str(self.exe), "0x140001040", "--json")
         self.assertEqual([row["rva"] for row in json.loads(out)], ["0x1007", "0x1030"])
+
+    def test_imports_text(self) -> None:
+        code, out = run("imports", str(self.exe), "--function", "GetTickCount")
+        self.assertEqual(code, 0)
+        self.assertIn("KERNEL32.dll!GetTickCount  slot 0x2040: 1 sites in 1 functions", out)
+        self.assertIn("0x100c  call", out)
 
     def test_a_missing_string_and_a_non_pe(self) -> None:
         self.assertEqual(run("refs", str(self.exe), "--string", "absent")[0], 1)

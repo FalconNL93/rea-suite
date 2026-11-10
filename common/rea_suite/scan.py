@@ -212,3 +212,112 @@ def find_string(image: Image, value: str) -> list[int]:
                     found.append(section.rva + at)
                 at = data.find(needle, at + 1)
     return sorted(set(found))
+
+
+# Indirect transfers through a pointer slot: (pattern, kind, length of the instruction before
+# the address bytes). x64 addresses are RIP-relative disp32, x86 ones absolute.
+SLOT_PATTERNS = {
+    True: [
+        (re.compile(rb"\xff\x15"), "call", 2),
+        (re.compile(rb"\xff\x25"), "jmp", 2),
+        (re.compile(rb"[\x48\x4c]\x8b[\x05\x0d\x15\x1d\x25\x2d\x35\x3d]"), "load", 3),
+    ],
+    False: [
+        (re.compile(rb"\xff\x15"), "call", 2),
+        (re.compile(rb"\xff\x25"), "jmp", 2),
+        (re.compile(rb"\x8b[\x05\x0d\x15\x1d\x25\x2d\x35\x3d]"), "load", 2),
+        (re.compile(rb"\xa1"), "load", 1),
+    ],
+}
+
+
+def slot_sites(image: Image, slots: set[int]) -> list[tuple[int, str, int]]:
+    """(instruction RVA, kind, slot) for every call, jmp or load through one of the slots."""
+    found = []
+    for section in image.code_sections():
+        data = image.section_bytes(section)
+        for pattern, kind, head in SLOT_PATTERNS[image.x64]:
+            for match in pattern.finditer(data):
+                at = match.start()
+                if at + head + 4 > len(data):
+                    break
+                value = struct.unpack_from("<i" if image.x64 else "<I", data, at + head)[0]
+                end = section.rva + at + head + 4
+                slot = end + value if image.x64 else value - image.base
+                if slot in slots:
+                    # a REX.W before ff 15 / ff 25 belongs to the instruction
+                    start = (
+                        at - 1
+                        if image.x64 and kind != "load" and at and data[at - 1] == 0x48
+                        else at
+                    )
+                    found.append((section.rva + start, kind, slot))
+    return sorted(set(found))
+
+
+def rel32_sites(image: Image, targets: set[int]) -> dict[int, list[int]]:
+    """E8 calls and E9 jumps to any of targets, in one pass: target -> [site RVAs]."""
+    result: dict[int, list[int]] = {}
+    for section in image.code_sections():
+        data = image.section_bytes(section)
+        for match in REL32.finditer(data):
+            at = match.start()
+            if at + 5 > len(data):
+                break
+            target = section.rva + at + 5 + struct.unpack_from("<i", data, at + 1)[0]
+            if target in targets:
+                result.setdefault(target, []).append(section.rva + at)
+    return result
+
+
+def import_calls(image: Image, dll: str | None = None, name: str | None = None) -> list[dict]:
+    """Every site that uses an imported function: calls, jumps and loads through its IAT slot,
+    and rel32 calls to a `jmp [slot]` thunk; with the functions they lie in. Filter by DLL and
+    function name (case-insensitive)."""
+    wanted = [
+        row
+        for row in image.imports
+        if (dll is None or row.dll.lower() == dll.lower())
+        and (name is None or (row.name or "").lower() == name.lower())
+    ]
+    slots = {row.slot: row for row in wanted}
+    sites = slot_sites(image, set(slots))
+    thunks = {rva: slot for rva, kind, slot in sites if kind == "jmp"}
+    via = rel32_sites(image, set(thunks)) if thunks else {}
+    cs = disassembler(image)
+    by_slot: dict[int, list[dict]] = {}
+
+    def add(rva: int, kind: str, slot: int, thunk: int | None = None) -> None:
+        insn = decode(image, cs, rva)
+        function = image.function_at(rva)
+        by_slot.setdefault(slot, []).append(
+            {
+                "rva": f"{rva:#x}",
+                "kind": kind,
+                "instruction": text(insn) if insn else "?",
+                "function": f"{function[0]:#x}" if function else None,
+                **({"thunk": f"{thunk:#x}"} if thunk is not None else {}),
+            }
+        )
+
+    for rva, kind, slot in sites:
+        add(rva, kind, slot)
+    for thunk, callers_ in via.items():
+        for rva in callers_:
+            add(rva, "via-thunk", thunks[thunk], thunk)
+    result = []
+    for row in wanted:
+        uses = sorted(by_slot.get(row.slot, []), key=lambda u: int(u["rva"], 16))
+        result.append(
+            {
+                "import": row.label,
+                "dll": row.dll,
+                "name": row.name,
+                "ordinal": row.ordinal,
+                "slot": f"{row.slot:#x}",
+                "delay": row.delay,
+                "sites": uses,
+                "functions": sorted({u["function"] for u in uses if u["function"]}),
+            }
+        )
+    return result

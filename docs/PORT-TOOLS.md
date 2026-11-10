@@ -59,5 +59,24 @@ displacement) and x86 absolute addresses (operands and immediates, `push offset`
 matches the whole NUL-terminated string, ASCII or UTF-16LE. `callers` finds direct rel32 calls
 and jumps only; calls through a register or a vtable need `rea-suite pe rtti` or a decompiler.
 
+### Every call site of an import DLL
+
+```sh
+rea-suite pe imports game/Game.exe --dll EOSSDK-Win64-Shipping.dll   # each function: sites, functions
+rea-suite pe imports game/Game.exe --function CreateFileW --json
+rea-suite pe imports game/Game.exe --used > work/game-imports.txt     # the whole IAT, used slots only
+```
+
+For each imported function (delay-loaded ones too) it lists every instruction that goes through
+its IAT slot: `call [slot]`, `jmp [slot]` (a thunk) and `mov reg, [slot]` (the pointer loaded
+for a later call), plus the rel32 calls to such a thunk (`via-thunk`), each with the function it
+lies in. That is the map of where a game talks to a DLL it is about to lose or replace. Calls
+through a pointer the game stored elsewhere (`GetProcAddress`, a table it filled) are not
+seen; Frida's observers below catch those at run time.
+
+Checked 2026-11-10 on a 61 MB x64 retail executable: 1,089 imports, 43,209 sites, in under a
+second; for its 42 EOS imports the sites agree exactly with the call map that port had built by
+hand with REA and Rizin.
+
 Tests: `uv run --no-sync python -m unittest rea_suite.test_pe` in `common/` (synthetic x64 and
 x86 programs from `samples.py`, no game bytes).

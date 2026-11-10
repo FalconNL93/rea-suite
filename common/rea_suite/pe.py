@@ -4,6 +4,7 @@
   rea-suite pe refs <exe> (<address> | --string TEXT) instructions naming an address or string
   rea-suite pe callers <exe> <function> [--no-jumps]  E8/E9 rel32 calls and jumps to a function
   rea-suite pe strings <exe> <start> <size>           strings the code in a range loads
+  rea-suite pe imports <exe> [--dll D] [--function F] every call site of imported functions
 
 Addresses are hexadecimal; one at or above the image base is a VA, a smaller one an RVA. Every
 command takes --json. Results name the containing function from the x64 unwind table where it
@@ -103,6 +104,27 @@ def cmd_strings(args, image: Image) -> int:
     return 0
 
 
+def cmd_imports(args, image: Image) -> int:
+    rows = scan.import_calls(image, args.dll, args.function)
+    if args.used:
+        rows = [r for r in rows if r["sites"]]
+    if args.json:
+        print(json.dumps(rows, indent=1))
+        return 0 if rows else 1
+    for r in rows:
+        delay = " (delay-loaded)" if r["delay"] else ""
+        print(
+            f"{r['import']}  slot {r['slot']}{delay}: "
+            f"{len(r['sites'])} sites in {len(r['functions'])} functions"
+        )
+        for u in r["sites"]:
+            thunk = f" through thunk {u['thunk']}" if "thunk" in u else ""
+            print(
+                f"  {u['rva']}  {u['kind']:<9} {u['instruction']:<36} in {u['function'] or '-'}{thunk}"
+            )
+    return 0 if rows else 1
+
+
 def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="rea-suite pe",
@@ -132,6 +154,10 @@ def parser() -> argparse.ArgumentParser:
     c.add_argument("start")
     c.add_argument("size")
     c.add_argument("--min-length", type=int, default=4)
+    c = command("imports", "every call site of imported functions, by IAT slot", cmd_imports)
+    c.add_argument("--dll", help="one DLL (case-insensitive)")
+    c.add_argument("--function", help="one function name (case-insensitive)")
+    c.add_argument("--used", action="store_true", help="leave out imports no code uses")
     return p
 
 
