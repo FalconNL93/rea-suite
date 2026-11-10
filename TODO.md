@@ -39,3 +39,7 @@ unpatched (one source per tool), so these go upstream as issues or pull requests
   Ghidra import (about 16 minutes for a 12 MB PE) does not save the analysis, so opening it in the MCP session imports
   again from scratch. A snapshot that keeps the analyzed program (or the Ghidra project) would make a big import a
   one-time cost.
+
+- **`pe rtti --slots`: mark shared stubs** (Alan Wake Remastered port, 2026-11-10): when one address fills many slots
+  across classes (an ICF-folded one-line stub answering a base's pure virtual), mark the slot `shared-stub` with the
+  count, so real overrides stand apart; AWR had 28 such slots among 47 overrides.
