@@ -224,3 +224,35 @@ the counterpart (not part of the suite). Checked 2026-11-10: the schedule and re
 binds against a ViGEmClient.dll (x64) with `rea-suite pe`. The pad itself was not run from the
 suite yet; the Alan Wake II port's original of this script drove that game with the same DLL and
 calls on 2026-11-10.
+
+## Window harness: `platforms/windows/window-oracle.ps1` (Windows)
+
+Watches one process's window while an input driver plays a schedule, and keeps what it saw:
+the answer to "did the game react to that press?" without a person watching. It launches the
+program (`-Exe`) or waits for a running one (`-ProcessName`, `-ProcessId`), starts the input
+driver (`-Pad`: `rea-suite pad` with the same schedule; or any `-InputCommand`), and times every
+capture from the driver's start (for the pad, its `plugged` line). For each input at time T it
+saves `before<i>.png` at T - `Before` (0.6 s) and `after<i>.png` at T + `After` (1.2 s), then
+`final.png`; inputs closer together than Before + After get their captures late. Captures use
+`PrintWindow` on the process's main window only, so other windows, notifications and the desktop
+never appear in them. It focuses the window once, four seconds before the first input, unless
+`-NoFocus`. `events.jsonl` logs each step with `t` on the driver's clock; `report.json` holds the
+process, its loaded modules (path, base, version), its TCP connections and UDP endpoints, and the
+DNS client cache (system-wide, so it shows names the process may have looked up).
+
+```powershell
+# Launch the game, press DOWN three times and A with a virtual pad, capture around each press
+.\platforms\windows\window-oracle.ps1 -Exe D:\work\run\Game.exe -Schedule 30:DOWN,33:DOWN,36:DOWN,39:A `
+  -Pad -PadArguments --idle-pad -Seconds 50 -Close -Out work\pad-idle
+# The game is started some other way (a launcher): wait for it, then watch
+.\platforms\windows\window-oracle.ps1 -ProcessName Game -Schedule 20:START -Pad -NoFocus
+```
+
+Output goes to `-Out` (default `work\window-oracle\<time>`, ignored by git). Captures need an
+unlocked desktop; a full-screen exclusive game may come out black (run it windowed).
+
+Checked 2026-11-10 on Windows 11 with PowerShell 7 against a process without a window (`PING.EXE`)
+and a stand-in input driver: launch, the timeline from the driver's start (each before/after at
+its time to within 0.1 s), the skipped captures logged, the report (modules) written, the driver
+stopped. Captures of a real window were not run here (no visible windows in automated checks);
+the Alan Wake II port's original of this harness took them with the same `PrintWindow` call.

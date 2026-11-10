@@ -34,7 +34,8 @@ common/
 platforms/
   linux/                bootstrap.sh, apt package list
   macos/                bootstrap.sh, Brewfile
-  windows/              bootstrap.ps1, rea-suite.ps1, rea.ps1 (= bin/rea), env.ps1, winget list
+  windows/              bootstrap.ps1, rea-suite.ps1, rea.ps1 (= bin/rea), env.ps1, winget list,
+                        window-oracle.ps1 (captures of a game's window around scheduled input)
 AGENTS.md               rules for contributors and agents (CLAUDE.md imports it)
 TODO.md                 tools still to add, each with why
 .agents/skills/         process skills for agents working on this repository
@@ -550,6 +551,7 @@ been run on macOS arm64 and Linux x86_64 (WSL2, 2026-11-03); Windows execution r
 | `rea-suite steamstub` | Detect Steam's DRM wrapper before analysis; Steamless removes it ([below](#steamstub)) | this repo |
 | `rea-suite frida` | Run a Frida script on a process and log it as JSON lines; a passive observer for exports, addresses and IAT slots (pad state, raw input, call counts per caller); a write guard that keeps a Windows game's file changes inside allowed folders ([port tools](docs/PORT-TOOLS.md#frida-rea-suite-frida)) | this repo |
 | `rea-suite pad` | A virtual Xbox 360 pad pressing buttons on a schedule, for testing a game's pad input without a person (ViGEm; Windows only, component `porting` for the driver) ([port tools](docs/PORT-TOOLS.md#virtual-pad-rea-suite-pad-windows)) | this repo |
+| `window-oracle.ps1` | Captures of only a game's window before and after each scheduled input, timed from the input driver, plus a process, module, connection and DNS report (Windows only; `platforms/windows/`) ([port tools](docs/PORT-TOOLS.md#window-harness-platformswindowswindow-oracleps1-windows)) | this repo |
 | `rea-suite pe` | PE scans from the file alone, no project: MSVC RTTI classes with vtables, slots and bases; references to an address or string; callers; strings a code range loads; every call site of an import DLL's functions; a game's option registry ([port tools](docs/PORT-TOOLS.md)) | this repo |
 
 radare2 is deliberately left out: Rizin is its fork with the same feature set,
