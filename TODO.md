@@ -23,3 +23,14 @@ with the reason when it is dropped.
 - **ghidra-allegrex (PSP)**: REA 6.8.0 has a PSP Allegrex profile that expects this Ghidra
   extension; kotcrab/ghidra-allegrex publishes exact-version builds (12.1.4 in v21.4). Needs a
   check of its license and REA's expectations before it joins a component.
+
+## Upstream in REA (rea-agents)
+
+rea-agents is REA's npm package from github.com/morluto/rea, not the owner's; the suite installs it
+unpatched (one source per tool), so these go upstream as issues or pull requests there.
+
+- **Ghidra startup deadline for large images**: the default 330 s (`DEFAULT_GHIDRA_STARTUP_TIMEOUT_MS`,
+  `dist/domain/analysisResourceLimits.js`) is too short for a 12 MB PE, and the CLI's error says only
+  "Provider startup deadline elapsed". Upstream: a default that grows with the image's size, or the
+  CLI naming `REA_GHIDRA_STARTUP_TIMEOUT_MS` as the MCP error does. Workaround meanwhile:
+  [known issues](docs/REA-KNOWN-ISSUES.md), item 9.

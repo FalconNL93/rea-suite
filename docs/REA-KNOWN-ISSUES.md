@@ -47,3 +47,28 @@ Reproduced with a 15 KB i686 PE built with mingw, by asking for a procedure at a
 **Workaround:** one binary per REA session (one agent each), or `rea-ghidra --project <project>` for
 headless Ghidra directly, and `objdump` / pefile for PE resources and short strings. Both worked on
 Rogue Spear.
+
+## Large images outlast the Ghidra startup deadline
+
+Found with rea-agents 6.8.0 by the Alan Wake Remastered port (2026-11-10): opening an 11.9 MB PE in
+REA's Ghidra provider, and earlier a 5 MB statically linked executable on a loaded machine, failed
+after REA's default Ghidra startup deadline of 330 s (`DEFAULT_GHIDRA_STARTUP_TIMEOUT_MS` in
+`dist/domain/analysisResourceLimits.js`): the import and auto-analysis count as startup. The MCP
+error names the remedy; the CLI says only "Provider startup deadline elapsed".
+
+9. **The default deadline does not grow with the image, and the CLI does not name the setting.**
+
+**Workaround:** raise the deadline before the first open of a large image, and keep the analysis
+so it is paid once:
+
+- CLI and a newly started MCP server: `REA_GHIDRA_STARTUP_TIMEOUT_MS` in the environment (`.env`, or
+  for one run `REA_GHIDRA_STARTUP_TIMEOUT_MS=3600000 rea ...`, an hour).
+- A running MCP server: `update_analysis_settings` with `ghidra.startup_timeout_ms`; it applies at the
+  next provider startup, so close the binary (`close_binary`) and open it again.
+- On a shared machine, run the first, heavy import through its heavy-run gate (`heavy run`, from
+  games/ci-images, where installed) and keep a snapshot, so later calls reuse its answers:
+  `heavy run --name rea-ghidra -- rea analyze game/Game.exe --provider ghidra --snapshot work/game.snapshot`
+  (REA snapshots cache answers, not the Ghidra database).
+- For scripted work on a big image, `rea-ghidra analyze` (no deadline) keeps a Ghidra project
+  that later queries open read-only; `rea-suite pe` answers RTTI, reference and caller questions
+  from the bytes without any analysis ([port tools](PORT-TOOLS.md)).

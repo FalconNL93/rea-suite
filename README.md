@@ -853,6 +853,8 @@ rea-ghidra functions --project ~/Games/port/ghidra Game.exe | cut -f1 > re/funct
 `analyze --force` runs the auto-analysis again on the program already in the project; it never
 imports over it, so names, types and comments made there stay. To start from nothing, delete the
 project folder. This is the x86/x64 PE counterpart of `rea-suite xbox360 analyze|decomp|xrefs|functions`.
+REA's own Ghidra provider gives up on a first import after 330 s by default, too short for a large
+game; raise `REA_GHIDRA_STARTUP_TIMEOUT_MS` first ([known issues](docs/REA-KNOWN-ISSUES.md), item 9).
 Tests: `uv run --no-sync python -m unittest rea_suite.test_rea_ghidra` in `common/` (a stand-in
 for `analyzeHeadless`).
 
