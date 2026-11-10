@@ -6,6 +6,10 @@ with the reason when it is dropped.
 
 ## Porting old games
 
+- **`pe registry` with integer and object arguments**: today it captures only string arguments of a registrar's
+  calls. Capturing a constant integer register argument (the type, as `r8d` in Remedy's tweakable registrar) and the
+  `rcx` object would cover registrars like Alan Wake Remastered's 1097 tweakables; the port's own scan
+  (`~/Games/awr/tools/tweakables.py`) is the starting point (2026-11-10).
 - **BinExport + BinDiff, or Ghidra's Version Tracking documented**: diff two builds or
   patch levels of a game function by function; ghidriff covers single patches, and
   BinDiff's last releases target old Ghidra versions (check again before adding).
