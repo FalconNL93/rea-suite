@@ -1,0 +1,26 @@
+{
+  "interval_ms": 0,
+  "targets": [
+    {
+      "name": "RegisterRawInputDevices",
+      "export": "user32.dll!RegisterRawInputDevices",
+      "mode": "call",
+      "at": "enter",
+      "reads": [
+        {
+          "as": "devices",
+          "from": "arg0",
+          "type": "array",
+          "count": "arg1",
+          "stride": { "x64": 16, "ia32": 12 },
+          "fields": [
+            { "as": "page", "offset": 0, "type": "u16" },
+            { "as": "usage", "offset": 2, "type": "u16" },
+            { "as": "flags", "offset": 4, "type": "u32" }
+          ]
+        }
+      ],
+      "caller": true
+    }
+  ]
+}

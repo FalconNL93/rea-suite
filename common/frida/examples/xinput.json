@@ -1,0 +1,24 @@
+{
+  "interval_ms": 2000,
+  "targets": [
+    {
+      "name": "XInputGetState",
+      "export": [
+        "xinput1_4.dll!XInputGetState",
+        "xinput1_3.dll!XInputGetState",
+        "xinput9_1_0.dll!XInputGetState"
+      ],
+      "mode": "change",
+      "reads": [
+        { "as": "index", "from": "arg0", "type": "u32" },
+        { "as": "result", "from": "result", "type": "u32" },
+        { "as": "packet", "from": "arg1", "offset": 0, "type": "u32", "at": "leave" },
+        { "as": "buttons", "from": "arg1", "offset": 4, "type": "u16", "at": "leave" }
+      ],
+      "key": ["result", "buttons"],
+      "group": "index",
+      "caller": true,
+      "format": "pad {index}: result {result} buttons {buttons} from {caller}"
+    }
+  ]
+}

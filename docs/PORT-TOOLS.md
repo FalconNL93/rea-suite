@@ -80,3 +80,51 @@ hand with REA and Rizin.
 
 Tests: `uv run --no-sync python -m unittest rea_suite.test_pe` in `common/` (synthetic x64 and
 x86 programs from `samples.py`, no game bytes).
+
+## Frida: `rea-suite frida`
+
+`rea-suite frida <script.js>` attaches a Frida script to a process (`--pid`, `--name`) or starts
+one (`--spawn PROGRAM ARGS...`), hands the script its config through its `configure` RPC export
+(`--config FILE` or `--config-json TEXT`), and writes everything the script sends as JSON lines
+(stdout, and `--log FILE`), each with `t`, the seconds since the runner started. A spawned
+process is resumed only after the script loaded and accepted its config, so nothing runs
+unobserved, and is killed instead when either failed. It ends after `--seconds`, when the
+process ends, or on Ctrl+C; a spawned process keeps running unless `--kill`. Exit 0 when it ran,
+1 on a script error, 2 when there is no such process. The scripts live in `common/frida/`.
+
+### Passive observer
+
+`common/frida/observer.js` logs calls of chosen functions without changing them. A target is an
+export (`"xinput1_4.dll!XInputGetState"`, or a list of alternatives), an address in a module
+(`"rva"`, with `"module"`, default the main one) or an IAT slot (`"iat"`: the function the slot
+points to, picked up once the loader has bound it). Targets in a module that is not loaded yet
+are hooked when it loads. Per target:
+
+- `mode`: `call` logs every call, `change` only when the values in `key` change (per value of
+  `group`, say per pad index), `count` counts calls per caller and reports every `interval_ms`.
+- `args` (log arg0..argN-1 as pointers), `reads` (typed values: an argument or the result itself,
+  or memory at it plus `offset`, read on enter or leave; arrays with a count from an argument),
+  `caller` (the return address as `module+offset`), `only_from` (only calls returning into this
+  module), `format` (a text line, `{name}` from the values), `limit` (most messages, default 10,000).
+
+The full config format is at the top of the script. Two examples are in `common/frida/examples/`:
+
+```sh
+# Pad state changes per pad index, with the caller; the game started by the runner
+rea-suite frida common/frida/observer.js --config common/frida/examples/xinput.json \
+  --log work/xinput.jsonl --spawn game/Game.exe
+# Raw input registrations (usage page, usage, flags), attached to a running game
+rea-suite frida common/frida/observer.js --config common/frida/examples/raw-input.json --name Game.exe
+# Calls through two IAT slots of the main module, counted per caller every 2 s
+rea-suite frida common/frida/observer.js --name Game.exe --config-json \
+  '{"targets": [{"name": "Initialize", "iat": "0x26130a8", "mode": "count"},
+                {"name": "Tick", "iat": "0x26130d8", "mode": "count", "only_from": "Game.exe"}]}'
+```
+
+Checked 2026-11-10 on Linux (frida 17.24.3): a spawned Python's `getenv` calls with argument and
+result strings, change mode per group, counts per caller and `only_from`; the opt-in test runs
+it (`REA_FRIDA_INTEGRATION=1 uv run --no-sync python -m unittest rea_suite.test_frida_run` in
+`common/`). On Windows 11 (frida 17.26.2), both examples together on a spawned Python that
+calls `XInputGetState` for pads 0 and 1 three times (no pad: result 1167, one message per pad)
+and registers two raw input devices: the XInput hook waited for `xinput1_4.dll` to load, and
+the registration came out as `[{page 1, usage 5}, {page 1, usage 4}]`. Not yet run against a game.

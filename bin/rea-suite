@@ -29,6 +29,8 @@
 #   rea-suite steamstub <exe>...            SteamStub DRM signs (.bind, entropy, timestamps)
 #   rea-suite pe <command> <exe> ...        PE scans without a project: MSVC RTTI classes and
 #                                            vtables, references, callers, strings (--help)
+#   rea-suite frida <script.js> --pid|--name|--spawn ...  run a Frida script (common/frida/:
+#                                            observer, write guard) and log it as JSON lines
 #   rea-suite analyze [paths...] [options]  offline analysis projects; --examples for workflows
 #   rea-suite tools <args...>               tools.yml manager (= rea-tools)
 #   rea-suite lint [file...]                ruff, shellcheck and a PowerShell parse check on
@@ -536,6 +538,7 @@ case "$cmd" in
   xbox360) uv run --offline --no-sync common/rea_suite/xbox360.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   functions) uv run --offline --no-sync common/rea_suite/functions.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   steamstub) uv run --offline --no-sync common/rea_suite/steamstub.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
+  frida) uv run --offline --no-sync common/rea_suite/frida_run.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   pe) uv run --offline --no-sync common/rea_suite/pe.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   tools) rea-tools "${args[@]}" ;;
   clean) cmd_clean "${args[@]}" ;;
