@@ -31,6 +31,8 @@
 #                                            vtables, references, callers, strings (--help)
 #   rea-suite frida <script.js> --pid|--name|--spawn ...  run a Frida script (common/frida/:
 #                                            observer, write guard) and log it as JSON lines
+#   rea-suite pad --presses 30:DOWN,33:A    a virtual Xbox 360 pad on a schedule (ViGEm;
+#                                            Windows only, --dry-run anywhere)
 #   rea-suite analyze [paths...] [options]  offline analysis projects; --examples for workflows
 #   rea-suite tools <args...>               tools.yml manager (= rea-tools)
 #   rea-suite lint [file...]                ruff, shellcheck and a PowerShell parse check on
@@ -539,6 +541,7 @@ case "$cmd" in
   functions) uv run --offline --no-sync common/rea_suite/functions.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   steamstub) uv run --offline --no-sync common/rea_suite/steamstub.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   frida) uv run --offline --no-sync common/rea_suite/frida_run.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
+  pad) uv run --offline --no-sync common/rea_suite/vigem_pad.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   pe) uv run --offline --no-sync common/rea_suite/pe.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   tools) rea-tools "${args[@]}" ;;
   clean) cmd_clean "${args[@]}" ;;

@@ -61,9 +61,9 @@ components:
   # macOS has no Wine here (Homebrew disabled its casks), rr and perf are Linux-only:
   # see the README's "Porting old games".
   porting:
-    description: Porting old Windows games - Wine with winedbg (run and trace the original binary), rr (record and replay) and perf + hotspot (sampling profiles) on Linux, Tracy (instrumented profiles), WinDbg with Time Travel Debugging on Windows
+    description: Porting old Windows games - Wine with winedbg (run and trace the original binary), rr (record and replay) and perf + hotspot (sampling profiles) on Linux, Tracy (instrumented profiles), WinDbg with Time Travel Debugging and the ViGEmBus driver (virtual pads, rea-suite pad) on Windows
     apt: [wine, wine64, rr, linux-perf]
-    winget: [Microsoft.WinDbg]
+    winget: [Microsoft.WinDbg, ViGEm.ViGEmBus]
     tools: [hotspot, tracy]
 
   vm:

@@ -164,7 +164,7 @@ REA_SUITE_COMPONENTS="build steam"
 | `hardware` | no | sigrok-cli for logic analyzer recordings (Linux, macOS) |
 | `angr` | no | the angr framework (~1 GB) |
 | `steam` | no | SteamCMD and Steamless (Windows) |
-| `porting` | no | porting old Windows games: Wine + winedbg, rr, perf + hotspot (Linux), Tracy, WinDbg (Windows) ([Porting old games](#porting-old-games); Wine is over 1 GB) |
+| `porting` | no | porting old Windows games: Wine + winedbg, rr, perf + hotspot (Linux), Tracy, WinDbg and the ViGEmBus driver (Windows) ([Porting old games](#porting-old-games); Wine is over 1 GB) |
 | `playstation` | no | PS1/PS2 disc preparation, Ghidra console loaders and jPSXdec ([workflow](docs/PLAYSTATION.md)) |
 | `game-archives` | no | extract-xiso, ZArchive; Windows also XGDTool and QuickBMS ([platform limits](docs/GAME-ARCHIVES.md)) |
 | `vm` | no | QEMU + OVMF (Linux) or VirtualBox (Windows); UTM on macOS |
@@ -549,6 +549,7 @@ been run on macOS arm64 and Linux x86_64 (WSL2, 2026-11-03); Windows execution r
 | `rea-suite functions` | A port's index of identified functions (no game bytes) and the gate that checks the executable still matches it; x86/x64 PE and Xbox 360 images ([below](#function-index-and-gate)) | this repo |
 | `rea-suite steamstub` | Detect Steam's DRM wrapper before analysis; Steamless removes it ([below](#steamstub)) | this repo |
 | `rea-suite frida` | Run a Frida script on a process and log it as JSON lines; a passive observer for exports, addresses and IAT slots (pad state, raw input, call counts per caller); a write guard that keeps a Windows game's file changes inside allowed folders ([port tools](docs/PORT-TOOLS.md#frida-rea-suite-frida)) | this repo |
+| `rea-suite pad` | A virtual Xbox 360 pad pressing buttons on a schedule, for testing a game's pad input without a person (ViGEm; Windows only, component `porting` for the driver) ([port tools](docs/PORT-TOOLS.md#virtual-pad-rea-suite-pad-windows)) | this repo |
 | `rea-suite pe` | PE scans from the file alone, no project: MSVC RTTI classes with vtables, slots and bases; references to an address or string; callers; strings a code range loads; every call site of an import DLL's functions; a game's option registry ([port tools](docs/PORT-TOOLS.md)) | this repo |
 
 radare2 is deliberately left out: Rizin is its fork with the same feature set,

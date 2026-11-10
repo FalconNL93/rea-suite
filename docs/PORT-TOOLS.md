@@ -188,3 +188,39 @@ worked; writing, appending to, deleting or renaming into a file outside, a hard 
 outside file, a write through a junction from `allowed` to the outside folder and starting
 `cmd.exe` were all refused, and the outside file was unchanged. Not yet run against a game, and
 not on x86 (the offsets follow the pointer size; untested).
+
+## Virtual pad: `rea-suite pad` (Windows)
+
+A virtual Xbox 360 pad that presses buttons on a schedule, for testing a game's pad input
+without a person at the controller. It drives ViGEm through `ViGEmClient.dll` with ctypes (no
+Python package between): plug in a pad, wait for each press's time in seconds from the moment it
+was plugged in, hold, release, and unplug `--tail` seconds after the last press.
+
+```powershell
+.\platforms\windows\rea-suite.ps1 pad --check --dll D:\tools\ViGEmClient.dll     # the driver answers
+.\platforms\windows\rea-suite.ps1 pad --presses 30:DOWN,33:DOWN,36:A --idle-pad  # with REA_VIGEMCLIENT_DLL set
+.\platforms\windows\rea-suite.ps1 pad --presses "5:A+B:0.5,8:LT,9:LX-" --hold 0.2 --tail 10
+rea-suite pad --presses 30:DOWN,33:A --dry-run                                  # any platform: the schedule
+```
+
+A press is `TIME:BUTTON[+BUTTON][:HOLD]`: `A B X Y`, `UP DOWN LEFT RIGHT`, `START BACK`, `LB RB`,
+`LS RS`, `GUIDE`, `LT RT` (full trigger), `LX+ LX- LY+ LY- RX+ RX- RY+ RY-` (full deflection).
+`--idle-pad` plugs in a pad that never moves first, so the scripted one gets the second XInput
+slot: what a remote-play or streaming host leaves behind, and a common cause of "the game ignores
+my pad". Every event is a JSON line with `t` from the plug-in (`plugged` with the XInput user
+index, `press`, `unplugged`), which the window harness below lines its captures up with.
+
+What it needs:
+
+- The ViGEmBus driver: winget `ViGEm.ViGEmBus` (component `porting`). Its project is retired
+  upstream; version 1.22.0 is the one used here (Windows 11, 2026-11-10).
+- `ViGEmClient.dll`, x64, from your own copy (`--dll`, or `REA_VIGEMCLIENT_DLL` in `.env`):
+  nefarius/ViGEmClient publishes source only, so build it, or take the one a tool you trust
+  ships. The suite does not download it.
+
+Linux and macOS have no ViGEm; there `--dry-run` checks a schedule, and Linux's `uinput` would be
+the counterpart (not part of the suite). Checked 2026-11-10: the schedule and reports
+(`uv run --no-sync python -m unittest rea_suite.test_vigem_pad` in `common/`), and the exports it
+binds against a ViGEmClient.dll (x64) with `rea-suite pe`. The pad itself was not run from the
+suite yet; the Alan Wake II port's original of this script drove that game with the same DLL and
+calls on 2026-11-10.
