@@ -221,3 +221,48 @@ def program_registry() -> tuple[bytes, dict[str, int]]:
     image = pe([(".text", code), (".rdata", data)], base=base, x64=True)
     return image, {"start": start, "size": end, "bool": reg_bool, "string": reg_string,
                    "sites": sites}  # fmt: skip
+
+
+def program_dll() -> tuple[bytes, dict[str, int]]:
+    """An x64 DLL-like image for the PE model's other directories: two exports, a delay-loaded
+    import, a TLS directory with one callback and two base relocations."""
+    base = 0x180000000
+    code = bytearray(b"\xcc" * 0x20)
+    _put(code, 0x00, b"\xc3")
+    _put(code, 0x10, b"\xc3")
+    data = bytearray(0x460)
+    _put(
+        data,
+        0x000,
+        struct.pack("<IIHHIIIIIII", 0, 0, 0, 0, 0x2100, 1, 2, 2, 0x2040, 0x2050, 0x2060),
+    )
+    _put(data, 0x040, struct.pack("<II", 0x1000, 0x1010))
+    _put(data, 0x050, struct.pack("<II", 0x2110, 0x2118))
+    _put(data, 0x060, struct.pack("<HH", 0, 1))
+    _put(data, 0x100, b"lib.dll\0")
+    _put(data, 0x110, b"Alpha\0")
+    _put(data, 0x118, b"Beta\0")
+    _put(
+        data,
+        0x200,
+        struct.pack("<QQQQII", base + 0x2300, base + 0x2308, base + 0x2310, base + 0x2320, 0, 0),
+    )
+    _put(data, 0x320, struct.pack("<QQ", base + 0x1010, 0))
+    _put(data, 0x380, struct.pack("<8I", 1, 0x2400, 0x2410, 0x2420, 0x2430, 0, 0, 0))
+    _put(data, 0x400, b"late.dll\0")
+    _put(data, 0x420, struct.pack("<QQ", 0x2440, 0))
+    _put(data, 0x430, struct.pack("<QQ", 0x2440, 0))
+    _put(data, 0x440, b"\0\0Later\0")
+    relocs = struct.pack("<IIHH", 0x2000, 12, 0xA000 | 0x320, 0xA000 | 0x200)
+    image = pe(
+        [(".text", bytes(code)), (".rdata", bytes(data)), (".reloc", relocs)],
+        base=base,
+        x64=True,
+        directories={
+            0: (0x2000, 0x70),
+            5: (0x3000, len(relocs)),
+            9: (0x2200, 40),
+            13: (0x2380, 64),
+        },
+    )
+    return image, {"alpha": 0x1000, "beta": 0x1010, "late_slot": 0x2420}

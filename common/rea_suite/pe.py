@@ -1,5 +1,7 @@
 """PE scans for porting work, from the file alone and without a disassembler project.
 
+  rea-suite pe info <exe> [--imports] [--exports]      headers, sections, directories
+  rea-suite pe sites <exe> <sites.json> | --init      check a port's declared sites
   rea-suite pe rtti <exe> [--class REGEX] [--slots]   MSVC classes: vtables, slots, bases
   rea-suite pe refs <exe> (<address> | --string TEXT) instructions naming an address or string
   rea-suite pe callers <exe> <function> [--no-jumps]  E8/E9 rel32 calls and jumps to a function
@@ -22,7 +24,7 @@ import re
 import sys
 from pathlib import Path
 
-from rea_suite import rtti, scan
+from rea_suite import rtti, scan, sites
 from rea_suite.pemodel import Image
 
 
@@ -40,6 +42,99 @@ def emit(args, rows: list, line) -> None:
         return
     for row in rows:
         print(line(row))
+
+
+def section(s) -> dict:
+    access = "r" if s.flags & 0x40000000 else "-"
+    access += ("w" if s.writable else "-") + ("x" if s.executable else "-")
+    return {
+        "name": s.name,
+        "rva": f"{s.rva:#x}",
+        "size": f"{s.size:#x}",
+        "offset": f"{s.offset:#x}",
+        "raw_size": f"{s.raw_size:#x}",
+        "flags": f"{s.flags:#010x}",
+        "access": access,
+    }
+
+
+def info(image: Image) -> dict:
+    imports = image.imports
+    return {
+        "machine": f"{image.machine:#06x}",
+        "pe32+": image.x64,
+        "image_base": f"{image.base:#x}",
+        "entry_rva": f"{image.entry:#x}",
+        "size_of_image": f"{image.size_of_image:#x}",
+        "sections": [section(s) for s in image.sections],
+        "imports": [{"import": r.label, "slot": f"{r.slot:#x}", "delay": r.delay} for r in imports],
+        "exports": [
+            {"name": e.name, "ordinal": e.ordinal, "rva": f"{e.rva:#x}", "forwarder": e.forwarder}
+            for e in image.exports
+        ],
+        "relocations": len(image.relocations),
+        "tls": None
+        if image.tls is None
+        else {**image.tls, "callbacks": [f"{v:#x}" for v in image.tls["callbacks"]]},
+        "runtime_functions": len(image.runtime_functions),
+    }
+
+
+def cmd_info(args, image: Image) -> int:
+    found = info(image)
+    if args.json:
+        print(json.dumps(found, indent=1))
+        return 0
+    print(
+        f"machine {found['machine']}  {'PE32+' if image.x64 else 'PE32'}  base {found['image_base']}"
+        f"  entry {found['entry_rva']}  size {found['size_of_image']}"
+    )
+    for s in found["sections"]:
+        print(f"  {s['name']:<8} rva {s['rva']:>10}  size {s['size']:>10}  {s['access']}")
+    dlls = {r["import"].split("!")[0].lower() for r in found["imports"]}
+    delay = sum(1 for r in found["imports"] if r["delay"])
+    print(
+        f"imports: {len(found['imports'])} functions from {len(dlls)} DLLs ({delay} delay-loaded)"
+    )
+    print(f"exports: {len(found['exports'])}")
+    print(f"relocations: {found['relocations'] or 'none (fixed base)'}")
+    tls = found["tls"]
+    callbacks = "none" if tls is None else f"{len(tls['callbacks'])} callbacks"
+    print(f"tls: {callbacks}")
+    print(f"unwind table: {found['runtime_functions']} functions")
+    if args.imports:
+        for r in found["imports"]:
+            print(f"  {r['slot']}  {r['import']}{'  (delay)' if r['delay'] else ''}")
+    if args.exports:
+        for e in found["exports"]:
+            print(
+                f"  {e['rva']}  #{e['ordinal']}  {e['name'] or ''}{'  -> ' + e['forwarder'] if e['forwarder'] else ''}"
+            )
+    return 0
+
+
+def cmd_sites(args, image: Image) -> int:
+    data = image.data
+    if args.init:
+        print(json.dumps(sites.skeleton(image, data, args.exe.name), indent=2))
+        return 0
+    if args.spec is None:
+        print("sites: give the declaration (sites.json) or --init", file=sys.stderr)
+        return 2
+    try:
+        spec = sites.load(args.caller_cwd / args.spec)
+    except (OSError, ValueError) as exc:
+        print(f"sites: {args.spec}: {exc}", file=sys.stderr)
+        return 2
+    problems = sites.verify(spec, image, data)
+    if args.json:
+        print(json.dumps({"sites": len(spec.get("sites", [])), "problems": problems}, indent=1))
+    else:
+        for problem in problems:
+            print(problem)
+        count = len(spec.get("sites", []))
+        print(f"{count} sites: {'all agree' if not problems else f'{len(problems)} problems'}")
+    return 1 if problems else 0
 
 
 def cmd_rtti(args, image: Image) -> int:
@@ -188,6 +283,12 @@ def parser() -> argparse.ArgumentParser:
         c.set_defaults(run=run)
         return c
 
+    c = command("info", "headers, sections and directories", cmd_info)
+    c.add_argument("--imports", action="store_true", help="list every import with its slot")
+    c.add_argument("--exports", action="store_true", help="list every export")
+    c = command("sites", "check a port's declared sites against the executable", cmd_sites)
+    c.add_argument("spec", type=Path, nargs="?", help="the declaration (rea-image-sites-v1)")
+    c.add_argument("--init", action="store_true", help="print a new declaration for this file")
     c = command("rtti", "MSVC RTTI: classes, vtables and slots, base classes", cmd_rtti)
     c.add_argument("--class", dest="cls", help="only classes whose name matches this regex")
     c.add_argument("--slots", action="store_true", help="list every vtable slot")

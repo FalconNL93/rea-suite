@@ -23,6 +23,46 @@ and misses references computed at run time, so treat a hit as a lead and an empt
 proof. Where the x64 unwind table covers an address, the result names the function it lies in
 (chained unwind entries followed to their primary function).
 
+### The image: `info`
+
+```sh
+rea-suite pe info game/Game.exe                  # machine, base, entry, sections, directory counts
+rea-suite pe info game/Game.exe --imports --json # every import with its IAT slot, delay-loaded ones too
+```
+
+The model under every `pe` command (`common/rea_suite/pemodel.py`) is a thin layer over pefile,
+which the suite already has (REA's `inspect_pe_imports` uses it too): sections with RVA to file
+offset, imports and delay imports with their IAT slots, exports, base relocations (optional: a
+fixed-base image has none and nothing needs them), the TLS directory with its callbacks, and the
+x64 unwind table with chained entries followed to their primary function. For a port's own
+scripts: `from rea_suite.pemodel import Image`. LIEF, also in the suite, is the choice for
+rewriting an image; this model only reads.
+
+### A port's declared sites: `sites`
+
+A port that patches or hooks an executable keeps every address it uses in one declaration, and
+checks it against the executable before using it: the file by SHA-256 and size, then every
+site's bytes and placement.
+
+```sh
+rea-suite pe sites game/Game.exe --init > re/sites.json   # a new declaration: the source block
+rea-suite pe sites game/Game.exe re/sites.json            # exit 0 all agree, 1 differences, 2 invalid
+```
+
+The format (`"schema": "rea-image-sites-v1"`) has seven kinds: `call` (a 5-byte E8 or 6-byte
+FF 15 call the port redirects, with its `target`), `edit` (bytes replaced by a `replacement` of
+the same length), `function` (a function's first bytes), `iat` (an import slot, with the
+`import` it must hold), `data` (a global outside code; `writable` when it must be), `range` (code
+the port scans, inside one code section) and `offset` (a structure offset: no address). Every
+site but an offset names its `evidence`; any other member is the port's own. The full description
+is at the top of `common/rea_suite/sites.py`. The checker reports every difference rather than
+the first. It is the suite's general version for investigating and validating; a port keeps its
+own reader of its declaration as its build gate.
+
+Checked 2026-11-10 on a 61 MB x64 retail executable with a port's 56 declared sites (12 calls,
+10 edits, 15 functions, 4 IAT slots, 10 globals, 2 ranges, 3 offsets), converted to this format:
+all agree.
+
 ### MSVC RTTI: classes, vtables, slots, bases
 
 ```sh

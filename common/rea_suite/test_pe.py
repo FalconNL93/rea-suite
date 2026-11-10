@@ -10,7 +10,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from rea_suite import pe, rtti, samples, scan
+from rea_suite import pe, rtti, samples, scan, sites
 from rea_suite.pemodel import Image
 
 
@@ -56,6 +56,83 @@ class Model(unittest.TestCase):
 
     def test_a_fixed_base_image_has_no_relocations(self) -> None:
         self.assertEqual(self.image.relocations, {})
+
+
+class Directories(unittest.TestCase):
+    def test_exports_delay_imports_tls_and_relocations(self) -> None:
+        data, at = samples.program_dll()
+        image = Image(data)
+        self.assertEqual(
+            [(e.name, e.rva) for e in image.exports], [("Alpha", 0x1000), ("Beta", 0x1010)]
+        )
+        (late,) = image.imports
+        self.assertEqual(
+            (late.label, late.slot, late.delay), ("late.dll!Later", at["late_slot"], True)
+        )
+        self.assertEqual(image.tls["callbacks"], [0x180001010])
+        self.assertEqual(image.relocations, {0x2320: 10, 0x2200: 10})
+        self.assertEqual(image.runtime_functions, [])
+
+
+class Sites(unittest.TestCase):
+    def setUp(self) -> None:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.root = Path(tmp.name)
+        self.data, self.at = samples.program_x64()
+        self.image = Image(self.data)
+
+    def declaration(self, **changes) -> dict:
+        spec = sites.skeleton(self.image, self.data, "program.exe")
+        spec["sites"] = [
+            {"name": "call_f2", "kind": "call", "rva": "0x1007", "expected": self.data[
+                self.image.offset(0x1007) : self.image.offset(0x1007) + 5].hex(),
+             "target": "Replacement", "evidence": "ev_test"},
+            {"name": "f1_head", "kind": "function", "rva": "0x1000", "expected": "488d05", "evidence": "doc"},
+            {"name": "ret_to_jmp", "kind": "edit", "rva": "0x1019", "expected": "c3",
+             "replacement": "cc", "evidence": "doc"},
+            {"name": "tick_slot", "kind": "iat", "rva": "0x2040", "import": "KERNEL32.dll!GetTickCount",
+             "evidence": "doc"},
+            {"name": "greeting", "kind": "data", "rva": "0x2000", "evidence": "doc"},
+            {"name": "f1_body", "kind": "range", "rva": "0x1000", "size": "0x30", "evidence": "doc"},
+            {"name": "health", "kind": "offset", "value": "0x1c"},
+        ]  # fmt: skip
+        for name, change in changes.items():
+            next(s for s in spec["sites"] if s["name"] == name).update(change)
+        return spec
+
+    def write(self, spec: dict) -> Path:
+        path = self.root / "sites.json"
+        path.write_text(json.dumps(spec))
+        return path
+
+    def test_a_matching_declaration_agrees(self) -> None:
+        spec = sites.load(self.write(self.declaration()))
+        self.assertEqual(sites.verify(spec, self.image, self.data), [])
+
+    def test_every_difference_is_reported(self) -> None:
+        spec = self.declaration(
+            f1_head={"expected": "90"},
+            tick_slot={"import": "KERNEL32.dll!ExitProcess"},
+            greeting={"writable": True},
+            f1_body={"size": "0x2000"},
+        )
+        spec["source"]["sha256"] = "0" * 64
+        problems = sites.verify(sites.load(self.write(spec)), self.image, self.data)
+        self.assertEqual(len(problems), 5, problems)
+        self.assertTrue(problems[0].startswith("source: sha256"))
+        self.assertIn("f1_head: 48 at 0x1000, expected 90", problems[1])
+        self.assertIn("the slot holds KERNEL32.dll!GetTickCount", problems[2])
+
+    def test_invalid_declarations_are_refused(self) -> None:
+        for change in (
+            {"ret_to_jmp": {"replacement": "cccc"}},
+            {"call_f2": {"expected": "e8"}},
+            {"greeting": {"evidence": ""}},
+            {"health": {"kind": "pointer"}},
+        ):
+            with self.assertRaises(ValueError, msg=change):
+                sites.load(self.write(self.declaration(**change)))
 
 
 class Rtti(unittest.TestCase):
@@ -214,6 +291,17 @@ class Cli(unittest.TestCase):
         lines = out.splitlines()
         self.assertEqual(lines[0], "| description | name | default | hint | type | stored | site |")
         self.assertIn("| Interface language | language | en | language code | string |  |", out)
+
+    def test_info_and_sites_init(self) -> None:
+        code, out = run("info", str(self.exe), "--imports")
+        self.assertEqual(code, 0)
+        self.assertIn("imports: 2 functions from 1 DLLs (0 delay-loaded)", out)
+        self.assertIn("relocations: none (fixed base)", out)
+        self.assertIn("unwind table: 3 functions", out)
+        code, out = run("sites", str(self.exe), "--init")
+        spec_path = self.exe.with_name("sites.json")
+        spec_path.write_text(out)
+        self.assertEqual(run("sites", str(self.exe), str(spec_path)), (0, "0 sites: all agree\n"))
 
     def test_a_missing_string_and_a_non_pe(self) -> None:
         self.assertEqual(run("refs", str(self.exe), "--string", "absent")[0], 1)
