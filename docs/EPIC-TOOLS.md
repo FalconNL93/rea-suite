@@ -466,3 +466,12 @@ usage line in `bin/rea-suite` and its PowerShell counterpart, and a pointer from
 [eula]: https://store.epicgames.com/en-US/eula
 [gi-drm]: https://www.gameinformer.com/index.php/2018/12/04/tim-sweeney-answers-questions-about-the-new-epic-games-store
 [usg-control]: https://www.usgamer.net/articles/controls-new-pc-patch-forces-you-to-launch-through-the-epic-games-store
+
+## Decided (the owner, 2026-11-10)
+
+- The command is `rea-suite epic`.
+- It may read the Epic launcher's own records (`.item` files) read-only.
+- The optional header is our own description of the imported functions' ABI, written with Epic's SDK headers in
+  mind (checked against them where the owner has them) but not copied from them.
+- The rest as the plan recommends; build in its order.
+
