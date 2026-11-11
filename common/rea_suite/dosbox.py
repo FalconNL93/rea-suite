@@ -783,7 +783,8 @@ def run(args) -> int:
     tail = LogTail(run_dir / "dosbox-x.log")
     scope = Scope(None if args.all else program.name)
     deadline = time.monotonic() + args.seconds if args.seconds else None
-    timed_out = False
+    timed_out = False  # --seconds reached: the stop asked for, not a failure
+    interrupted = False
 
     def alive() -> bool:
         nonlocal timed_out
@@ -845,7 +846,7 @@ def run(args) -> int:
             tick()
             time.sleep(0.05)
     except KeyboardInterrupt:
-        timed_out = True
+        interrupted = True
     finally:
         if proc.poll() is None:
             stop_process(proc)
@@ -855,9 +856,17 @@ def run(args) -> int:
         if terminal:
             terminal.close()
     emit(tail.flush())
-    out.write({"kind": "exit", "code": proc.returncode, "timed_out": timed_out})
+    out.write(
+        {
+            "kind": "exit",
+            "code": proc.returncode,
+            "timed_out": timed_out,
+            "interrupted": interrupted,
+        }
+    )
     out.close()
-    if timed_out or (proc.returncode and not status):
+    # Stopped at --seconds, DOSBox-X's own exit code is that of its stop, not the program's.
+    if interrupted or (proc.returncode and not status and not timed_out):
         status = status or 1
     return status
 
@@ -950,14 +959,19 @@ def parser() -> argparse.ArgumentParser:
 
     r = sub.add_parser("run", help="run a DOS program and log it")
     r.add_argument("program", type=Path, help="the DOS program (its folder becomes C:)")
-    r.add_argument("args", nargs=argparse.REMAINDER, help="its arguments")
+    r.add_argument(
+        "args",
+        nargs=argparse.REMAINDER,
+        help="its arguments (this command's options go before PROGRAM)",
+    )
     r.add_argument("--mount", type=Path, help="mount this folder as C: (it holds the program)")
     r.add_argument("--dpmi", action="store_true", help="load DOSBox-X's CWSDPMI first")
     r.add_argument(
         "--ints",
         default=DEFAULT_INTS,
         help=f"interrupts to trace in the debugger, INT[:AH[:AL]] in hex (default {DEFAULT_INTS}; "
-        "empty: the log only)",
+        "empty: the log only). Each stop costs about 20 ms: for a DOS/4GW game's load trace narrowly "
+        "(21:3D,33,10), the full set only for a short window",
     )
     r.add_argument("--returns", action="store_true", help="log the registers each call returns")
     r.add_argument("--nested", action="store_true", help="also calls made by BIOS code")
@@ -979,6 +993,7 @@ def parser() -> argparse.ArgumentParser:
     r.add_argument("--dosbox", help="the DOSBox-X binary (default tools/bin/dosbox-x)")
     r.add_argument("--connect-timeout", type=float, default=20.0, help=argparse.SUPPRESS)
     r.set_defaults(run=run)
+    p.run_parser = r  # misplaced_options reads its option names
 
     a = sub.add_parser("parse", help="a DOSBox-X log file as JSON lines")
     a.add_argument("logfile", type=Path)
@@ -993,8 +1008,25 @@ def parser() -> argparse.ArgumentParser:
     return p
 
 
+def misplaced_options(args: argparse.Namespace, p: argparse.ArgumentParser) -> list[str]:
+    """This command's options written after PROGRAM, which argparse would hand the program unseen (a DOS program's
+    own options are `-x` or `/x`, never one of these)."""
+    if getattr(args, "command", None) != "run" or not args.args:
+        return []
+    known = {o for action in p.run_parser._actions for o in action.option_strings}
+    return [a for a in args.args if a.split("=", 1)[0] in known]
+
+
 def main(argv: list[str] | None = None) -> int:
-    args = parser().parse_args(argv)
+    p = parser()
+    args = p.parse_args(argv)
+    if misplaced := misplaced_options(args, p):
+        print(
+            f"dosbox: {', '.join(misplaced)} after PROGRAM would go to the program: put this command's options "
+            "before PROGRAM",
+            file=sys.stderr,
+        )
+        return 2
     try:
         return args.run(args)
     except (OSError, ValueError) as exc:

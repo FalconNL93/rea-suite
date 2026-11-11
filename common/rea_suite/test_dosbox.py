@@ -6,6 +6,8 @@ client assembled with nasm) are opt-in: REA_DOSBOX_INTEGRATION=1, with DOSBox-X 
 from __future__ import annotations
 
 import argparse
+import contextlib
+import io
 import json
 import os
 import shutil
@@ -312,7 +314,7 @@ class Channel(unittest.TestCase):
 class Command(unittest.TestCase):
     def test_dosbox_command_line(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            game = Path(tmp) / "My Game"
+            game = (Path(tmp) / "My Game").resolve()  # macOS: /var is /private/var
             (game / "BIN").mkdir(parents=True)
             (game / "BIN" / "MAIN.EXE").write_bytes(b"MZ")
             args = argparse.Namespace(
@@ -480,3 +482,18 @@ class RealRun(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Options(unittest.TestCase):
+    def test_an_option_after_the_program_is_refused_not_passed_on(self) -> None:
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            code = dosbox.main(["run", "GAME/MAIN.EXE", "--mount", ".", "--seconds", "30"])
+        self.assertEqual(code, 2)
+        self.assertIn("--mount, --seconds after PROGRAM", err.getvalue())
+
+    def test_the_programs_own_options_are_passed_on(self) -> None:
+        p = dosbox.parser()
+        args = p.parse_args(["run", "--seconds", "5", "MAIN.EXE", "-nosound", "/m"])
+        self.assertEqual(dosbox.misplaced_options(args, p), [])
+        self.assertEqual(args.args, ["-nosound", "/m"])
