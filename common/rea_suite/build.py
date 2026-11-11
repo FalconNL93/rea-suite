@@ -12,6 +12,9 @@ the newest build stay in .runtime/build/<name>/<version>/; a newer build replace
                    only cargo (RHEL), that one builds
   cmake: true      configure and build the source with CMake and Ninja (.venv);
                    `bin:` paths are relative to the build directory
+  script: <path>   a build script of the suite's (relative to the checkout), run with bash as
+                   `<script> <source> <dest>` on the release's source; `bin:` paths are
+                   relative to dest
 """
 
 from __future__ import annotations
@@ -24,7 +27,8 @@ from pathlib import Path
 from . import github
 from .archive import extract
 
-BUILD_ROOT = Path(__file__).resolve().parents[2] / ".runtime" / "build"
+ROOT = Path(__file__).resolve().parents[2]
+BUILD_ROOT = ROOT / ".runtime" / "build"
 
 
 def build_dir(name: str, version: str) -> Path:
@@ -120,3 +124,19 @@ def cmake(name: str, repo: str, ref: str, dest: Path) -> None:
         check=True,
     )
     subprocess.run(["cmake", "--build", str(dest)], check=True)
+
+
+def script(name: str, repo: str, ref: str, dest: Path, path: str) -> None:
+    """Build repo at ref with one of the suite's scripts; source in .runtime/build."""
+    check_allowed()
+    if not shutil.which("bash"):
+        raise BuildUnavailable("needs bash")
+    work = build_dir(name, ref[:12] if len(ref) == 40 else ref)
+    print(f"  building {repo} at {ref} with {path} in {work} (only when it changes)")
+    tarball = work / "source.tar.gz"
+    github.download(source_tarball(repo, ref), tarball)
+    src = work / "src"
+    extract(tarball, src, 1)
+    tarball.unlink()
+    dest.mkdir(parents=True, exist_ok=True)
+    subprocess.run(["bash", str(ROOT / path), str(src), str(dest)], check=True)

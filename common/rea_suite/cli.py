@@ -145,6 +145,8 @@ def install_github(tool: Tool, state: dict[str, str], force_latest: bool) -> Non
             try:
                 if "cargo" in tool.build:
                     build.cargo(tool.build["cargo"], tag.removeprefix("v"), staging)
+                elif "script" in tool.build:
+                    build.script(tool.name, tool.github, tag, staging, tool.build["script"])
                 else:
                     build.cmake(tool.name, tool.github, release["tag_name"], staging)
             except build.BuildUnavailable as exc:
