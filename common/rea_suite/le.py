@@ -9,6 +9,9 @@
   rea-suite le dump-image <exe> --out FILE [--base ADDR] [--json-map MAP]
                                              every object at its base in one flat image (gaps
                                              zeroed) with fixups applied, and a map of it
+  rea-suite le services <exe> [--json]       the DOS services the code uses: INT n with AH/AX,
+                                             DPMI calls, IN/OUT ports, segment register loads,
+                                             far transfers and 16-bit code (le_services.py)
 
 Read only: the executable is never written. Every offset the file names is checked against the file,
 so a damaged one is refused with LeError rather than read past its end. Written from IBM's
@@ -812,6 +815,18 @@ def cmd_image(args) -> int:
     return 0
 
 
+def cmd_services(args) -> int:
+    from rea_suite import le_services  # Capstone loads only for this command
+
+    module = read_module((args.caller_cwd / args.exe).resolve())
+    d = le_services.inventory(module)
+    if args.json:
+        print(json.dumps(d, indent=1))
+    else:
+        le_services.print_inventory(d)
+    return 0
+
+
 def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="rea-suite le",
@@ -855,6 +870,12 @@ def parser() -> argparse.ArgumentParser:
         "--json-map", type=Path, help="write the map (objects, bases, entry) as JSON here"
     )
     c.set_defaults(run=cmd_image)
+    c = sub.add_parser(
+        "services", help="INT n, DPMI, I/O ports, segment loads, far and 16-bit code"
+    )
+    c.add_argument("exe", type=Path)
+    c.add_argument("--json", action="store_true")
+    c.set_defaults(run=cmd_services)
     return p
 
 
