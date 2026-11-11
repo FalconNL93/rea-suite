@@ -30,6 +30,18 @@ class Schedule(unittest.TestCase):
             with self.assertRaises(ValueError, msg=text):
                 vigem_pad.schedule(text, 0.1)
 
+    def test_live_presses_take_buttons_and_an_optional_hold(self) -> None:
+        item = vigem_pad.live_press("a+b:0.5\n", 0.15)
+        self.assertEqual((item.names, item.hold), (["A", "B"], 0.5))
+        self.assertEqual(vigem_pad.live_press("DOWN", 0.15).hold, 0.15)
+        for text in ("", "Z", "A:0", "1:A:0.5"):
+            with self.assertRaises(ValueError, msg=text):
+                vigem_pad.live_press(text, 0.15)
+
+    def test_stdin_and_presses_together_are_refused(self) -> None:
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(vigem_pad.main(["--presses", "1:A", "--stdin"]), 1)
+
     def test_dry_run_prints_the_schedule(self) -> None:
         out = io.StringIO()
         with contextlib.redirect_stdout(out):

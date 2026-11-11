@@ -41,6 +41,10 @@
 #                                            observer, write guard) and log it as JSON lines
 #   rea-suite pad --presses 30:DOWN,33:A    a virtual Xbox 360 pad on a schedule (ViGEm;
 #                                            Windows only, --dry-run anywhere)
+#   rea-suite run [options] --start PROGRAM ...  one bounded, observed run of a Windows program:
+#                                            a script of keys, clicks, pad presses and captures,
+#                                            message boxes, modules and endpoints, the install
+#                                            unchanged, a JSON report (Windows and WSL; --help)
 #   rea-suite analyze [paths...] [options]  offline analysis projects; --examples for workflows
 #   rea-suite tools <args...>               tools.yml manager (= rea-tools)
 #   rea-suite lint [file...]                ruff, shellcheck and a PowerShell parse check on
@@ -550,6 +554,7 @@ case "$cmd" in
   steamstub) uv run --offline --no-sync common/rea_suite/steamstub.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   frida) uv run --offline --no-sync common/rea_suite/frida_run.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   pad) uv run --offline --no-sync common/rea_suite/vigem_pad.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
+  run) uv run --offline --no-sync common/rea_suite/run_harness.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   pe) uv run --offline --no-sync common/rea_suite/pe.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   rmdp) uv run --offline --no-sync common/rea_suite/rmdp.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   le) uv run --offline --no-sync common/rea_suite/le.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
