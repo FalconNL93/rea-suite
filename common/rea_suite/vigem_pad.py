@@ -3,6 +3,7 @@
   rea-suite pad --presses 30:DOWN,33:A,36:A+B:0.5 [--idle-pad] [--dll ViGEmClient.dll]
   rea-suite pad --check                     the driver answers (no pad is plugged in)
   rea-suite pad --presses ... --dry-run     print the schedule only (any platform)
+  rea-suite pad --stdin                     press what each line of stdin says, when it arrives
 
 For testing a game's pad input without a person: plug in a pad, wait for each press's time
 (seconds from when the pad was plugged in), hold it (--hold, or :SECONDS on the press), release
@@ -12,8 +13,10 @@ GUIDE, LT RT (full trigger) and LX+ LX- LY+ LY- RX+ RX- RY+ RY- (full stick defl
 --idle-pad plugs in a pad that never presses anything first, so the scripted one is the second
 (user index 1), the way a remote-play or streaming setup leaves a virtual pad in the first slot.
 
-Each event is a JSON line with `t`, the seconds since the pad was plugged in, so a harness
-(platforms/windows/window-oracle.ps1) can line its captures up with the presses.
+With --stdin the pad takes its presses live, one a line (BUTTON[+BUTTON][:HOLD]), and unplugs
+--tail seconds after stdin closes: `rea-suite run` drives it that way, pressing only while the
+game's window is in front. Each event is a JSON line with `t`, the seconds since the pad was
+plugged in, so a harness can line its captures up with the presses.
 
 ViGEmClient.dll comes from your own copy (--dll, or REA_VIGEMCLIENT_DLL): the ViGEmClient
 library built from nefarius/ViGEmClient, or the one a Python or game tool you trust ships. The
@@ -76,6 +79,18 @@ class Press:
         return report
 
 
+def press(buttons: str, at: float, hold: float, item: str = "") -> Press:
+    """'A+B' at a time, held this long; ValueError on anything unknown."""
+    item = item or buttons
+    names = [n.strip().upper() for n in buttons.split("+")]
+    unknown = [n for n in names if n not in BUTTONS and n not in TRIGGERS and n not in STICKS]
+    if unknown:
+        raise ValueError(f"unknown button {unknown[0]!r} in {item!r}")
+    if at < 0 or hold <= 0:
+        raise ValueError(f"time and hold must be positive: {item!r}")
+    return Press(at, names, hold)
+
+
 def schedule(text: str, hold: float) -> list[Press]:
     """'30:DOWN,33:A+B:0.5' -> presses sorted by time; ValueError on anything unknown."""
     presses = []
@@ -83,15 +98,17 @@ def schedule(text: str, hold: float) -> list[Press]:
         parts = item.split(":")
         if len(parts) not in (2, 3):
             raise ValueError(f"a press is TIME:BUTTON[+BUTTON][:HOLD]: {item!r}")
-        names = [n.strip().upper() for n in parts[1].split("+")]
-        unknown = [n for n in names if n not in BUTTONS and n not in TRIGGERS and n not in STICKS]
-        if unknown:
-            raise ValueError(f"unknown button {unknown[0]!r} in {item!r}")
-        at, length = float(parts[0]), float(parts[2]) if len(parts) == 3 else hold
-        if at < 0 or length <= 0:
-            raise ValueError(f"time and hold must be positive: {item!r}")
-        presses.append(Press(at, names, length))
+        length = float(parts[2]) if len(parts) == 3 else hold
+        presses.append(press(parts[1], float(parts[0]), length, item))
     return sorted(presses, key=lambda p: p.at)
+
+
+def live_press(line: str, hold: float) -> Press:
+    """A line of --stdin, 'A+B' or 'A+B:0.5': pressed now; ValueError on anything unknown."""
+    parts = line.strip().split(":")
+    if len(parts) not in (1, 2) or not parts[0]:
+        raise ValueError(f"a live press is BUTTON[+BUTTON][:HOLD]: {line.strip()!r}")
+    return press(parts[0], 0.0, float(parts[1]) if len(parts) == 2 else hold, line.strip())
 
 
 def emit(start: float, **fields) -> None:
@@ -159,6 +176,13 @@ def wait_until(start: float, at: float) -> None:
         time.sleep(min(left, 0.02))
 
 
+def play(client: Client, target: int, start: float, item: Press) -> None:
+    emit(start, event="press", press="+".join(item.names), hold=item.hold)
+    client.update(target, item.report())
+    time.sleep(item.hold)
+    client.update(target, Report())
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         prog="rea-suite pad",
@@ -174,6 +198,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--idle-pad", action="store_true", help="an idle pad in the first slot")
     p.add_argument("--dll", type=Path, help="ViGEmClient.dll (default: $REA_VIGEMCLIENT_DLL)")
     p.add_argument("--check", action="store_true", help="connect to the driver and stop")
+    p.add_argument("--stdin", action="store_true", help="live presses, one a line of stdin")
     p.add_argument("--dry-run", action="store_true", help="print the schedule; no DLL")
     args = p.parse_args(argv)
     try:
@@ -182,11 +207,14 @@ def main(argv: list[str] | None = None) -> int:
         print(f"pad: {exc}", file=sys.stderr)
         return 1
     if args.dry_run:
-        for press in presses:
-            print(json.dumps({"at": press.at, "press": "+".join(press.names), "hold": press.hold}))
+        for item in presses:
+            print(json.dumps({"at": item.at, "press": "+".join(item.names), "hold": item.hold}))
         return 0
-    if not presses and not args.check:
-        print("pad: give --presses (or --check)", file=sys.stderr)
+    if args.stdin and presses:
+        print("pad: give --presses or --stdin, not both", file=sys.stderr)
+        return 1
+    if not presses and not args.check and not args.stdin:
+        print("pad: give --presses, --stdin (or --check)", file=sys.stderr)
         return 1
     if os.name != "nt":
         print("pad: ViGEm is Windows only (--dry-run works anywhere)", file=sys.stderr)
@@ -217,12 +245,19 @@ def main(argv: list[str] | None = None) -> int:
             user_index=client.user_index(target),
             idle_pad=None if idle is None else client.user_index(idle),
         )
-        for press in presses:
-            wait_until(start, press.at)
-            emit(start, event="press", press="+".join(press.names), hold=press.hold)
-            client.update(target, press.report())
-            time.sleep(press.hold)
-            client.update(target, Report())
+        for item in presses:
+            wait_until(start, item.at)
+            play(client, target, start, item)
+        if args.stdin:
+            for line in sys.stdin:
+                if not line.strip():
+                    continue
+                try:
+                    item = live_press(line, args.hold)
+                except ValueError as exc:
+                    emit(start, event="refused", line=line.strip(), reason=str(exc))
+                    continue
+                play(client, target, start, item)
         time.sleep(args.tail)
         emit(start, event="unplugged")
     except KeyboardInterrupt:
