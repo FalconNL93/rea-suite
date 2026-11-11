@@ -47,3 +47,9 @@ unpatched (one source per tool), so these go upstream as issues or pull requests
 - **`pe rtti --slots`: mark shared stubs** (Alan Wake Remastered port, 2026-11-10): when one address fills many slots
   across classes (an ICF-folded one-line stub answering a base's pure virtual), mark the slot `shared-stub` with the
   count, so real overrides stand apart; AWR had 28 such slots among 47 overrides.
+
+- **`rmdp object`: Remedy object data** (Alan Wake Remastered port, 2026-11-11): `rmdp inner` unpacks a level's
+  `cid_*`/`dp_*` entries, but reading a script instance's members (its variables) needs Remastered's object model,
+  which OpenAWE's 2010 description does not cover. AWR stopped there, having identified its scripted achievement
+  calls as level completions (`docs/research/2026-11-11-achievement-unlocks.md` in alan-wake-rm). Worth building
+  when another Remedy title needs it.
