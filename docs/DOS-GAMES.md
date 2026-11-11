@@ -200,6 +200,15 @@ The LE is recompiled onto winrt's core (its static recompiler and CPU, no PC emu
     lands nowhere.
   - Watcom's heap takes all linear memory in 16 MB chunks, then walks down 4 KB after each refusal: cap
     what DPMI 0501h grants (and 0100h), or the start-up makes thousands of calls.
+  - Pace what the hardware paced: a host runs a DOS idle loop out in milliseconds. The VGA retrace follows
+    real time (70 Hz), and an input poll that finds nothing waits a minimum interval; Theme Park's menu
+    otherwise ran its 3,000-poll idle timeout out at once and started the demo. Measure against the original's
+    known waits (a run of step 5).
+  - Deliver input where the game reads it: a host key goes into the BIOS buffer at the game's next INT 16h
+    poll. A game that checks INT 16h and then drains DOS's buffer loses a key that arrives between the two.
+  - A game waits on flags its interrupt handlers set, in loops with no system call or port access, so input
+    and timer delivery at the hooks alone never reaches it: the CPU needs asynchronous interrupt points
+    (winrt's core, from Theme Park's "Buy Land" stop, 2026-11-12).
 - **The fastest way to the first frame** is a headless runner (snapshots to files, a trace switch for the DOS
   calls) and a layer that refuses each unknown service with its number and its caller, then fixing the stops
   one at a time against the run of step 5: Theme Park's title screen took 13 stops (STI, INT 21h 48h, port
