@@ -553,6 +553,7 @@ been run on macOS arm64 and Linux x86_64 (WSL2, 2026-11-03); Windows execution r
 | `rea-suite pad` | A virtual Xbox 360 pad pressing buttons on a schedule, for testing a game's pad input without a person (ViGEm; Windows only, component `porting` for the driver) ([port tools](docs/PORT-TOOLS.md#virtual-pad-rea-suite-pad-windows)) | this repo |
 | `window-oracle.ps1` | Captures of only a game's window before and after each scheduled input, timed from the input driver, plus a process, module, connection and DNS report (Windows only; `platforms/windows/`) ([port tools](docs/PORT-TOOLS.md#window-harness-platformswindowswindow-oracleps1-windows)) | this repo |
 | `rea-suite pe` | PE scans from the file alone, no project: the image's directories; a port's declared patch sites checked by hash and bytes; MSVC RTTI classes with vtables, slots and bases; references to an address or string; callers; strings a code range loads; every call site of an import DLL's functions; a game's option registry ([port tools](docs/PORT-TOOLS.md)) | this repo |
+| `rea-suite rmdp` | Remedy packages (`.bin` index and `.rmdp` data: Alan Wake, Remastered, American Nightmare, Quantum Break, Control), read only: list, extract, search the bytes, and unpack Alan Wake's level containers ([port tools](docs/PORT-TOOLS.md)) | this repo |
 
 radare2 is deliberately left out: Rizin is its fork with the same feature set,
 and REA integrates Rizin (`REA_RIZIN_COMMAND`, Cutter bridge).

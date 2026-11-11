@@ -29,6 +29,9 @@
 #   rea-suite steamstub <exe>...            SteamStub DRM signs (.bind, entropy, timestamps)
 #   rea-suite pe <command> <exe> ...        PE scans without a project: MSVC RTTI classes and
 #                                            vtables, references, callers, strings (--help)
+#   rea-suite rmdp list|extract|find|inner <index.bin> ...  Remedy packages (Alan Wake,
+#                                            Remastered, American Nightmare, Quantum Break,
+#                                            Control): list, extract, search, level containers
 #   rea-suite frida <script.js> --pid|--name|--spawn ...  run a Frida script (common/frida/:
 #                                            observer, write guard) and log it as JSON lines
 #   rea-suite pad --presses 30:DOWN,33:A    a virtual Xbox 360 pad on a schedule (ViGEm;
@@ -543,6 +546,7 @@ case "$cmd" in
   frida) uv run --offline --no-sync common/rea_suite/frida_run.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   pad) uv run --offline --no-sync common/rea_suite/vigem_pad.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   pe) uv run --offline --no-sync common/rea_suite/pe.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
+  rmdp) uv run --offline --no-sync common/rea_suite/rmdp.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   tools) rea-tools "${args[@]}" ;;
   clean) cmd_clean "${args[@]}" ;;
   lint) exec .githooks/lint.sh "${args[@]}" ;;

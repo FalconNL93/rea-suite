@@ -13,6 +13,7 @@
     .\platforms\windows\rea-suite.ps1 functions <config> check|add|find|convert  # a port's function index and gate
     .\platforms\windows\rea-suite.ps1 steamstub <exe>...  # SteamStub DRM signs
     .\platforms\windows\rea-suite.ps1 pe <command> <exe> ...  # PE scans: RTTI, references, callers, strings
+    .\platforms\windows\rea-suite.ps1 rmdp list|extract|find|inner <index.bin> ...  # Remedy packages
     .\platforms\windows\rea-suite.ps1 frida <script.js> --pid|--name|--spawn ...  # Frida script, JSON lines
     .\platforms\windows\rea-suite.ps1 pad --presses 30:DOWN,33:A [--idle-pad]  # virtual Xbox 360 pad (ViGEm)
     .\platforms\windows\rea-suite.ps1 analyze [paths...] [options]  # offline analysis; --examples
@@ -27,7 +28,7 @@
 #>
 #Requires -Version 7
 param(
-    [Parameter(Position = 0)][ValidateSet('setup', 'select', 'winget', 'update', 'reinstall', 'agents', 'analyze', 'playstation', 'xbox360', 'functions', 'steamstub', 'pe', 'frida', 'pad', 'doctor', 'status', 'tools', 'clean', 'lint')][string]$Command = 'setup',
+    [Parameter(Position = 0)][ValidateSet('setup', 'select', 'winget', 'update', 'reinstall', 'agents', 'analyze', 'playstation', 'xbox360', 'functions', 'steamstub', 'pe', 'rmdp', 'frida', 'pad', 'doctor', 'status', 'tools', 'clean', 'lint')][string]$Command = 'setup',
     [Parameter(Position = 1, ValueFromRemainingArguments)][string[]]$Rest = @()
 )
 $ErrorActionPreference = 'Stop'
@@ -203,6 +204,7 @@ switch ($Command) {
     'frida' { & uv run --offline --no-sync common\rea_suite\frida_run.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'pad' { & uv run --offline --no-sync common\rea_suite\vigem_pad.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'pe' { & uv run --offline --no-sync common\rea_suite\pe.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
+    'rmdp' { & uv run --offline --no-sync common\rea_suite\rmdp.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'analyze' { & uv run --offline --no-sync common\rea_suite\analyze.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'reinstall' {
         foreach ($what in $Rest) {

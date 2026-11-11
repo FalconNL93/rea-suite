@@ -171,6 +171,37 @@ same names, types, sites and string defaults as the table that port generated wi
 Tests: `uv run --no-sync python -m unittest rea_suite.test_pe` in `common/` (synthetic x64 and
 x86 programs from `samples.py`, no game bytes).
 
+## Remedy packages: `rea-suite rmdp`
+
+Remedy's games keep their data in packages: an index (`.bin`, a tree of folders and files) and a data file
+(`.rmdp`, the files' bytes back to back, uncompressed). `rmdp` reads them without writing anything:
+
+```sh
+rea-suite rmdp list game/data/ep999-000.bin --glob 'messages/*'          # path, size, offset, CRC-32
+rea-suite rmdp extract game/data/ep999-000.bin 'messages/*' --out work/x --check
+rea-suite rmdp find game/data/ep999-000.bin --text UnlockAchievement --glob 'worlds/*' --inner
+rea-suite rmdp inner game/data/ep999-000.bin 'worlds/*/level_01/root.bin' --out work/x
+```
+
+- **Versions.** 2 (Alan Wake: big-endian, 32-bit links, packed records; Alan Wake Remastered: the same version with
+  64-bit links and records aligned as a C compiler lays them out, told apart by which layout gives a root with null
+  links), 7 (American Nightmare, little-endian) and 8/9 (Quantum Break, Control).
+- **Checks.** Every name is checked against its CRC-32 (lowercase ASCII), and every link must lead to a record once.
+  `--check` compares each extracted file with its stored CRC-32, which is little-endian in every package.
+- **Level containers.** Alan Wake's level `.bin` files hold a little-endian table (count, then per entry a name length,
+  the name and a size; 32-bit in Alan Wake, 64-bit in Remastered) and one zlib stream with the entries back to back.
+  `find --inner` searches inside them, and `inner` extracts their entries (`cid_*` object data, `dp_*` parameter pools:
+  the script bytecode's strings are in `dp_bytecodeparameters.bin`).
+- **Output.** Extraction refuses a folder inside the package's own folder, so a game installation is never written.
+  Names that file systems cannot hold are escaped as `%XX`.
+
+Written from the format's description in [GrzybDev/NorthlightTools](https://github.com/GrzybDev/NorthlightTools)
+(`docs/rmdp.md`, read at f8ccb3f) and [OpenAWE-Project/OpenAWE](https://github.com/OpenAWE-Project/OpenAWE)
+(`src/awe/binarchive.cpp`, read at 3ad7807). Both are GPL-3.0 and were read as references only; no code of theirs is
+in this tool. Checked 2026-11-11 against Alan Wake Remastered's packages (`ep999-000`: 28 809 files, every name
+checksum matching; `ep999-001`; the English pack), and by `common/rea_suite/test_rmdp.py` on packages built in three
+layouts.
+
 ## Frida: `rea-suite frida`
 
 `rea-suite frida <script.js>` attaches a Frida script to a process (`--pid`, `--name`) or starts
