@@ -26,7 +26,7 @@ with the reason when it is dropped.
   `rea-suite frida` logs a Windows game. Wanted by the Theme Park port (2026-11-11).
 - **Ghidra support for LE/LX**: Ghidra has no LE loader. Evaluate the community loader extensions
   (license, the Ghidra versions they build for, fixups applied) before one joins a component; until
-  then, load `rea-suite le dump-object` output raw at each object's base (2026-11-11).
+  then, load `rea-suite le dump-image` output raw at its base (2026-11-11).
 
 ## Console games
 

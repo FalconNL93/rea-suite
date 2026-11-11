@@ -213,6 +213,7 @@ directly; `le` reads them from the file alone, without writing anything:
 rea-suite le info game/MAIN.EXE [--json]       # stub, header, objects, fixup counts, entry, imports
 rea-suite le dump-object game/MAIN.EXE 1 --base 0x10000 --out work/tp/obj1.bin
 rea-suite le dump-object game/MAIN.EXE 3 --base 0x400000 --object-base 1=0x10000 --out work/tp/obj3.bin
+rea-suite le dump-image game/MAIN.EXE --out work/tp/main.bin --json-map work/tp/main.json
 ```
 
 - **Header.** Found at the MZ header's `e_lfanew` (0x3C), as a 4GW stub has it, or after the MZ
@@ -236,6 +237,11 @@ rea-suite le dump-object game/MAIN.EXE 3 --base 0x400000 --object-base 1=0x10000
   Load the output raw at `--base` in Ghidra, Rizin or Unicorn, and each other object at its own base.
   Left as they are, and counted on stderr: imports, selectors, 16-bit offsets, 8-bit and alias fixups.
   Iterated, compressed and invalid pages are left as zeros, with a warning.
+- **dump-image.** Every object at its base in one flat file, from the lowest object base to the
+  highest object end, the gaps zeros, with the same fixups applied: load it raw at the printed base
+  (REA, Ghidra, Rizin map one file at one address) and the code's references into the data objects
+  resolve. `--base` moves the lowest object and the rest with it; `--json-map` writes the objects'
+  bases, image offsets and the entry point, which stderr prints too.
 
 Written from IBM's [LX - Linear eXecutable Module Format Description](https://www.edm2.com/index.php/LX_-_Linear_eXecutable_Module_Format_Description)
 (1992, EDM2's reprint: the header, object table, page table, fixup records and entry table) and the
@@ -246,7 +252,8 @@ references; no code of either is in this tool. Checked 2026-11-11 against Theme 
 (DOS/4GW stub, three objects, 162 pages ending exactly at the end of the file, 19 746 internal
 32-bit offset fixups, all applied; the entry point lands on Watcom's startup and its stores address
 the data object), and by `common/rea_suite/test_le.py` on a module built in the test (`uv run
---no-sync python -m unittest rea_suite.test_le` in `common/`).
+--no-sync python -m unittest rea_suite.test_le` in `common/`). `dump-image` was checked 2026-11-11 on
+the same file: one image of 0xd2340 bytes at 0x10000 with the three objects at their bases.
 
 ## Frida: `rea-suite frida`
 

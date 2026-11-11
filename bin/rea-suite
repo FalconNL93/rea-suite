@@ -32,9 +32,10 @@
 #   rea-suite rmdp list|extract|find|inner <index.bin> ...  Remedy packages (Alan Wake,
 #                                            Remastered, American Nightmare, Quantum Break,
 #                                            Control): list, extract, search, level containers
-#   rea-suite le info|dump-object <exe> ...  LE/LX executables (DOS/4GW and other DOS
-#                                            extenders, VxDs, OS/2): header, objects, fixups;
-#                                            an object with its fixups applied at a base
+#   rea-suite le info|dump-object|dump-image <exe> ...  LE/LX executables (DOS/4GW
+#                                            and other DOS extenders, VxDs, OS/2): header,
+#                                            objects, fixups; an object or the image with
+#                                            its fixups applied at a base
 #   rea-suite frida <script.js> --pid|--name|--spawn ...  run a Frida script (common/frida/:
 #                                            observer, write guard) and log it as JSON lines
 #   rea-suite pad --presses 30:DOWN,33:A    a virtual Xbox 360 pad on a schedule (ViGEm;
