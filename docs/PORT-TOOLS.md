@@ -488,6 +488,8 @@ rea-suite dosbox info                                        # the binary, its v
 rea-suite dosbox run --dpmi --log work/tp.jsonl --seconds 300 work/tp/THEME/MAIN.EXE
 rea-suite dosbox run --ints 21:3d,21:3f,31 --returns game/GAME.EXE  # opens, reads, DPMI; results
 rea-suite dosbox run --ints '' game/GAME.EXE                 # DOSBox-X's log only (any build)
+rea-suite dosbox run --ints 21:3d --dump 0:400@exit --dump 1A2B30:0x8000@open:DATA/MAP.DAT \
+  --input 't=8:ENTER t=12:mouse:160,100 t=12.5:click' game/GAME.EXE   # memory and input, below
 rea-suite dosbox parse work/dosbox/<run>/dosbox-x.log --program MAIN.EXE  # a log taken elsewhere
 ```
 
@@ -515,6 +517,7 @@ Records have `t` (seconds since the start) and `kind`:
   to port E9h (a program or a patched build can mark its phases there); `message` DOSBox-X's own.
   They carry `cycle`, DOSBox-X's instruction counter, and only the program's part of the log is kept
   (from the DOS open of its file to the shell going back to AUTOEXEC.BAT; `--all` keeps everything).
+- **`dump`**, **`poke`**, **`input`**: what `--dump`, `--poke` and `--input` did (below).
 - **`start`**, **`exit`** (`code`, `timed_out`), **`error`**.
 
 Exit 0 when it ran, 1 when DOSBox-X failed or `--seconds` ended it, 2 when there is no DOSBox-X or
@@ -524,6 +527,107 @@ for programs that need a DPMI host and bring none (DOS/4GW programs bring their 
 'section key=value'` and `--conf FILE` pass DOSBox-X settings through (`cpu cycles=max`, `dos
 ems=false`, ...). The run's folder (`--workdir`, default `work/dosbox/<time>-<program>/`) keeps
 DOSBox-X's log and the command line used.
+
+### Memory dumps, pokes and scripted input
+
+For a run with nobody at the keyboard: memory written to files at a trigger, bytes written into
+memory, and keys, mouse positions and clicks at times. All three go through the debugger (a build
+with it; `--ints ''` keeps tracing off and still opens the channel for them).
+
+- **`--dump ADDR:LEN@TRIGGER`** (repeatable) writes LEN bytes (decimal, or `0x` hex) from ADDR into
+  `dump-NN-<trigger>.bin` in the run's folder, once, the first time TRIGGER comes, and a record:
+
+  ```json
+  {"t": 0.455, "kind": "dump", "addr": "90000", "linear": "00090000", "len": 16, "trigger": "int16", "mode": "pm", "at": "00A7:00000199", "file": "work/dosbox/<run>/dump-01-int16.bin", "sha256": "db44570f..."}
+  ```
+
+  ADDR is a linear address in hex (`1A2B30`) or `SEL:OFF` (a selector in protected mode, a segment
+  in real and V86 mode: `0168:00012345`, `9000:0010`). `obj<N>+off` (an LE object's runtime base)
+  is not supported: under DOS/4GW the objects' bases are decided at load, so take them from the
+  trace (the CS:EIP of the program's calls) or `rea-suite le info`. A record whose memory ended
+  early has `short` with the bytes read.
+- **`--poke ADDR=BYTES@TRIGGER`** (repeatable) writes the bytes (hex: `CA FE`, `cafe`) at ADDR,
+  once, before the dumps of the same trigger, with a `poke` record. For a port to set a game's own
+  variables (a cheat flag, a level number, a mouse variable a game keeps itself) at a known point.
+- **Triggers**: `intNN[:AH[:AL]]` (hex, `int21:3D`) at the program's call of that interrupt, before
+  it runs; `open:NAME` at its INT 21h 3Dh or 6Ch open of a file (no case, either slash; the name
+  whole or as the path's tail, so `open:data/map.dat` matches `C:\GAME\DATA\MAP.DAT`), before DOS
+  opens it, and the record carries the `path`; `t=SECONDS` at that time on the records' clock (the
+  same `t`); `start` at the program's first instruction; `exit` at its INT 21h 00h, 31h or 4Ch, or,
+  when `--seconds` ends the run first, at that moment (the record then has `"ended": "seconds"`).
+  An interrupt or open trigger adds the breakpoint it needs without logging those calls unless
+  `--ints` asks for them. Times are the host's clock, not the emulated one: each traced call
+  stops the emulation for about 15 ms, so a run driven by times traces narrowly (`--ints 21:3d`, or
+  `--ints ''`) and leaves margins.
+- **`--input SCRIPT`** (also `--keys`), or `--input-file FILE` (an item a line, `#` comments): items
+  `t=SECONDS:ACTION`, on the records' clock, delivered once the program has started (an earlier
+  time comes at its start). An item that comes late (`late` in its record) moves the rest of the
+  script back by as much, so holds, clicks and the gaps between items keep their length:
+
+  | Action | What |
+  | --- | --- |
+  | `ENTER`, `ctrl+F6`, `sc:0x29` | a key or a chord, pressed and released after 0.05 s; names as `rea-suite run` takes them |
+  | `RIGHT*2` | held for 2 seconds |
+  | `"Theme Park"` | typed, a character every 0.08 s (US layout; SHIFT for capitals and symbols) |
+  | `mouse:X,Y` | the pointer to X,Y, in the driver's coordinates (what INT 33h 0003h returns) |
+  | `move:DX,DY` | the pointer moved by DX,DY from where the driver has it |
+  | `click`, `click:right` | a button pressed and released after 0.05 s (left, right, middle) |
+  | `down:left`, `up:left` | a button pressed, released (drags: `down`, `mouse`, `up`) |
+
+  Each delivery is an `input` record (`bytes` for keys, `button` and `pressed`, `x` and `y` with
+  `at`, the position the driver then reports).
+
+How the input gets in, and why this way:
+
+- **Keys and buttons: DOSBox-X's integration device.** With `[cpu] integration device=true` (set
+  when there is input) DOSBox-X has an I/O device at ports 28h-2Ah (src/ints/bios.cpp, registers in
+  include/iglib.h) whose register 00804200h puts a byte into the keyboard controller's buffer as
+  the keyboard would (set 1 scan codes, what port 60h gives a DOS program, so INT 9 handlers and
+  INT 16h see a real key) and presses or releases a mouse button through the INT 33h driver's own
+  event path (a polling game sees the button, an event handler gets its event). The runner writes it
+  with the debugger's `OUTB`/`OUTD`, so the program is not touched and timing is the runner's.
+- **The pointer: the driver's own INT 33h 0004h, run from the debugger.** The same device's mouse
+  moves do nothing headless: with `mouse_emulation` at its default the driver puts the pointer where
+  the host's pointer is, and the setting only takes effect at an SDL motion event, which SDL's dummy
+  video driver never makes (`user_cursor_emulation` in src/gui/sdlmain.cpp, Mouse_CursorMoved in
+  src/ints/mouse.cpp; it also drops moves while the debugger is stopped). So at a stop in the
+  program's own code (a BREAK, repeated until it lands there: in protected mode the code selector of
+  the program's own last call, in real mode its memory, never the extender, the DPMI host, DOS or
+  the BIOS) the runner sets AX, CX, DX, has the CPU take INT 33h with the debugger's `INT 33`
+  command (an interrupt taken there, with a one-time breakpoint where it returns), and puts the
+  registers back: as if the program had called INT 33h 0004h itself, through its DOS extender in
+  protected mode. When a position is due the runner stops once (a BREAK) to set an INT 33h
+  breakpoint (unless `--ints` traces 33h already; one set while the CPU runs takes effect only at
+  the next stop), since a program's own INT 33h call is the best such place: a game that polls the
+  mouse gets its position within a frame (about 30 ms in the tests). After half a second without
+  one it BREAKs every 50 ms until a stop lands in the program's code (back to back, BREAKs leave
+  the program one instruction between them). Absolute and exact (the driver clamps to its range and granularity: multiples of
+  8 in text modes), and `move` reads the position with 0003h first. Limits: the driver's mickey
+  counters (000Bh) do not change and no movement event reaches an 000Ch handler, so a game that
+  reads relative motion does not see a move (the next button event carries the new position);
+  for such a game `--poke` its own variables. Placing the pointer can come a second late when the
+  program spends its time in the extender (a program that never calls INT 33h itself and runs mostly in its DPMI host).
+- **Not used, and why.** `AUTOTYPE` (src/dos/dos_programs.cpp, the mapper's Typer in
+  src/gui/sdl_mapper.cpp) types mapper key names from a host thread on the wall clock, with one pace
+  for all, and has to start from the shell before the program; it has no mouse. Mapper events have
+  no command to fire them. The integration device's moves need the SDL motion event above.
+  Changing registers at each INT 33h 0003h return would cost a stop per poll and miss handler games.
+
+Researched 2026-11-11 against DOSBox-X v2026.10.01's source: the integration device in
+src/ints/bios.cpp (`dosbox_integration_trigger_write`, `DOSBOX_ID_REG_8042_KB_INJECT`, ports 28h-2Ah,
+the `[cpu] integration device` setting in src/dosbox.cpp), include/iglib.h, `KEYBOARD_AddBuffer` in
+src/hardware/keyboard.cpp, the INT 33h driver in src/ints/mouse.cpp (`Mouse_CursorMoved`,
+`Mouse_ButtonPressed`, functions 0003h and 0004h), the debugger's `MEMDUMPBIN` (`SaveMemoryBin`: one
+byte at a time through `GetAddress`, no length limit; offsets wrap at 64 KiB in 16-bit segments, and
+the current CS gets its cached base without a limit check, which is how a linear address is read in
+protected mode), `SM`, `SMV`, `SR`, `OUTB`/`OUTD`, `SELINFO` and `INT` in src/debug/debug.cpp, the
+control channel's `BREAK` and its 1024-line queues in src/debug/debug_mcp.cpp (the runner sends at
+most 200 commands before waiting for their answers), and `mouse_emulation` in src/gui/sdlmain.cpp.
+Checked 2026-11-11 on Linux by `test_dosbox.py`: the parsing and the trigger handling against the
+stand-in debugger, and (opt-in) two programs it assembles, a real-mode .COM and a 32-bit protected-mode
+one under CWSDPMI, each writing a pattern at 9000:0000, waiting for a key, resetting the mouse and
+polling it until the left button is down: the dumps hold the pattern, the key, the placed position
+and the poked bytes, and the scripted click ends the program.
 
 ### How it works
 
@@ -562,7 +666,8 @@ Only DOSBox-X's own facilities, nothing patched:
   (the debugger's curses screen) is read and dropped. On Windows it opens a console of its own; the
   runner starts it in a hidden one.
 
-Limits: a real-mode callback's breakpoint is placed at the next stop in real or V86 mode (in
+Limits: a linear `--dump` address in protected mode needs a 32-bit CS (a DOS extender's flat
+code; otherwise give `SEL:OFF`), and in real mode reaches 10FFEFh at most. A real-mode callback's breakpoint is placed at the next stop in real or V86 mode (in
 protected mode the debugger reads BP's segment as a selector), so an entry that comes before any
 real-mode stop is missed; the DOS/4GW mouse path is not affected, since the extender's real-mode
 INT 33h 000Ch call names the callback. Interrupts a program raises without an `int` instruction

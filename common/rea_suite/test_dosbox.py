@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import hashlib
 import io
 import json
 import os
@@ -20,6 +21,7 @@ import unittest
 from pathlib import Path
 
 from rea_suite import dosbox
+from rea_suite import dosbox_actions as acts
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -190,6 +192,7 @@ class FakeDebugger:
         self.memdir, self.psp = memdir, psp
         self.current: tuple[dict, bytes] = (regs(), b"")
         self.commands: list[str] = []
+        self.memory: dict[str, bytes] = {}  # MEMDUMPBIN's address argument -> its bytes
 
     def request(self, command: str = "", kind: str = "EXEC") -> list[str]:
         self.commands.append(command)
@@ -201,20 +204,25 @@ class FakeDebugger:
             names = command.split()[1:]
             return [f"EV of '{' '.join(names)}' is:", " ".join(f"{state[n]:x}" for n in names)]
         if word == "MEMDUMPBIN":
-            (self.memdir / dosbox.MEMFILE).write_bytes(code)
+            (self.memdir / dosbox.MEMFILE).write_bytes(self.memory.get(command.split()[1], code))
         return ["DEBUG: ok"]
+
+    def request_all(self, commands: list[str]) -> list[list[str]]:
+        return [self.request(c) for c in commands]
 
     def stop(self, t: dosbox.Tracer, state: dict, code: bytes) -> bool:
         self.current = (state, code)
         return t.stop(state)
 
 
-def tracer(fake: FakeDebugger, tmp: Path, **options) -> tuple[dosbox.Tracer, list[dict]]:
+def tracer(
+    fake: FakeDebugger, tmp: Path, actions: acts.Actions | None = None, **options
+) -> tuple[dosbox.Tracer, list[dict]]:
     records: list[dict] = []
     out = dosbox.Output(None, quiet=True)
     out.write = records.append  # type: ignore[method-assign]
-    args = argparse.Namespace(ints="21,31,33,10", returns=False, nested=False, **options)
-    t = dosbox.Tracer(fake, out, tmp, args)  # type: ignore[arg-type]
+    options = {"ints": "21,31,33,10", "returns": False, "nested": False, **options}
+    t = dosbox.Tracer(fake, out, tmp, argparse.Namespace(**options), actions)  # type: ignore[arg-type]
     return t, records
 
 
@@ -438,6 +446,274 @@ cbregs: times 32h db 0
 """
 
 
+class ActionOptions(unittest.TestCase):
+    def test_triggers(self) -> None:
+        t = acts.parse_trigger("int21:3D")
+        self.assertEqual((t.kind, t.n, t.ah, t.al), ("int", 0x21, 0x3D, None))
+        self.assertEqual(t.breakpoints(), [(0x21, 0x3D, None)])
+        self.assertEqual(acts.parse_trigger("INT33").breakpoints(), [(0x33, None, None)])
+        self.assertEqual(acts.parse_trigger("t=2.5").seconds, 2.5)
+        self.assertEqual(acts.parse_trigger("exit").breakpoints(),
+                         [(0x21, 0x4C, None), (0x21, 0x00, None), (0x21, 0x31, None)])  # fmt: skip
+        self.assertEqual(acts.parse_trigger("open:data/foo.dat").name, "data/foo.dat")
+        for bad in ("int", "int123", "t=x", "t=-1", "open:", "soon"):
+            with self.assertRaises(ValueError, msg=bad):
+                acts.parse_trigger(bad)
+
+    def test_an_open_matches_the_name_or_the_paths_tail(self) -> None:
+        t = acts.parse_trigger("open:data/level.dat")
+        self.assertTrue(t.matches_call(0x21, 0x3D00, "C:\\GAME\\DATA\\LEVEL.DAT"))
+        self.assertTrue(t.matches_call(0x21, 0x6C00, "data\\level.dat"))
+        self.assertFalse(t.matches_call(0x21, 0x3D00, "C:\\GAME\\XDATA\\LEVEL.DAT"))
+        self.assertFalse(t.matches_call(0x21, 0x3C00, "DATA\\LEVEL.DAT"))  # a create
+        self.assertTrue(acts.parse_trigger("int21:3D:02").matches_call(0x21, 0x3D02, None))
+        self.assertFalse(acts.parse_trigger("int21:3D:02").matches_call(0x21, 0x3D00, None))
+
+    def test_dumps_and_pokes(self) -> None:
+        d = acts.parse_dump("0168:00012345:0x400@open:MAIN.DAT")
+        self.assertEqual((d.address.sel, d.address.off, d.length), (0x168, 0x12345, 0x400))
+        self.assertEqual(d.trigger.kind, "open")
+        d = acts.parse_dump("1A2B30:64@t=30")
+        self.assertEqual((d.address.linear, d.length, d.trigger.seconds), (0x1A2B30, 64, 30))
+        p = acts.parse_poke("90020=CA FE,01@start")
+        self.assertEqual((p.address.linear, p.data), (0x90020, b"\xca\xfe\x01"))
+        self.assertEqual(acts.poke_commands(p, "pm"), ["SMV 090020 0CA 0FE 001"])
+        p = acts.parse_poke("9000:20=90@exit")
+        self.assertEqual(acts.poke_commands(p, "rm"), ["SM 09000:020 090"])
+        for bad in ("90000:16", "90000@exit", "obj1+10:16@exit", "90000:0@exit", "zz:1@exit"):
+            with self.assertRaises(ValueError, msg=bad):
+                acts.parse_dump(bad)
+        for bad in ("90000=@exit", "90000=xyz@exit", "90000@exit"):
+            with self.assertRaises(ValueError, msg=bad):
+                acts.parse_poke(bad)
+
+    def test_memdump_pieces_by_mode(self) -> None:
+        linear = acts.parse_address("12345")
+        # real mode: segment = linear / 16, at most FFF0h bytes a piece (offsets wrap at 64 KiB)
+        self.assertEqual(acts.memdump_pieces(linear, 0x20000, "rm"),
+                         [(0x1234, 5, 0xFFF0), (0x2233, 5, 0xFFF0), (0x3232, 5, 0x20)])  # fmt: skip
+        self.assertEqual(acts.memdump_pieces(acts.parse_address("9000:0010"), 8, "v86"),
+                         [(0x9001, 0, 8)])  # fmt: skip
+        with self.assertRaises(ValueError):
+            acts.memdump_pieces(acts.parse_address("200000"), 1, "rm")
+        # protected mode: SEL:OFF as is, a linear address through CS less its base, mod 4 GiB
+        self.assertEqual(acts.memdump_pieces(acts.parse_address("A7:1000"), 9, "pm"),
+                         [(0xA7, 0x1000, 9)])  # fmt: skip
+        self.assertEqual(acts.memdump_pieces(linear, 4, "pm", cs=0x160, cs_base=0x10000),
+                         [(0x160, 0x2345, 4)])  # fmt: skip
+        self.assertEqual(acts.memdump_pieces(linear, 4, "pm", cs=0x160, cs_base=0x20000),
+                         [(0x160, 0xFFFF2345, 4)])  # fmt: skip
+
+    def test_selinfo_answer(self) -> None:
+        lines = ["SelectorInfo CS:", "CS: b:00010000 type:1B parbg", "    l:0000FFFF dpl : 3 11110"]
+        self.assertEqual(acts.parse_selinfo(lines), (0x10000, 0xFFFF, True))
+        lines[2] = "    l:0000FFFF dpl : 3 11100"
+        self.assertFalse(acts.parse_selinfo(lines)[2])
+        with self.assertRaises(ValueError):
+            acts.parse_selinfo(["SelectorInfo 0:", "   ", "   "])
+
+    def test_dump_record(self) -> None:
+        d = acts.parse_dump("90000:4@exit")
+        r = acts.dump_record(
+            d, Path("dump-01-exit.bin"), b"\x01\x02", "pm", "00A7:00000199", 0x90000
+        )
+        self.assertEqual((r["kind"], r["addr"], r["linear"], r["len"], r["trigger"], r["short"]),
+                         ("dump", "90000", "00090000", 4, "exit", 2))  # fmt: skip
+        self.assertEqual(r["sha256"], hashlib.sha256(b"\x01\x02").hexdigest())
+        self.assertEqual(
+            acts.dump_filename(3, acts.parse_dump("1:1@int21:3D")), "dump-03-int21-3D.bin"
+        )
+
+
+class InputScript(unittest.TestCase):
+    def test_keys_text_and_mouse(self) -> None:
+        steps = acts.parse_input(
+            't=10:ENTER t=12:"aB" t=13:ctrl+F6 t=14:RIGHT*2\n'
+            "# a comment\nt=15:mouse:160,100 t=16:click:right t=17:move:-8,4 t=18:down t=19:up"
+        )
+        got = [(s.t, s.kind, s.value) for s in steps]
+        self.assertEqual(got[:2], [(10, "keys", (0x1C,)), (10 + acts.KEY_HOLD, "keys", (0x9C,))])
+        typed = [v for t, k, v in got if 12 <= t < 13]
+        self.assertEqual(typed, [(0x1E,), (0x9E,), (0x2A, 0x30), (0xB0, 0xAA)])  # a, then shift+b
+        self.assertIn((13, "keys", (0x1D, 0x40)), got)
+        self.assertIn((16, "keys", (0xE0, 0xCD)), got)  # RIGHT, extended, released after 2 s
+        self.assertIn((15, "mouse", (160, 100)), got)
+        self.assertIn((16, "button", (1, True)), got)
+        self.assertIn((17, "move", (-8, 4)), got)
+        self.assertEqual([t for t, _, _ in got], sorted(t for t, _, _ in got))
+
+    def test_bad_items(self) -> None:
+        for bad in ("ENTER", "t=1:NOKEY", "t=1:mouse:1", "t=1:mouse:-1,0", "t=1:click:side",
+                    't=1:"é"', "t=1:ENTER*x", "t=1:ENTER junk"):  # fmt: skip
+            with self.assertRaises(ValueError, msg=bad):
+                acts.parse_input(bad)
+
+    def test_integration_device_writes(self) -> None:
+        keys, button = acts.parse_input("t=1:ENTER t=2:down:middle")[0::2]
+        self.assertEqual(acts.integration_values(keys), [0x1C])
+        self.assertEqual(acts.integration_values(button), [0x0882])
+        self.assertEqual(acts.integration_commands([0x1C]),
+                         ["OUTB 02A 00", "OUTD 028 0804200", "OUTD 029 01C"])  # fmt: skip
+        with self.assertRaises(ValueError):
+            acts.integration_values(acts.parse_input("t=1:mouse:1,1")[0])
+
+
+class ActionStops(unittest.TestCase):
+    """The tracer's triggers against the stand-in debugger."""
+
+    def test_triggered_dumps_once_and_breakpoints_for_them(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            fake = FakeDebugger(Path(tmp))
+            actions = acts.Actions.from_args(
+                ["9000:0:4@int16", "814:200:2@open:LEVEL.DAT", "90000:2@exit"],
+                ["90000=AA@start"],
+                None,
+            )
+            fake.memory["0814:0139"] = b"C:\\GAME\\LEVEL.DAT\0"
+            fake.memory["09000:00"] = b"PATT"
+            t, records = tracer(fake, Path(tmp), actions=actions, ints="33")
+            stops = [
+                (regs(eip=0x100), b"\xb4\x09"),
+                (regs(eip=0x105), b"\xcd\x16"),
+                (regs(eip=0x107), b"\xcd\x16"),  # again: once only
+                (regs(eax=0x3D00, edx=0x139, eip=0x109), b"\xcd\x21"),
+                (regs(eax=0x4C00, eip=0x10B), b"\xcd\x21"),
+            ]
+            for state, code in stops:
+                fake.stop(t, state, code)
+            for bp in ("BPINT 016", "BPINT 021 03D", "BPINT 021 06C", "BPINT 021 04C", "BPINT 033"):
+                self.assertIn(bp, fake.commands)
+            kinds = [(r["kind"], r.get("trigger")) for r in records]
+            self.assertEqual(kinds, [("start", None), ("poke", "start"), ("dump", "int16"),
+                                     ("dump", "open:LEVEL.DAT"), ("dump", "exit")])  # fmt: skip
+            self.assertIn("SMV 090000 0AA", fake.commands)
+            self.assertIn("MEMDUMPBIN 09000:00 04 REAMEM.BIN", fake.commands)
+            self.assertEqual(records[3]["path"], "C:\\GAME\\LEVEL.DAT")
+            self.assertNotIn("int", [r["kind"] for r in records])  # 21 and 16 are not --ints
+            first = Path(records[2]["file"])
+            self.assertEqual(first.read_bytes(), b"PATT")
+            self.assertEqual(records[2]["sha256"], hashlib.sha256(b"PATT").hexdigest())
+            self.assertTrue(t.done)
+
+    def test_the_mouse_is_placed_only_in_the_programs_own_code(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            t, _ = tracer(FakeDebugger(Path(tmp)), Path(tmp))
+            t.psp = 0x814
+            self.assertTrue(t.own_code(regs(cs=0x814)))
+            self.assertFalse(t.own_code(regs(cs=0xF000)))  # BIOS, DOSBox-X's callbacks
+            self.assertTrue(t.own_code(regs(cs=0xA7, cr0=1)))  # protected mode, none seen yet
+            t.app_cs = 0xA7
+            self.assertFalse(t.own_code(regs(cs=0x8F, cr0=1)))  # the DPMI host's
+            self.assertFalse(t.own_code(regs(cs=0x814)))  # its extender's real-mode part
+
+
+# Writes a pattern at 9000:0000, waits for a key (INT 16h), resets the mouse and polls it (INT 33h
+# 0003h) until the left button is down, keeps the key, the reset's answer and the position at
+# 9000:0010, and exits. The 32-bit protected-mode variant does the same from a 32-bit code segment
+# it makes, under CWSDPMI.
+INPUT = """org 100h
+        mov ax, 9000h
+        mov es, ax
+        xor di, di
+        mov si, pattern
+        mov cx, 16
+        rep movsb
+        xor ah, ah
+        int 16h
+        mov [es:10h], ax
+        xor ax, ax
+        int 33h
+        mov [es:12h], ax
+.poll:  mov ax, 3
+        int 33h
+        test bx, 1
+        jz .poll
+        mov [es:14h], cx
+        mov [es:16h], dx
+        mov ax, 4C00h
+        int 21h
+pattern db 'REA-DUMP-PATTERN'
+"""
+
+INPUT_PM = """org 100h
+        mov [rmseg], cs
+        mov ah, 4Ah
+        mov bx, 1000h
+        int 21h
+        mov ax, 1687h
+        int 2Fh
+        test ax, ax
+        jnz fail
+        mov [entry], di
+        mov [entry+2], es
+        mov ax, cs
+        add ax, 1000h
+        mov es, ax
+        mov ax, 1
+        call far [entry]
+        jc fail
+        xor ax, ax
+        mov cx, 1
+        int 31h
+        jc fail
+        mov [sel32], ax
+        mov bx, ax
+        mov dx, [rmseg]
+        mov cx, dx
+        shl dx, 4
+        shr cx, 12
+        mov ax, 7
+        int 31h
+        mov bx, [sel32]
+        xor cx, cx
+        mov dx, 0FFFFh
+        mov ax, 8
+        int 31h
+        mov bx, [sel32]
+        mov cx, 40FAh
+        mov ax, 9
+        int 31h
+        jc fail
+        mov ax, 2
+        mov bx, 9000h
+        int 31h
+        mov [sel9000], ax
+        push word [sel32]
+        push word code32
+        retf
+fail:   mov ax, 4C01h
+        int 21h
+bits 32
+code32: mov ah, 30h
+        int 21h
+        mov es, [sel9000]
+        xor edi, edi
+        mov esi, pattern
+        mov ecx, 16
+        rep movsb
+        xor ah, ah
+        int 16h
+        mov [es:10h], ax
+        xor eax, eax
+        int 33h
+        mov [es:12h], ax
+.poll:  mov eax, 3
+        int 33h
+        test bx, 1
+        jz .poll
+        mov [es:14h], cx
+        mov [es:16h], dx
+        mov ax, 4C00h
+        int 21h
+bits 16
+pattern db 'REA-DUMP-PATTERN'
+rmseg   dw 0
+entry   dd 0
+sel32   dw 0
+sel9000 dw 0
+"""
+
+
 @unittest.skipUnless(os.environ.get("REA_DOSBOX_INTEGRATION"), "runs DOSBox-X")
 class RealRun(unittest.TestCase):
     def run_program(self, source: str, name: str, *options: str) -> list[dict]:
@@ -454,8 +730,25 @@ class RealRun(unittest.TestCase):
                     "--workdir", str(Path(tmp) / "run"), *options, str(Path(tmp) / name)]  # fmt: skip
             status = dosbox.main(argv)
             records = [json.loads(line) for line in log.read_text().splitlines()]
+            for r in records:  # the dumps' bytes, before the folder goes
+                if r["kind"] == "dump":
+                    r["data"] = Path(r["file"]).read_bytes()
         self.assertEqual(status, 0, records[-3:])
         return records
+
+    def check_dumps_and_input(self, records: list[dict], x: int, y: int) -> None:
+        dumps = {r["trigger"]: r for r in records if r["kind"] == "dump"}
+        self.assertEqual(dumps["int16"]["data"], b"REA-DUMP-PATTERN")  # before the key is read
+        self.assertEqual(dumps["int16"]["sha256"], hashlib.sha256(b"REA-DUMP-PATTERN").hexdigest())
+        # at the exit: ENTER (scan code 1Ch, character 0Dh), the mouse reset's FFFFh, the
+        # position placed, and the bytes the poke wrote
+        self.assertEqual(
+            dumps["exit"]["data"], struct.pack("<4H", 0x1C0D, 0xFFFF, x, y) + bytes(8) + b"\xca\xfe"
+        )
+        placed = next(r for r in records if r["kind"] == "input" and r["input"] == "mouse")
+        self.assertEqual(placed["at"], [x, y])
+        self.assertEqual(records[-1]["kind"], "exit")
+        self.assertFalse(records[-1]["timed_out"])  # the scripted click ended it
 
     def test_real_mode_program(self) -> None:
         records = self.run_program(HELLO, "HELLO.COM")
@@ -478,6 +771,26 @@ class RealRun(unittest.TestCase):
         callback = next(r for r in records if r["kind"] == "callback")
         self.assertEqual(callback["at"], back["callback"])
         self.assertEqual(callback["via"], "dpmi 0303")
+
+    def test_dumps_pokes_keys_and_mouse_in_real_mode(self) -> None:
+        records = self.run_program(
+            INPUT, "INPUT.COM", "--ints", "21",
+            "--dump", "90000:16@int16", "--dump", "9000:0010:18@exit", "--dump", "90000:4@t=3",
+            "--poke", "90020=CAFE@start",
+            "--input", "t=0:ENTER t=2:mouse:104,48 t=4:click",
+        )  # fmt: skip
+        self.check_dumps_and_input(records, 104, 48)
+        timed = next(r for r in records if r.get("trigger") == "t=3")
+        self.assertEqual(timed["data"], b"REA-")
+
+    def test_dumps_pokes_keys_and_mouse_in_protected_mode(self) -> None:
+        records = self.run_program(
+            INPUT_PM, "INPUT32.COM", "--dpmi", "--ints", "21",
+            "--dump", "90000:16@int16", "--dump", "90010:18@exit", "--poke", "90020=CAFE@int16",
+            "--input", "t=0:ENTER t=2:mouse:200,64 t=5:click",
+        )  # fmt: skip
+        self.check_dumps_and_input(records, 200, 64)
+        self.assertEqual({r["mode"] for r in records if r["kind"] in ("dump", "poke")}, {"pm"})
 
 
 if __name__ == "__main__":

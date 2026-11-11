@@ -24,6 +24,12 @@ Two sources, both DOSBox-X's own, nothing patched:
   registers each call returns with. A stop costs about 15 ms of round trips, so a game runs slower
   than normal; its own timing is unaffected (the emulated clock stops with it).
 
+With nobody at the keyboard: --dump ADDR:LEN@TRIGGER writes memory to a file of the run's folder and
+--poke ADDR=BYTES@TRIGGER writes into it, at an interrupt call (int21:3D), a file open
+(open:DATA/MAP.DAT), a time (t=30), the program's start or its exit; --input 't=10:ENTER
+t=12:"abc" t=13:mouse:160,100 t=13.5:click' types keys (DOSBox-X's integration device) and places
+the pointer and clicks (INT 33h 0004h run from the debugger at a stop in the program's own code).
+
 Options come before PROGRAM; everything after it is the program's arguments. docs/PORT-TOOLS.md
 ("DOS programs") has the details, the limits and the sources.
 
@@ -40,6 +46,7 @@ build that has the debugger and its control channel.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import re
@@ -56,6 +63,8 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from rea_suite import dosbox_actions as acts
+
 ROOT = Path(__file__).resolve().parents[2]
 WORK = ROOT / "work" / "dosbox"
 DEFAULT_INTS = "21,31,33,10"
@@ -63,6 +72,9 @@ DEFAULT_INTS = "21,31,33,10"
 DEFAULT_GROUPS = "files,dosmisc,exec,mouse,int10"
 MEMFILE = "REAMEM.BIN"  # the debugger's MEMDUMPBIN target, in DOSBox-X's working folder
 CALL_STRUCT = 0x32  # DPMI real-mode call structure
+MOUSE_BP = ("int", 0x33, "mouse")  # the INT 33h breakpoint set while a pointer move waits
+MOUSE_PATIENCE = 0.5  # seconds to wait for the program's own INT 33h call before BREAKs
+MOUSE_RETRY = 0.05  # between BREAKs that land outside the program's code
 REGISTERS = (
     "EAX", "EBX", "ECX", "EDX", "ESI", "EDI", "EBP", "ESP", "EIP", "EFLAGS",
     "CS", "DS", "ES", "FS", "GS", "SS", "CR0",
@@ -282,6 +294,24 @@ class Channel:
             del self.blocks[key]
         return self.blocks.pop(rid)
 
+    def request_all(self, commands: list[str], batch: int = 200) -> list[list[str]]:
+        """Several EXEC requests sent at once: DOSBox-X takes every line that has arrived in one
+        turn, so a batch costs a few round trips, not one a command. Its queues hold 1024 lines
+        each way and drop the oldest beyond that, so a batch waits for its answers (a PING's,
+        which come after them) before the next goes out."""
+        out = []
+        for start in range(0, len(commands), batch):
+            rids = []
+            lines = []
+            for command in commands[start : start + batch]:
+                self.serial += 1
+                rids.append(str(self.serial))
+                lines.append(f"REQ {self.serial} EXEC {command}")
+            self._send("\n".join(lines))
+            self.request("", "PING")
+            out += [self.blocks.pop(rid, ["ERR", "no answer"]) for rid in rids]
+        return out
+
 
 def parse_ev(lines: list[str], names: Iterable[str]) -> dict[str, int]:
     """The `EV A B C` command's answer: a header line, then the values in hex on one line."""
@@ -474,7 +504,9 @@ def dos_command(program: Path, mount: Path, args: list[str]) -> tuple[str, str]:
     return folder, " ".join([relative.name, *args])
 
 
-def dosbox_command(args, binary: str, run_dir: Path, port: int | None) -> list[str]:
+def dosbox_command(
+    args, binary: str, run_dir: Path, port: int | None, actions: acts.Actions | None = None
+) -> list[str]:
     program = (args.caller_cwd / args.program).resolve()
     mount = (args.caller_cwd / args.mount).resolve() if args.mount else program.parent
     folder, command = dos_command(program, mount, args.args)
@@ -490,6 +522,8 @@ def dosbox_command(args, binary: str, run_dir: Path, port: int | None) -> list[s
     if port:
         settings["dosbox mcp_server"] = str(port)
         settings["cpu core"] = "normal"  # only the normal core checks interrupt breakpoints
+    if actions and actions.steps:
+        settings["cpu integration device"] = "true"  # the input goes in through it
     if not args.window:
         # no MIDI either: DOSBox-X's default tries a TiMidity server and can hang connecting to it
         settings.update({"midi mididevice": "none", "mixer nosound": "true"})
@@ -516,11 +550,19 @@ class Tracer:
     answered at a later emulated millisecond), then told apart by the code at CS:EIP: `int n` for a
     traced n is a call, a known address a return or a callback, `hlt` a running CPU that waits."""
 
-    def __init__(self, channel: Channel, out: Output, run_dir: Path, args):
+    def __init__(self, channel: Channel, out: Output, run_dir: Path, args, actions=None):
         self.ch = channel
         self.out = out
+        self.run_dir = run_dir
         self.mem = run_dir / MEMFILE
-        self.ints = parse_ints(args.ints)
+        self.actions = actions or acts.Actions()
+        self.steps = list(self.actions.steps)  # input still to deliver, in time order
+        self.logged = parse_ints(args.ints)  # the calls --ints asks to log
+        # and the breakpoints the triggers need besides, where --ints' own do not include them
+        self.ints = list(self.logged)
+        for spec in self.actions.breakpoints():
+            if not acts.spec_covered(spec, self.ints):
+                self.ints.append(spec)
         self.traced = {n for n, _, _ in self.ints}
         self.returns = args.returns
         self.nested = args.nested
@@ -532,6 +574,11 @@ class Tracer:
         self.started = False
         self.psp: int | None = None
         self.done = False  # the program ended: the breakpoints are gone, DOSBox-X runs on its own
+        self.breaking = False  # a BREAK went out for actions at a time: the next stop is theirs
+        self.ending = False  # the run's time is up: no more input or timed actions
+        self.dumps = 0
+        self.app_cs: int | None = None  # the program's protected-mode code selector, once seen
+        self.mouse_break = 0.0  # when a BREAK may be made for the pointer
 
     def regs(self) -> dict[str, int]:
         return parse_ev(self.ch.request("EV " + " ".join(REGISTERS)), REGISTERS)
@@ -559,6 +606,15 @@ class Tracer:
     def wait_stop(self, alive: Callable[[], bool], tick: Callable[[], None]) -> dict | None:
         previous, same, flushed = None, 0, time.monotonic()
         while alive():
+            if self.started and not self.done and not self.ending:
+                self.deliver_input()
+                # the pointer: a first BREAK to set an INT 33h breakpoint (one set while the CPU
+                # runs takes effect only at the next stop), then the program's own INT 33h calls
+                # for a while, then BREAKs spaced out (back to back they starve the program)
+                mouse = self.mouse_due() and time.monotonic() >= self.mouse_break
+                if not self.breaking and (self.actions.due(self.now()) or mouse):
+                    self.ch.request("", "BREAK")  # a stop for the actions due now
+                    self.breaking = True
             regs = self.regs()
             same = same + 1 if regs == previous else 0
             previous = regs
@@ -577,11 +633,24 @@ class Tracer:
             self.bps.add(("int", n, ah, al))
         self.out.write({"kind": "start", "entry": at(regs), "mode": cpu_mode(regs)})
         self.started = True
+        for action in self.actions.pending("start"):
+            self.act(action, regs)
 
     def call(self, n: int, regs: dict[str, int]) -> None:
         if from_bios(regs) and not self.nested:
             return
+        ax = regs["EAX"] & 0xFFFF
+        if cpu_mode(regs) == "pm":
+            self.app_cs = regs["CS"]
         record = int_record(n, regs, self.read)
+        if any(acts.covers(spec, n, ax) for spec in self.logged):
+            self.log_call(n, regs, record)
+        for action in self.actions.memory():
+            if not action.done and action.trigger.matches_call(n, ax, record.get("path")):
+                detail = {"path": record["path"]} if action.trigger.kind == "open" else {}
+                self.act(action, regs, detail)
+
+    def log_call(self, n: int, regs: dict[str, int], record: dict) -> None:
         self.calls += 1
         record["call"] = self.calls
         if from_bios(regs):
@@ -683,17 +752,240 @@ class Tracer:
         if traced_int:
             self.call(code[1], regs)
             if self.ends_program(code[1], regs):
+                for action in self.actions.pending("exit"):
+                    self.act(action, regs)
                 self.finish()
         self.place_real_callbacks(regs)
         self.resume()
         return True
 
-    def run(self, alive: Callable[[], bool], tick: Callable[[], None]) -> None:
+    def run(
+        self,
+        alive: Callable[[], bool],
+        tick: Callable[[], None],
+        running: Callable[[], bool] | None = None,
+    ) -> None:
         while alive() and not self.done:
             regs = self.wait_stop(alive, tick)
             tick()
-            if regs is not None and not self.stop(regs):
-                time.sleep(0.002)
+            if regs is None:
+                continue
+            placed = False
+            if self.started and self.mouse_due():
+                if 0x33 not in self.traced:  # the program's own INT 33h calls: the best places
+                    self.ch.request(bpint(0x33, None, None))
+                    self.bps.add(MOUSE_BP)
+                    self.traced.add(0x33)
+                    self.mouse_break = time.monotonic() + MOUSE_PATIENCE
+                placed = self.place_mouse(regs)
+                if not placed and self.breaking:  # not in the program's own code: later again
+                    self.mouse_break = max(self.mouse_break, time.monotonic() + MOUSE_RETRY)
+            if self.breaking:  # the stop the BREAK made, or a breakpoint's that came first
+                self.breaking = False
+                for action in self.actions.due(self.now()):
+                    self.act(action, regs)
+                if not self.stop(regs):
+                    self.resume()
+            elif not self.stop(regs):
+                if placed:  # the stop of the INT 33h breakpoint, gone now
+                    self.resume()
+                else:
+                    time.sleep(0.002)
+        if running and self.started and not self.done and self.actions.pending("exit"):
+            self.end(running, tick)
+
+    # --- actions: dumps, pokes, input ---
+
+    def now(self) -> float:
+        """Seconds on the records' clock (their `t`)."""
+        return time.monotonic() - self.out.start
+
+    def end(self, running: Callable[[], bool], tick: Callable[[], None]) -> None:
+        """The run's time is up with the program still running: a last stop for `exit` actions."""
+        self.ending = True
+        until = time.monotonic() + 10
+        self.ch.request("", "BREAK")
+        regs = self.wait_stop(lambda: running() and time.monotonic() < until, tick)
+        if regs is not None:
+            for action in self.actions.pending("exit"):
+                self.act(action, regs, {"ended": "seconds"})
+
+    def act(self, action, regs: dict[str, int], detail: dict | None = None) -> None:
+        """A dump or a poke, once, at a stop (the mode and CS say how its address reads)."""
+        action.done = True
+        try:
+            record = (
+                self.poke(action, regs)
+                if isinstance(action, acts.Poke)
+                else self.dump(action, regs)
+            )
+        except (ValueError, OSError) as exc:
+            record = {"kind": "error", "error": str(exc), "action": action.text}
+        record.update(detail or {})
+        self.out.write(record)
+
+    def dump(self, dump: acts.Dump, regs: dict[str, int]) -> dict:
+        mode = cpu_mode(regs)
+        cs_base = 0
+        linear = acts.linear_of(dump.address, mode)
+        if mode == "pm" and dump.address.linear is not None:
+            cs_base, _, big = acts.parse_selinfo(self.ch.request("SELINFO CS"))
+            # stopped in 16-bit code (a DPMI host's, an extender's): a 32-bit selector covering it
+            if not big:
+                dump = acts.Dump(
+                    self.flat_address(dump, regs), dump.length, dump.trigger, dump.text
+                )
+        elif mode == "pm":  # SEL:OFF: the linear address from the descriptor, for the record
+            with contextlib.suppress(ValueError):
+                base = acts.parse_selinfo(self.ch.request(f"SELINFO {hexarg(dump.address.sel)}"))[0]
+                linear = (base + dump.address.off) & 0xFFFFFFFF
+        pieces = acts.memdump_pieces(dump.address, dump.length, mode, regs["CS"], cs_base)
+        self.dumps += 1
+        path = self.run_dir / acts.dump_filename(self.dumps, dump)
+        data = b"".join(self.read(seg, off, size) for seg, off, size in pieces)
+        path.write_bytes(data)
+        return acts.dump_record(dump, path, data, mode, at(regs), linear)
+
+    def flat_address(self, dump: acts.Dump, regs: dict[str, int]) -> acts.Address:
+        """A linear range as SEL:OFF through a 32-bit selector whose limit covers it: the
+        program's own code selector, then the data and stack registers'."""
+        linear = dump.address.linear
+        for sel in dict.fromkeys([self.app_cs, *(regs[r] for r in ("DS", "ES", "SS", "FS", "GS"))]):
+            if not sel:
+                continue
+            try:
+                base, limit, big = acts.parse_selinfo(self.ch.request(f"SELINFO {hexarg(sel)}"))
+            except ValueError:
+                continue
+            off = (linear - base) & 0xFFFFFFFF  # type: ignore[operator]
+            if big and off + dump.length - 1 <= limit:
+                return acts.Address(dump.address.text, linear=None, sel=sel, off=off)
+        raise ValueError(f"{dump.text}: no 32-bit selector covers it at this stop; give SEL:OFF")
+
+    def poke(self, poke: acts.Poke, regs: dict[str, int]) -> dict:
+        mode = cpu_mode(regs)
+        refused = [
+            a for a in self.ch.request_all(acts.poke_commands(poke, mode)) if a[:1] == ["ERR"]
+        ]
+        if refused:
+            raise ValueError(f"{poke.text}: the debugger refused it: {refused[0]!r}")
+        return {
+            "kind": "poke",
+            "addr": poke.address.text,
+            "bytes": poke.data.hex(),
+            "trigger": poke.trigger.text,
+            "mode": mode,
+            "at": at(regs),
+        }
+
+    def deliver_input(self) -> None:
+        """Keys and buttons due now, through the integration device (taken whether the emulation
+        runs or stands at a stop), up to a mouse position, which needs a stop (place_mouse)."""
+        now = self.now()
+        while self.steps and self.steps[0].t <= now and self.steps[0].kind in ("keys", "button"):
+            step = self.steps.pop(0)
+            values = acts.integration_values(step)
+            answers = self.ch.request_all(acts.integration_commands(values))
+            record = {"kind": "input", "input": step.kind, "source": step.source}
+            if step.kind == "keys":
+                record["bytes"] = bytes(step.value).hex()
+            else:
+                record.update(button=step.value[0], pressed=step.value[1])
+            self.input_record(record, step, now, answers)
+
+    def input_record(self, record: dict, step, now: float, answers: list[list[str]]) -> None:
+        if late := round(now - step.t, 3):
+            record["late"] = late
+        # the rest of the script moves back as much: holds and gaps keep their length
+        if late > 0.01:
+            for later in self.steps:
+                later.t += late
+        if any(a[:1] == ["ERR"] for a in answers):
+            record["error"] = "the debugger refused a command"
+        self.out.write(record)
+
+    def mouse_due(self) -> bool:
+        return (
+            bool(self.steps)
+            and self.steps[0].kind in ("mouse", "move")
+            and self.steps[0].t <= self.now()
+        )
+
+    def own_code(self, regs: dict[str, int]) -> bool:
+        """A stop in the program's own code, where running an interrupt is as safe as the program
+        making the call there: in protected mode its code selector (that of its own last call),
+        in real mode its memory (from its PSP up to A000h). Not in the DOS extender, the DPMI host,
+        DOS or the BIOS."""
+        if cpu_mode(regs) == "pm":
+            return self.app_cs is None or regs["CS"] == self.app_cs
+        if self.app_cs is not None:  # a protected-mode program in real mode: its extender's
+            return False
+        return self.psp is not None and self.psp <= regs["CS"] < 0xA000
+
+    def place_mouse(self, regs: dict[str, int]) -> bool:
+        """The mouse positions due now, by INT 33h 0004h run at this stop; False when this stop
+        is not in the program's own code (the caller resumes and stops again later)."""
+        if not self.own_code(regs):
+            return False
+        # a stop for certain (equal registers can be a CPU waiting in hlt while it runs): the BREAK
+        # asked for, or an interrupt breakpoint's
+        code = self.read(regs["CS"], regs["EIP"], 2)
+        if not self.breaking and not (code[:1] == b"\xcd" and code[1] in self.traced):
+            return False
+        now = self.now()
+        while self.mouse_due():
+            step = self.steps.pop(0)
+            x, y = step.value
+            record = {"kind": "input", "input": step.kind, "source": step.source}
+            if step.kind == "move":
+                back = self.int33(regs, 0x0003)
+                x += _signed16(back["ECX"])
+                y += _signed16(back["EDX"])
+                record["from"] = [_signed16(back["ECX"]), _signed16(back["EDX"])]
+            self.int33(regs, 0x0004, x, y)
+            after = self.int33(regs, 0x0003)
+            record.update(
+                x=step.value[0],
+                y=step.value[1],
+                at=[_signed16(after["ECX"]), _signed16(after["EDX"])],
+            )
+            self.input_record(record, step, now, [])
+        self.mouse_break = 0.0
+        if MOUSE_BP in self.bps.keys and not self.mouse_due():
+            self.ch.request(f"BPDEL {hexarg(self.bps.remove(MOUSE_BP))}")
+            self.traced = {n for n, _, _ in self.ints}
+        self.deliver_input()  # keys and buttons after it, at this stop
+        return True
+
+    def int33(self, regs: dict[str, int], ax: int, cx: int = 0, dx: int = 0) -> dict[str, int]:
+        """Run INT 33h with AX, CX, DX from this stop (the debugger's INT command: an interrupt
+        taken here, and a one-time breakpoint where it returns), and put the registers back.
+        Stops elsewhere on the way (a traced interrupt the driver's path makes) are run past."""
+        self.ch.request(f"SR EAX {hexarg(ax)} ECX {hexarg(cx & 0xFFFF)} EDX {hexarg(dx & 0xFFFF)}")
+        self.ch.request("INT 033")
+        home = (regs["CS"], regs["EIP"])
+        until = time.monotonic() + 10
+        previous = None
+        while True:
+            if time.monotonic() > until:
+                raise ChannelError("INT 33h run from the debugger did not come back")
+            now = self.regs()
+            if now == previous:
+                if (now["CS"], now["EIP"]) == home:
+                    break
+                self.resume()
+                now = None
+            previous = now
+            time.sleep(0.001)
+        self.ch.request(
+            f"SR EAX {hexarg(regs['EAX'])} ECX {hexarg(regs['ECX'])} EDX {hexarg(regs['EDX'])}"
+        )
+        return previous
+
+
+def _signed16(value: int) -> int:
+    value &= 0xFFFF
+    return value - 0x10000 if value & 0x8000 else value
 
 
 class Terminal:
@@ -743,16 +1035,20 @@ def run(args) -> int:
         return 2
     stamp = time.strftime("%Y%m%d-%H%M%S")
     run_dir = (args.caller_cwd / args.workdir) if args.workdir else WORK / f"{stamp}-{program.stem}"
+    script = args.input
+    if args.input_file:
+        script = (args.caller_cwd / args.input_file).read_text(encoding="utf-8")
+    actions = acts.Actions.from_args(args.dump, args.poke, script)  # ValueError: exit 2
     run_dir.mkdir(parents=True, exist_ok=True)
     out = Output(args.caller_cwd / args.log if args.log else None, args.quiet)
-    trace = bool(args.ints)
+    trace = bool(args.ints) or bool(actions)  # dumps, pokes and input go through the debugger
     server = None
     port = None
     if trace:
         server = socket.create_server(("127.0.0.1", 0))
         server.settimeout(0.2)
         port = server.getsockname()[1]
-    cmd = dosbox_command(args, binary, run_dir, port)
+    cmd = dosbox_command(args, binary, run_dir, port, actions)
     (run_dir / "command.txt").write_text(shlex.join(cmd) + "\n")
     env = dict(os.environ)
     if not args.window:
@@ -778,6 +1074,8 @@ def run(args) -> int:
             "dosbox": binary,
             "run_dir": str(run_dir),
             "trace": args.ints if trace else None,
+            **({"actions": [a.text for a in actions.memory()]} if actions.memory() else {}),
+            **({"input": len(actions.steps)} if actions.steps else {}),
         }
     )
     tail = LogTail(run_dir / "dosbox-x.log")
@@ -827,15 +1125,16 @@ def run(args) -> int:
                     {
                         "kind": "error",
                         "error": "DOSBox-X opened no debugger control channel: this build has no "
-                        "debugger or no mcp_server (rea-suite dosbox info; --ints '' for the log "
-                        "alone)",
+                        "debugger or no mcp_server (rea-suite dosbox info; --ints '' without "
+                        "--dump, --poke or --input for the log alone)",
                     }
                 )
                 status = 2
                 stop_process(proc)
             elif conn is not None:
                 try:
-                    Tracer(Channel(conn), out, run_dir, args).run(alive, tick)
+                    tracer = Tracer(Channel(conn), out, run_dir, args, actions)
+                    tracer.run(alive, tick, running=lambda: proc.poll() is None)
                 except ChannelError as exc:
                     try:
                         proc.wait(5)  # the channel closes when DOSBox-X quits
@@ -973,6 +1272,31 @@ def parser() -> argparse.ArgumentParser:
         "empty: the log only). Each stop costs about 20 ms: for a DOS/4GW game's load trace narrowly "
         "(21:3D,33,10), the full set only for a short window",
     )
+    r.add_argument(
+        "--dump",
+        action="append",
+        default=[],
+        metavar="ADDR:LEN@TRIGGER",
+        help="write LEN bytes (decimal, or 0x hex) from ADDR (hex: linear, or SEL:OFF) to a file in "
+        "the run's folder when TRIGGER comes, once: intNN[:AH[:AL]], open:NAME, t=SECONDS, start, "
+        "exit (repeatable)",
+    )
+    r.add_argument(
+        "--poke",
+        action="append",
+        default=[],
+        metavar="ADDR=BYTES@TRIGGER",
+        help="write the bytes (hex) at ADDR when TRIGGER comes, once, before that trigger's dumps "
+        "(repeatable)",
+    )
+    r.add_argument(
+        "--input",
+        "--keys",
+        metavar="SCRIPT",
+        help='keyboard and mouse input at times: \'t=10:ENTER t=12:"abc" t=13:mouse:160,100 '
+        "t=13.5:click' (docs/PORT-TOOLS.md)",
+    )
+    r.add_argument("--input-file", type=Path, help="the --input script from a file, an item a line")
     r.add_argument("--returns", action="store_true", help="log the registers each call returns")
     r.add_argument("--nested", action="store_true", help="also calls made by BIOS code")
     r.add_argument(
