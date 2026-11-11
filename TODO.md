@@ -20,10 +20,6 @@ with the reason when it is dropped.
   apitrace, or a trace taken after Wine's translation to OpenGL/Vulkan.
 - **Kaitai Struct (compiler and visualizer)**: describe a game's file formats once and get
   parsers and a structure viewer from the description.
-- **DOSBox-X with its debugger**: run and debug DOS-era games and their installers.
-- **`rea-suite dosbox`**: a wrapper around DOSBox-X's debugger as an analysis aid for DOS games: log
-  the INT calls (DOS, DPMI, the extender's) and real-mode callbacks of a run as JSON lines, the way
-  `rea-suite frida` logs a Windows game. Wanted by the Theme Park port (2026-11-11).
 - **Upstream wishes for REA (rea-agents, not changed from here)**, both found by the Theme Park port
   (2026-11-11):
   - open_binary for LE/LX: REA's own format check refuses an MZ image with an LE header before any

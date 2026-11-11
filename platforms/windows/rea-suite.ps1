@@ -16,6 +16,7 @@
     .\platforms\windows\rea-suite.ps1 rmdp list|extract|find|inner <index.bin> ...  # Remedy packages
     .\platforms\windows\rea-suite.ps1 le info|dump-object|dump-image|services <exe> ...  # LE/LX executables (DOS extenders)
     .\platforms\windows\rea-suite.ps1 frida <script.js> --pid|--name|--spawn ...  # Frida script, JSON lines
+    .\platforms\windows\rea-suite.ps1 dosbox run|parse|info ...  # a DOS program in DOSBox-X, its INT calls as JSON lines
     .\platforms\windows\rea-suite.ps1 pad --presses 30:DOWN,33:A [--idle-pad]  # virtual Xbox 360 pad (ViGEm)
     .\platforms\windows\rea-suite.ps1 run --script steps.txt --start D:\Game\Game.exe  # bounded, observed run of a program
     .\platforms\windows\rea-suite.ps1 analyze [paths...] [options]  # offline analysis; --examples
@@ -30,7 +31,7 @@
 #>
 #Requires -Version 7
 param(
-    [Parameter(Position = 0)][ValidateSet('setup', 'select', 'winget', 'update', 'reinstall', 'agents', 'analyze', 'playstation', 'xbox360', 'functions', 'steamstub', 'pe', 'rmdp', 'le', 'frida', 'pad', 'run', 'doctor', 'status', 'tools', 'clean', 'lint')][string]$Command = 'setup',
+    [Parameter(Position = 0)][ValidateSet('setup', 'select', 'winget', 'update', 'reinstall', 'agents', 'analyze', 'playstation', 'xbox360', 'functions', 'steamstub', 'pe', 'rmdp', 'le', 'frida', 'dosbox', 'pad', 'run', 'doctor', 'status', 'tools', 'clean', 'lint')][string]$Command = 'setup',
     [Parameter(Position = 1, ValueFromRemainingArguments)][string[]]$Rest = @()
 )
 $ErrorActionPreference = 'Stop'
@@ -204,6 +205,7 @@ switch ($Command) {
     'functions' { & uv run --offline --no-sync common\rea_suite\functions.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'steamstub' { & uv run --offline --no-sync common\rea_suite\steamstub.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'frida' { & uv run --offline --no-sync common\rea_suite\frida_run.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
+    'dosbox' { & uv run --offline --no-sync common\rea_suite\dosbox.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'pad' { & uv run --offline --no-sync common\rea_suite\vigem_pad.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'run' { & uv run --offline --no-sync common\rea_suite\run_harness.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'pe' { & uv run --offline --no-sync common\rea_suite\pe.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }

@@ -2,7 +2,8 @@
 
 Tools that came out of the game ports (first the Alan Wake II port, 2026-11) and work for any
 Windows game: scans of the executable from the file alone, passive Frida observers, a virtual
-pad and a run harness that drives and watches a game. A game's addresses, names and switches never live
+pad and a run harness that drives and watches a game; for DOS games, LE executables and a DOSBox-X
+run that logs the interrupts a game makes. A game's addresses, names and switches never live
 here: they come in as arguments or a file of the port's own.
 
 What REA already does is not repeated: `search_strings`, `xrefs`, `find_xrefs_to_name` and the
@@ -471,6 +472,135 @@ worked; writing, appending to, deleting or renaming into a file outside, a hard 
 outside file, a write through a junction from `allowed` to the outside folder and starting
 `cmd.exe` were all refused, and the outside file was unchanged. Not yet run against a game, and
 not on x86 (the offsets follow the pointer size; untested).
+
+## DOS programs: `rea-suite dosbox`
+
+`rea-suite dosbox run PROGRAM [ARG...]` runs a DOS program in DOSBox-X (component `dos`) and writes
+what it asks of DOS, the DPMI host, the mouse driver and the video BIOS as JSON lines (stdout, and
+`--log FILE`), the way `rea-suite frida` logs a Windows game: for a comparison run of the original
+next to a port. The program's folder is drive C: (`--mount DIR` for a folder above it), DOSBox-X runs
+headless (SDL's `dummy` video and audio drivers, no MIDI; `--window` shows it) and quits when the
+program ends or after `--seconds`. Options come before the program; everything after it is its
+arguments.
+
+```sh
+rea-suite dosbox info                                        # the binary, its version, debugger: yes/no
+rea-suite dosbox run --dpmi --log work/tp.jsonl --seconds 300 work/tp/THEME/MAIN.EXE
+rea-suite dosbox run --ints 21:3d,21:3f,31 --returns game/GAME.EXE  # opens, reads, DPMI; results
+rea-suite dosbox run --ints '' game/GAME.EXE                 # DOSBox-X's log only (any build)
+rea-suite dosbox parse work/dosbox/<run>/dosbox-x.log --program MAIN.EXE  # a log taken elsewhere
+```
+
+Records have `t` (seconds since the start) and `kind`:
+
+- **`int`** (the debugger): a call of a traced interrupt (`--ints`, default `21,31,33,10`;
+  `INT[:AH[:AL]]` in hex narrows one to a function), with every register, the CPU mode (`rm`, `pm`,
+  `v86`), `at` (CS:EIP of the `int`), the service named from `le services`' tables (`function`,
+  `service`, DPMI's `group`, the subfunction register) and decoded arguments: the path at DS:DX of
+  INT 21h opens, creates, finds, renames and EXEC (DS:SI for 6Ch), the `$` string of 09h, the
+  real-mode registers of DPMI 0300h-0302h (`real_mode`, BL the interrupt for 0300h), the handler of
+  DPMI 0303h and INT 33h 000Ch. `call` numbers them. A call made from BIOS code (the ROM area,
+  DOSBox-X's callbacks at F000h, as when DOS writes a string through INT 10h) is left out unless
+  `--nested`. Calls a protected-mode program makes appear in `pm`; an `int` its DPMI host or
+  extender then executes in real mode on its behalf appears too, in `rm` at the host's address (a
+  host that reflects through the interrupt table without an `int`, as CWSDPMI does, shows none).
+- **`return`** (`--returns`): the registers a call returns with (`carry` the CF flag), by `call`.
+- **`callback`**: an entry into a real-mode callback, with its registers: the address DPMI 0303h
+  returned (`via` `dpmi 0303`, with the protected-mode `handler`) and the handler INT 33h 000Ch
+  installed (`mouse 000C`; under DOS/4GW the extender's real-mode call carries the callback it made).
+- **`dos-int`, `file`, `log`, `e9`, `message`** (DOSBox-X's log): `dos-int` is each INT 21h that
+  reaches DOS (AH, AL) when the debugger does not trace them; `file` the opens, creates, reads,
+  writes, seeks and closes by name (`[log] fileio`); `log` any other line (group, severity, text; the
+  groups at debug level are `--groups`, default `files,dosmisc,exec,mouse,int10`); `e9` text written
+  to port E9h (a program or a patched build can mark its phases there); `message` DOSBox-X's own.
+  They carry `cycle`, DOSBox-X's instruction counter, and only the program's part of the log is kept
+  (from the DOS open of its file to the shell going back to AUTOEXEC.BAT; `--all` keeps everything).
+- **`start`**, **`exit`** (`code`, `timed_out`), **`error`**.
+
+Exit 0 when it ran, 1 when DOSBox-X failed or `--seconds` ended it, 2 when there is no DOSBox-X or
+the build has no debugger for `--ints`. The binary is `--dosbox PATH`, else `REA_DOSBOX_X`, else
+the one tools.yml installed, else one on PATH. `--dpmi` loads DOSBox-X's built-in CWSDPMI (`Z:\BIN`) first,
+for programs that need a DPMI host and bring none (DOS/4GW programs bring their own). `--set
+'section key=value'` and `--conf FILE` pass DOSBox-X settings through (`cpu cycles=max`, `dos
+ems=false`, ...). The run's folder (`--workdir`, default `work/dosbox/<time>-<program>/`) keeps
+DOSBox-X's log and the command line used.
+
+### How it works
+
+Only DOSBox-X's own facilities, nothing patched:
+
+- **The log.** `[log] logfile=` gets every message; `int21=true` adds a line per INT 21h with AH and
+  AL (`DOS_21Handler`, src/dos/dos.cpp), `fileio=true` the file operations by name, and each group
+  (`files`, `dosmisc`, `mouse`, ...) its messages from the chosen level. The release builds have all
+  of it, debugger or not. A line is `%10u%s %s:%s`: the instruction counter, the severity, the
+  group, the text (`LOG::operator()`, src/debug/debug_gui.cpp). `bochs debug port e9=true` logs what
+  is written to port E9h a line at a time.
+- **The debugger.** The program starts under `DEBUGBOX`, which stops at its first instruction. An
+  interrupt breakpoint (`BPINT nn`) per traced interrupt then stops before every `int nn`, in real,
+  protected and V86 mode (the normal core checks them at the `int` instruction, so the runner sets
+  `cpu core=normal`; the dynamic core does not). `BP seg:off` stops at the instruction after a call
+  (`--returns`, and for DPMI 0303h, whose result is the callback's address) and at a callback.
+- **The control channel.** DOSBox-X's debugger takes commands over TCP: with `[dosbox]
+  mcp_server=PORT` it connects to 127.0.0.1:PORT (src/debug/debug_mcp.cpp, SDL_net) and answers
+  `REQ <id> EXEC <debugger command>` with `BEGIN <id> OK`, the command's output, `END <id>`. Its
+  network thread sends an answer only on its next turn, which comes with the next incoming line or
+  after 50 ms, so the runner sends a PING every 2 ms while it waits (and sets TCP_NODELAY on its side;
+  without both a round trip costs 40 to 50 ms). A round trip is then about 3 ms.
+- **A stop.** The runner reads the registers (`EV EAX EBX ... CR0`) until two reads in a row agree:
+  while the emulation runs, each read is answered at a later emulated millisecond (the channel is
+  polled from a timer tick), so the state moves; stopped, it stays. The code at CS:EIP
+  (`MEMDUMPBIN` to a file in the run's folder) then says what it was: `int nn` for a traced nn a
+  call, a return or callback address one of those, `hlt` a CPU waiting while running (no stop). The
+  `RUN` that resumes executes the first instruction without checking interrupt breakpoints, so an
+  `int nn` right where a return or callback lands is logged at that stop. When the program ends
+  (INT 21h 00h, 31h or 4Ch with the program's own PSP) the breakpoints are deleted and the rest runs
+  at full speed. A stop costs about 15 ms; the emulated clock stops with it, so the program's own
+  timing is unaffected, but the run takes longer (each character DOS prints through INT 10h is two
+  stops, if 10h is traced).
+- **The terminal.** On Linux and macOS DOSBox-X opens its debugger only with a terminal on stdin,
+  stdout and stderr (`isatty`, src/debug/debug.cpp), so it runs on a pseudo-terminal whose output
+  (the debugger's curses screen) is read and dropped. On Windows it opens a console of its own; the
+  runner starts it in a hidden one.
+
+Limits: a real-mode callback's breakpoint is placed at the next stop in real or V86 mode (in
+protected mode the debugger reads BP's segment as a selector), so an entry that comes before any
+real-mode stop is missed; the DOS/4GW mouse path is not affected, since the extender's real-mode
+INT 33h 000Ch call names the callback. Interrupts a program raises without an `int` instruction
+(a DPMI host simulating one through the IVT, as CWSDPMI does for 0300h and for INT 21h from protected
+mode) are not seen as calls of their own; 0300h's `real_mode` shows what it asked. Records from the
+log and from the debugger are interleaved by when they were read, not by the instruction counter.
+
+### Builds and platforms
+
+| | DOSBox-X | debugger | control channel | checked |
+| --- | --- | --- | --- | --- |
+| Linux | built from the release's source by `rea-tools` (`platforms/linux/build-dosbox-x.sh`, about 6 minutes on 32 cores): `--enable-debug=heavy`, SDL2 and SDL2_net from its own tree, no FFmpeg or FluidSynth | heavy | yes | 2026-11-11, Ubuntu 26.04 under WSL2 |
+| macOS | release zip, the SDL2 app (`dosbox-x-macosx-arm64-*.zip`, `dosbox-x-sdl2/dosbox-x.app`) | heavy (upstream's `build-macos-sdl2`) | expected (SDL2_net) | not run yet |
+| Windows | release zip, the Visual Studio SDL2 build (`dosbox-x-vsbuild-win64-*-portable.zip`) | heavy (`vs/config.h`) | expected (`C_SDL_NET`) | not run yet |
+
+The distributions' packages (Ubuntu 26.04's `dosbox-x` 2026.01.02) and the Flathub build are made
+without the debugger (no `BPINT` in the binary; Flathub's manifest passes only `--enable-sdl2`), so
+`--ints ''` is all they can do. `rea-suite dosbox info` reads the binary for both (the debugger's
+and the control channel's strings).
+
+Researched 2026-11-11 against DOSBox-X v2026.10.01's source (github.com/joncampbell123/dosbox-x):
+logging in `src/debug/debug_gui.cpp` (`LOG::Init`, `LOG::SetupConfigSection`, `DEBUG_ShowMsg`) and
+`include/logging.h`; INT 21h logging in `src/dos/dos.cpp`; file logging in `src/dos/dos_files.cpp`;
+the debugger's commands, breakpoints and `DEBUGBOX` in `src/debug/debug.cpp` and
+`src/shell/shell_cmds.cpp`; the interrupt breakpoint check in `src/cpu/core_normal/prefix_none.h`;
+the control channel in `src/debug/debug_mcp.cpp` and its `mcp_server` setting in `src/dosbox.cpp`;
+the build flags in `build-sdl2`, `build-macos-sdl2`, `vs/config.h` and `.github/workflows/linux.yml`;
+the release assets from the GitHub releases API; Flathub's `com.dosbox_x.DOSBox-X.yaml`. Its
+Windows-only JSON-RPC agent (`docs/rpc-agent-usage.md`, `--enable-dosbox_agent`) is not in release
+builds. Two traps found on the way: DOSBox-X's default MIDI device tries a TiMidity server on
+127.0.0.1:7777 and can hang in `connect` at startup (the runner sets `mididevice=none`), and with a
+program still running a quit asks in a dialog (`quit warning=false`). Checked 2026-11-11 on Linux by
+`common/rea_suite/test_dosbox.py`: the log lines, the debugger's answers, the stop handling against a
+stand-in debugger, and (opt-in, `REA_DOSBOX_INTEGRATION=1`, nasm and DOSBox-X needed) two programs
+the test assembles: a .COM making INT 21h, 10h and 33h calls and writing to port E9h, and a 32-bit
+DPMI client under CWSDPMI making INT 31h 0400h, 0300h (INT 21h 09h), 0303h, 0301h into real-mode
+code that calls the callback, 0304h and exiting from protected mode (`uv run --no-sync python -m
+unittest rea_suite.test_dosbox` in `common/`). Not yet run against a DOS/4GW game.
 
 ## Virtual pad: `rea-suite pad` (Windows)
 
