@@ -202,6 +202,52 @@ in this tool. Checked 2026-11-11 against Alan Wake Remastered's packages (`ep999
 checksum matching; `ep999-001`; the English pack), and by `common/rea_suite/test_rmdp.py` on packages built in three
 layouts.
 
+## Linear executables: `rea-suite le`
+
+DOS games built with Watcom C and a DOS extender (DOS/4GW, PMODE/W, DOS/32A, CauseWay) are LE
+executables: a real-mode MZ stub that starts the extender, then a 32-bit flat module in pages with a
+fixup table. VxDs are LE too, and OS/2's 32-bit programs LX. Ghidra and REA read neither format
+directly; `le` reads them from the file alone, without writing anything:
+
+```sh
+rea-suite le info game/MAIN.EXE [--json]       # stub, header, objects, fixup counts, entry, imports
+rea-suite le dump-object game/MAIN.EXE 1 --base 0x10000 --out work/tp/obj1.bin
+rea-suite le dump-object game/MAIN.EXE 3 --base 0x400000 --object-base 1=0x10000 --out work/tp/obj3.bin
+```
+
+- **Header.** Found at the MZ header's `e_lfanew` (0x3C), as a 4GW stub has it, or after the MZ
+  image, as an extender bound in front of the program has it. The extender is named from strings in
+  the stub (`DOS4GPATH` for the stub that starts `DOS4GW.EXE`, `DOS/32A`, `PMODE/W`, ...), or "not
+  identified". Watcom marks DOS/4GW programs with OS type 1 (OS/2); that is what the header says.
+- **Objects.** Number (from 1, as fixups count them), relocation base, virtual size, 16 or 32-bit
+  (the BIG flag, 0x2000), `rwx`, the pages it takes in the page table and the other flags by name.
+  An object with no pages (a bss) is zeros at load.
+- **Pages.** LE keeps a 24-bit page number (high byte first) and a flags byte per page, the pages in
+  the file back to back from the data pages offset (counted from the start of the file), the last one
+  shorter; LX keeps an offset (shifted by the page shift) and a size per page.
+- **Fixups.** Counted by source type and target kind, one per source offset (a record with a source
+  list counts each). A fixup crossing a page boundary is listed under both pages, the second time
+  with a negative offset.
+- **Entry point.** EIP object and offset, and the address at the object's relocation base.
+- **dump-object.** The object's pages, zero-filled pages as zeros, padded to its virtual size, with
+  every internal 32-bit offset, 32-bit self-relative and 16:32 pointer's offset fixup written for the
+  chosen bases. `--base` places the dumped object (default: its relocation base); the other objects
+  move by the same amount, so the module keeps its layout, unless `--object-base N=ADDR` places one.
+  Load the output raw at `--base` in Ghidra, Rizin or Unicorn, and each other object at its own base.
+  Left as they are, and counted on stderr: imports, selectors, 16-bit offsets, 8-bit and alias fixups.
+  Iterated, compressed and invalid pages are left as zeros, with a warning.
+
+Written from IBM's [LX - Linear eXecutable Module Format Description](https://www.edm2.com/index.php/LX_-_Linear_eXecutable_Module_Format_Description)
+(1992, EDM2's reprint: the header, object table, page table, fixup records and entry table) and the
+LE/LX structures in Open Watcom's
+[`bld/watcom/h/exeflat.h`](https://github.com/open-watcom/open-watcom-v2/blob/master/bld/watcom/h/exeflat.h)
+(LE's `le_map_entry` and the `OSF_*` constants; Sybase Open Watcom Public License), read as
+references; no code of either is in this tool. Checked 2026-11-11 against Theme Park's `MAIN.EXE`
+(DOS/4GW stub, three objects, 162 pages ending exactly at the end of the file, 19 746 internal
+32-bit offset fixups, all applied; the entry point lands on Watcom's startup and its stores address
+the data object), and by `common/rea_suite/test_le.py` on a module built in the test (`uv run
+--no-sync python -m unittest rea_suite.test_le` in `common/`).
+
 ## Frida: `rea-suite frida`
 
 `rea-suite frida <script.js>` attaches a Frida script to a process (`--pid`, `--name`) or starts
