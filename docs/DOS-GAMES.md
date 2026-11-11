@@ -194,6 +194,16 @@ The LE is recompiled onto winrt's core (its static recompiler and CPU, no PC emu
   the PIT at the rate the game programs, the sound library answered at its API edge. It is tested
   service by service on its own registers, apart from the CPU, and adapted to the core's hooks in
   one file.
+- **The layer's traps** (Theme Park's first frame, 2026-11-11):
+  - Watcom's `_chain_intr` jumps by `retf` to the vector INT 21h 35h returned, so every default vector the
+    layer hands out is a host thunk that returns as the BIOS would; otherwise the first chained timer tick
+    lands nowhere.
+  - Watcom's heap takes all linear memory in 16 MB chunks, then walks down 4 KB after each refusal: cap
+    what DPMI 0501h grants (and 0100h), or the start-up makes thousands of calls.
+- **The fastest way to the first frame** is a headless runner (snapshots to files, a trace switch for the DOS
+  calls) and a layer that refuses each unknown service with its number and its caller, then fixing the stops
+  one at a time against the run of step 5: Theme Park's title screen took 13 stops (STI, INT 21h 48h, port
+  3C6h, INT 16h, ...), each a matter of minutes because the refusal named the service.
 
 ## Outputs, kept where they belong
 
