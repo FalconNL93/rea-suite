@@ -15,6 +15,8 @@
 #
 # The queries open the project read-only; with --project, <binary> may be the program's name
 # alone. Ghidra's logs go to <project>/logs/. Scripts: common/ghidra_scripts/.
+# The decompiler's limit per function is REA's setting REA_GHIDRA_DECOMPILE_TIMEOUT_SECONDS
+# (default in common/env.sh, yours in .env).
 set -euo pipefail
 # macOS: Homebrew's bash (platforms/macos/Brewfile), not the bundled 3.2
 ((BASH_VERSINFO[0] >= 4)) || exec /opt/homebrew/bin/bash "$0" "$@"
@@ -26,7 +28,7 @@ source "$REA_SUITE_ROOT/common/box.sh" # immutable host: on inside the distrobox
 # shellcheck source=common/env.sh disable=SC1091
 source "$ROOT/common/env.sh"
 
-usage() { sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; }
 die() { echo "rea-ghidra: $*" >&2; exit 1; }
 
 cmd="${1:-}"

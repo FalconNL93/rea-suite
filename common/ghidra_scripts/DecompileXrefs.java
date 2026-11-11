@@ -29,9 +29,9 @@ public class DecompileXrefs extends GhidraScript {
     decomp.openProgram(currentProgram);
     try (PrintWriter out = new PrintWriter(args[0], "UTF-8")) {
       for (Function f : found.values()) {
-        DecompileResults r = decomp.decompileFunction(f, 120, monitor);
+        DecompileResults r = decomp.decompileFunction(f, DecompileLimit.seconds(), monitor);
         out.printf("// ---- %s @ %s ----%n", f.getName(), f.getEntryPoint());
-        out.println(r.decompileCompleted() ? r.getDecompiledFunction().getC() : "// decompile failed");
+        out.println(DecompileLimit.text(r));
       }
     }
   }

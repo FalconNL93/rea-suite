@@ -98,6 +98,8 @@ export PATH
 
 export VIRTUAL_ENV="$REA_SUITE_ROOT/.venv"
 _rea_default GHIDRA_INSTALL_DIR "$REA_SUITE_ROOT/tools/ghidra/current"
+# The decompiler's limit per function, for REA (none of its own) and rea-ghidra alike
+_rea_default REA_GHIDRA_DECOMPILE_TIMEOUT_SECONDS 120
 
 # rea-agents wants absolute paths for some external engines.
 _rea_tool() { # VAR command

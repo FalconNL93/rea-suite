@@ -61,6 +61,8 @@ $env:Path = (($paths | Where-Object { Test-Path $_ }) + $env:Path) -join ';'
 $env:VIRTUAL_ENV = "$Root\.venv"
 $state = Get-Content "$Root\tools\state.json" -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json
 if ($state.ghidra) { Set-ReaDefault GHIDRA_INSTALL_DIR "$Root\tools\ghidra\$($state.ghidra)" }
+# The decompiler's limit per function, for REA (none of its own); as common/env.sh
+Set-ReaDefault REA_GHIDRA_DECOMPILE_TIMEOUT_SECONDS '120'
 
 # Absolute engine paths for rea-agents
 $jar = Get-ChildItem "$Root\tools\jadx-headless-mcp" -Recurse -Filter '*-all.jar' -ErrorAction SilentlyContinue | Select-Object -First 1
