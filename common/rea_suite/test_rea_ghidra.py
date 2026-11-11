@@ -12,8 +12,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 TOOL = ROOT / "bin" / "rea-ghidra"
 
-# Records each call; -import adds the program to the project's index, -postScript writes its
-# script's name and arguments to the output file, as the real scripts write their results.
+# Records each call; -import adds the program to the project's index, -postScript with an output
+# file writes its script's name and arguments there, as the real query scripts write their results.
 STUB = r"""#!/usr/bin/env bash
 set -euo pipefail
 echo "$*" >> "$STUB_CALLS"
@@ -26,7 +26,9 @@ for i in "${!args[@]}"; do
       printf 'VERSION=1\n/\n  00000000:%s:1\n' "$(basename "${args[$((i + 1))]}")" \
         >> "$project/$name.rep/idata/~index.dat"
       touch "$project/$name.gpr" ;;
-    -postScript) echo "${args[*]:$((i + 1))}" > "${args[$((i + 2))]}" ;;
+    -postScript)
+      out="${args[$((i + 2))]:-}"
+      [[ -z "$out" ]] || echo "${args[*]:$((i + 1))}" > "$out" ;;
   esac
 done
 """
@@ -80,8 +82,19 @@ class ReaGhidra(unittest.TestCase):
             "analyze", "--force", "--project", str(self.project), str(self.binary)
         )
         self.assertEqual(forced.returncode, 0, forced.stderr)
-        self.assertEqual(self.call_lines()[1], f"{self.project} game -process Game.exe")
+        self.assertTrue(
+            self.call_lines()[1].startswith(f"{self.project} game -process Game.exe -scriptPath")
+        )
         self.assertNotIn("-overwrite", self.calls.read_text())
+
+    def test_every_analysis_clears_alignment_after_data(self) -> None:
+        self.run_tool("analyze", "--project", str(self.project), "--name", "game", str(self.binary))
+        self.run_tool("analyze", "--force", "--project", str(self.project), str(self.binary))
+        imported, forced = self.call_lines()
+        for call in (imported, forced):
+            self.assertIn(f"-scriptPath {ROOT}/common/ghidra_scripts", call)
+            self.assertTrue(call.endswith("-postScript ClearDataAlignment.java"), call)
+        self.assertTrue((ROOT / "common" / "ghidra_scripts" / "ClearDataAlignment.java").is_file())
 
     def test_queries_are_read_only_and_take_options_after_the_binary(self) -> None:
         self.run_tool("analyze", "--project", str(self.project), "--name", "game", str(self.binary))

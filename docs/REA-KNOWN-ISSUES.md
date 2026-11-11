@@ -99,3 +99,26 @@ loses them.
 
 **Workaround:** create the folder first, export the bundle under a new name per session
 (`work/<target>/evidence-<date>-<n>.json`), then close with a `snapshot_path`.
+
+## No limit on a function's decompile
+
+Found with rea-agents 6.8.0 by the Theme Park port (2026-11-11): an MCP session on `MAIN.EXE` (an LE
+executable) sat at full CPU until the client's calls timed out after 30 minutes. The cause was in
+the program, not in REA: Kaiju's Alignment over global variables, which Ghidra's decompiler never
+finishes ([README](../README.md#headless-ghidra-from-the-shell)). That REA waited for it is REA's:
+
+15. **No decompile deadline by default.** `ghidra.decompile_timeout_seconds` defaults to none
+    (`dist/domain/analysisSettingDefinitions.js`), which the bridge passes to
+    `DecompInterface.decompileFunction` as 0, and Ghidra reads 0 as no timeout
+    (`DecompileProcess.getTimeoutMs`). The bridge also lifts Ghidra's instruction limit per function
+    (`options.setMaxInstructions(Integer.MAX_VALUE)` in `ReaGhidraBridge.initializeDecompiler`).
+
+**Workaround (in place):** `common/env.sh` and `env.ps1` set a default for
+`REA_GHIDRA_DECOMPILE_TIMEOUT_SECONDS`, which REA reads at start and `rea-ghidra` uses too; a
+function over it fails on its own and the session goes on. Checked 2026-11-11: `rea decompile` of
+the flat image from `rea-suite le dump-image` (`--target-format raw-binary`; REA refuses the LE file
+itself), at a function that indexes into Alignment, answered `provider_timeout` after 120 s and
+named the setting. A running MCP server takes another value through `update_analysis_settings`
+(`ghidra.decompile_timeout_seconds`, from the next call). A program REA analyzed itself still holds
+Kaiju's Alignment, so those functions time out there; decompile them with `rea-ghidra`, whose
+analysis clears it.

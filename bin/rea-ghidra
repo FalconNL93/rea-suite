@@ -81,15 +81,18 @@ imported() { # the program is in the project's index (read without Ghidra)
 
 analyze() {
   local log="$project/logs/analyze.log"
+  # Kaiju types zero-filled variables after data as Alignment, which hangs the decompiler
+  local repair=(-scriptPath "$ROOT/common/ghidra_scripts" -postScript ClearDataAlignment.java)
   if imported; then
     ((force)) || return 0
     echo "rea-ghidra: analyzing $program again, its names kept (log: $log)" >&2
-    "${headless[@]}" -process "$program" >"$log" 2>&1 || die "analysis failed; see $log"
+    "${headless[@]}" -process "$program" "${repair[@]}" >"$log" 2>&1 ||
+      die "analysis failed; see $log"
     return 0
   fi
   [[ -f "$binary" ]] || die "no such file: $binary (and no program $program in $project)"
   echo "rea-ghidra: analyzing $program (once; log: $log)" >&2
-  "${headless[@]}" -import "$(readlink -f "$binary")" >"$log" 2>&1 ||
+  "${headless[@]}" -import "$(readlink -f "$binary")" "${repair[@]}" >"$log" 2>&1 ||
     die "analysis failed; see $log"
 }
 

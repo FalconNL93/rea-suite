@@ -882,9 +882,19 @@ project folder. This is the x86/x64 PE counterpart of `rea-suite xbox360 analyze
 
 - **Decompile the addresses the question needs**, in one batch, not the whole program: a
   whole-program decompile of a game ran past 25 minutes on decompiler timeouts.
-- **The largest functions can hang the decompiler.** `decomp` gives up on a function after
-  120 s; an REA session on the same function sat at full CPU until its calls timed out. Disassemble
-  those with Rizin instead (`rizin -q -c 'pD <size> @ <address>' <file> > out.txt`).
+- **Alignment over variables hangs the decompiler; `analyze` clears it.** Kaiju's "Disassembly
+  Improvements" analyzer types each run of zero bytes after a data item as Alignment, and Ghidra's
+  decompiler never finishes a function that indexes into one, whatever the function's size. Where
+  zero-filled variables are initialized memory (an LE's data object holds its bss), that is most
+  of them: in Theme Park's `MAIN.EXE` 356 items over 110 KB, and 31 of 1000 functions, from 91
+  bytes up, ran into a 60 s limit while every other one took under 1.3 s (checked 2026-11-11).
+  `analyze` (and `analyze --force`, for a project analyzed before) ends with
+  `ClearDataAlignment.java`, which clears Alignment that follows data and keeps the padding between
+  functions; then all 1000 decompiled, the slowest in 4.3 s. Kaiju stays on: without it Ghidra
+  found 879 of the 1000 functions. Each function still gets `REA_GHIDRA_DECOMPILE_TIMEOUT_SECONDS`
+  (default in `common/env.sh`), which also bounds REA, otherwise without a limit; a function past
+  it says so in the output. A program REA analyzed itself keeps the Alignment
+  ([known issues](docs/REA-KNOWN-ISSUES.md), item 15): decompile those functions with `rea-ghidra`.
 - **One process per project.** Ghidra locks a project for a whole run, so a second agent's
   read-only queries fail with "locked by another process". Give parallel agents a copy of the
   project each, or a route that needs none (`rea-suite pe`, or `rea-suite le dump-image` and Rizin).
