@@ -14,7 +14,7 @@
     .\platforms\windows\rea-suite.ps1 steamstub <exe>...  # SteamStub DRM signs
     .\platforms\windows\rea-suite.ps1 pe <command> <exe> ...  # PE scans: RTTI, references, callers, strings
     .\platforms\windows\rea-suite.ps1 rmdp list|extract|find|inner <index.bin> ...  # Remedy packages
-    .\platforms\windows\rea-suite.ps1 le info|dump-object <exe> ...  # LE/LX executables (DOS extenders)
+    .\platforms\windows\rea-suite.ps1 le info|dump-object|dump-image|services <exe> ...  # LE/LX executables (DOS extenders)
     .\platforms\windows\rea-suite.ps1 frida <script.js> --pid|--name|--spawn ...  # Frida script, JSON lines
     .\platforms\windows\rea-suite.ps1 pad --presses 30:DOWN,33:A [--idle-pad]  # virtual Xbox 360 pad (ViGEm)
     .\platforms\windows\rea-suite.ps1 analyze [paths...] [options]  # offline analysis; --examples

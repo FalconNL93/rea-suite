@@ -213,6 +213,8 @@ directly; `le` reads them from the file alone, without writing anything:
 rea-suite le info game/MAIN.EXE [--json]       # stub, header, objects, fixup counts, entry, imports
 rea-suite le dump-object game/MAIN.EXE 1 --base 0x10000 --out work/tp/obj1.bin
 rea-suite le dump-object game/MAIN.EXE 3 --base 0x400000 --object-base 1=0x10000 --out work/tp/obj3.bin
+rea-suite le dump-image game/MAIN.EXE --out work/tp/main.bin --json-map work/tp/main.json
+rea-suite le services game/MAIN.EXE [--json]   # INT n, DPMI, I/O ports, segment loads, far, 16-bit
 ```
 
 - **Header.** Found at the MZ header's `e_lfanew` (0x3C), as a 4GW stub has it, or after the MZ
@@ -238,6 +240,38 @@ rea-suite le dump-object game/MAIN.EXE 3 --base 0x400000 --object-base 1=0x10000
   (`rea-ghidra analyze game/MAIN.EXE`), every object at its base and every fixup applied.
   Left as they are, and counted on stderr: imports, selectors, 16-bit offsets, 8-bit and alias fixups.
   Iterated, compressed and invalid pages are left as zeros, with a warning.
+- **dump-image.** Every object at its base in one flat file, from the lowest object base to the
+  highest object end, the gaps zeros, with the same fixups applied: load it raw at the printed base
+  (REA, Ghidra, Rizin map one file at one address) and the code's references into the data objects
+  resolve. `--base` moves the lowest object and the rest with it; `--json-map` writes the objects'
+  bases, image offsets and the entry point, which stderr prints too.
+- **services.** What a host layer that runs the program must provide (`common/rea_suite/le_services.py`),
+  from the code objects decoded with Capstone after fixups at the relocation bases:
+  - **Decoding.** By flow from the entry point, exported entries and internal fixup targets in code
+    (function pointers), following direct jumps and calls, never across a fixup that is not an
+    instruction's displacement or immediate (a jump or function table is pointers, not code). Then
+    each stretch nothing reached is decoded the same way from its first byte past nop padding:
+    functions called only through a computed pointer, dead code and data that happens to decode.
+    Every site says how it was reached (`found_by` `flow` or `gap`, `gap` in the text). A linear
+    sweep or a byte search for `CD ??` finds `int` in data and inside other instructions.
+  - **Interrupts.** Every `int n` with AH, AL, BH, BL set before it in its basic block, the function
+    (AH, or AX for DPMI 31h, mouse 33h, multiplex 2Fh, VDS 4Bh) and the subfunction where one picks
+    it (INT 21h AH=25h/35h AL is the vector, DPMI 0200h-0205h and 0300h BL the interrupt) named from
+    tables; DPMI functions also by group (descriptors, DOS memory, interrupt vectors, real-mode calls,
+    real-mode callbacks, ...). A run of `int n; ret` stubs for consecutive n (a runtime that calls
+    `table + 3n` to issue an interrupt chosen at run time) is listed once as a table.
+  - **Ports.** `in`/`out`/`ins`/`outs` with the port, an immediate or DX followed back through
+    `mov`, `inc`, `dec`, `add`, `sub`, named (PIC, PIT, keyboard, VGA, Sound Blaster, OPL, ...).
+  - **Segment loads.** `mov sreg`, `pop sreg`, `lds`/`les`/`lfs`/`lgs`/`lss`, with the value where
+    the block shows it: a constant, a copy of another segment register (`mov ax, ds` or the
+    `push ds` the pop takes), an object's selector (a selector fixup on the `mov`); else the source
+    (memory, a far pointer in memory, the stack, a register).
+  - **Far and 16-bit.** Far calls, jumps and returns and `iret` by opcode; 16-bit code objects, the
+    address-size prefix in 32-bit code, selector and 16:16 fixups in code.
+  - **Limits.** A value counts only when the same basic block sets it: one loaded from memory,
+    passed by a caller or set before a branch target is unresolved, and the summary counts those.
+    The containing function is the nearest direct-call target (or gap start) at or before the
+    site, a heuristic since LE has no function table.
 
 Written from IBM's [LX - Linear eXecutable Module Format Description](https://www.edm2.com/index.php/LX_-_Linear_eXecutable_Module_Format_Description)
 (1992, EDM2's reprint: the header, object table, page table, fixup records and entry table) and the
@@ -248,7 +282,14 @@ references; no code of either is in this tool. Checked 2026-11-11 against Theme 
 (DOS/4GW stub, three objects, 162 pages ending exactly at the end of the file, 19 746 internal
 32-bit offset fixups, all applied; the entry point lands on Watcom's startup and its stores address
 the data object), and by `common/rea_suite/test_le.py` on a module built in the test (`uv run
---no-sync python -m unittest rea_suite.test_le` in `common/`).
+--no-sync python -m unittest rea_suite.test_le rea_suite.test_le_services` in `common/`). `dump-image`
+and `services` were checked 2026-11-11 on the same file: one image of 0xd2340 bytes at 0x10000 with
+the three objects; 156 430 instructions over 540 929 of 544 235 code bytes in about six seconds
+(4 257 of them from gaps), 111 interrupt sites and a table of 256 `int n; ret` stubs, among them
+12 INT 31h functions (descriptors: allocate, get/set base, set limit; DOS memory; 0300h; and
+AX=2508h), 114 port sites (PIC, PIT, VGA CRTC and DAC) and 886 segment register loads, 563 of them
+GS, 449 by `lgs` (Watcom far pointers); the synthetic module in `test_le_services.py` holds a known
+sequence of each.
 
 ## Frida: `rea-suite frida`
 

@@ -28,6 +28,7 @@ with the reason when it is dropped.
   REA's own format check refuses an MZ image with an LE header before any provider sees it
   ("unsupported LE executable in MZ image", provider_id=ghidra too, 2026-11-11). Wanted in rea-agents:
   pass LE/LX to the Ghidra provider when the loader is installed, so MCP sessions open DOS/4GW games.
+  Until then, `rea-suite le dump-image` output loads raw at its base, every object in place.
 
 ## Console games
 

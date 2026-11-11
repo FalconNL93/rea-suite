@@ -196,6 +196,35 @@ class LeTest(unittest.TestCase):
         self.assertEqual(out.read_bytes(), b"D" * PAGE)
         self.assertIn("0 fixups applied", err.getvalue())
 
+    def test_dump_image_places_every_object_at_its_base(self):
+        module = le.read_module(self.exe)
+        image = le.dump_image(module)
+        self.assertEqual((image.base, len(image.data)), (CODE_BASE, DATA_BASE + PAGE - CODE_BASE))
+        word = lambda at: struct.unpack_from("<I", image.data, at - CODE_BASE)[0]
+        self.assertEqual(word(CODE_BASE + 0x04), DATA_BASE + 0x10)
+        self.assertEqual(word(CODE_BASE + 0xFE), DATA_BASE + 0x30)
+        self.assertEqual(image.data[2 * PAGE : DATA_BASE - CODE_BASE], bytes(0x10000 - 2 * PAGE))
+        self.assertEqual(image.data[DATA_BASE - CODE_BASE :], b"D" * PAGE)
+        moved = le.dump_image(module, 0x400000)
+        self.assertEqual(moved.bases, {1: 0x400000, 2: 0x410000})
+        self.assertEqual(struct.unpack_from("<I", moved.data, 0x04)[0], 0x410010)
+
+    def test_dump_image_command_writes_the_image_and_its_map(self):
+        out, json_map = self.folder / "out" / "image.bin", self.folder / "out" / "image.json"
+        err = io.StringIO()
+        with redirect_stderr(err):
+            code = le.main(
+                ["--caller-cwd", str(self.folder), "dump-image", "MAIN.EXE", "--out", str(out)]
+                + ["--json-map", str(json_map)]
+            )
+        self.assertEqual(code, 0)
+        self.assertEqual(len(out.read_bytes()), DATA_BASE + PAGE - CODE_BASE)
+        m = json.loads(json_map.read_text())
+        self.assertEqual(m["base"], CODE_BASE)
+        self.assertEqual(m["entry_point"]["address"], CODE_BASE + 0x20)
+        self.assertEqual([o["image_offset"] for o in m["objects"]], [0, DATA_BASE - CODE_BASE])
+        self.assertIn("entry point 0x00010020", err.getvalue())
+
     def test_info_command_json_and_text(self):
         for extra in (["--json"], []):
             buf = io.StringIO()

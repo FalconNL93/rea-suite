@@ -6,6 +6,12 @@
   rea-suite le dump-object <exe> <n> --base ADDR --out FILE [--object-base M=ADDR ...]
                                              object n's bytes with its internal 32-bit fixups
                                              applied as if loaded at ADDR, to load raw elsewhere
+  rea-suite le dump-image <exe> --out FILE [--base ADDR] [--json-map MAP]
+                                             every object at its base in one flat image (gaps
+                                             zeroed) with fixups applied, and a map of it
+  rea-suite le services <exe> [--json]       the DOS services the code uses: INT n with AH/AX,
+                                             DPMI calls, IN/OUT ports, segment register loads,
+                                             far transfers and 16-bit code (le_services.py)
 
 Read only: the executable is never written. Every offset the file names is checked against the file,
 so a damaged one is refused with LeError rather than read past its end. Written from IBM's
@@ -675,6 +681,66 @@ def load_bases(
     return bases
 
 
+@dataclass
+class Image:
+    data: bytearray
+    base: int
+    bases: dict[int, int]
+    applied: dict[str, int]
+    skipped: dict[str, int]
+    pages: dict[str, int]
+
+
+def dump_image(module: Module, base: int | None = None) -> Image:
+    """Every object at its base in one buffer, from the lowest object base to the highest object end,
+    the gaps zeros: what a loader that maps one file at one address needs to see the code and the
+    data it addresses side by side. `base` moves the lowest object there and the rest with it."""
+    lowest = min(module.objects, key=lambda o: o.base)
+    bases = load_bases(module, lowest.number, base, [])
+    start = bases[lowest.number]
+    end = max(bases[o.number] + o.size for o in module.objects)
+    if end - start > 1 << 30:
+        raise LeError(f"the objects span 0x{end - start:x} bytes; dump them one by one")
+    image = Image(bytearray(end - start), start, bases, {}, {}, {})
+    for o in module.objects:
+        dump = dump_object(module, o.number, bases)
+        at = bases[o.number] - start
+        image.data[at : at + len(dump.data)] = dump.data
+        for total, part in (
+            (image.applied, dump.applied),
+            (image.skipped, dump.skipped),
+            (image.pages, dump.pages),
+        ):
+            for kind, n in part.items():
+                total[kind] = total.get(kind, 0) + n
+    return image
+
+
+def image_map(module: Module, image: Image) -> dict:
+    entry = module.entry_point()
+    if entry:
+        entry["address"] = image.bases[entry["object"]] + entry["offset"]
+    return {
+        "file": str(module.path),
+        "base": image.base,
+        "size": len(image.data),
+        "entry_point": entry,
+        "objects": [
+            {
+                "number": o.number,
+                "base": image.bases[o.number],
+                "size": o.size,
+                "image_offset": image.bases[o.number] - image.base,
+                "bits": o.bits,
+                "access": o.access,
+            }
+            for o in module.objects
+        ],
+        "fixups": {"applied": image.applied, "left": image.skipped},
+        "pages": image.pages,
+    }
+
+
 # --- command line ---------------------------------------------------------------------------------
 
 
@@ -715,6 +781,52 @@ def cmd_dump(args) -> int:
     return 0
 
 
+def cmd_image(args) -> int:
+    exe = (args.caller_cwd / args.exe).resolve()
+    out = (args.caller_cwd / args.out).resolve()
+    json_map = (args.caller_cwd / args.json_map).resolve() if args.json_map else None
+    if exe in (out, json_map):
+        print("le: the output would overwrite the executable; choose another", file=sys.stderr)
+        return 2
+    module = read_module(exe)
+    image = dump_image(module, args.base)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_bytes(image.data)
+    m = image_map(module, image)
+    if json_map:
+        json_map.parent.mkdir(parents=True, exist_ok=True)
+        json_map.write_text(json.dumps(m, indent=1) + "\n")
+    print(
+        f"image: 0x{len(image.data):x} bytes at 0x{image.base:08x} to {out}; "
+        f"{sum(image.applied.values())} fixups applied, {sum(image.skipped.values())} left",
+        file=sys.stderr,
+    )
+    for o in m["objects"]:
+        print(
+            f"  object {o['number']}  0x{o['base']:08x}  0x{o['size']:08x}  "
+            f"{o['bits']}-bit {o['access']}  at +0x{o['image_offset']:x}",
+            file=sys.stderr,
+        )
+    if m["entry_point"]:
+        print(f"  entry point 0x{m['entry_point']['address']:08x}", file=sys.stderr)
+    unexpanded = {k: n for k, n in image.pages.items() if k not in ("legal", "zero-filled")}
+    if unexpanded:
+        print(f"le: pages left as zeros: {unexpanded}", file=sys.stderr)
+    return 0
+
+
+def cmd_services(args) -> int:
+    from rea_suite import le_services  # Capstone loads only for this command
+
+    module = read_module((args.caller_cwd / args.exe).resolve())
+    d = le_services.inventory(module)
+    if args.json:
+        print(json.dumps(d, indent=1))
+    else:
+        le_services.print_inventory(d)
+    return 0
+
+
 def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="rea-suite le",
@@ -744,6 +856,26 @@ def parser() -> argparse.ArgumentParser:
     )
     c.add_argument("--out", type=Path, required=True)
     c.set_defaults(run=cmd_dump)
+    c = sub.add_parser(
+        "dump-image", help="every object at its base in one flat image, fixups applied"
+    )
+    c.add_argument("exe", type=Path)
+    c.add_argument(
+        "--base",
+        type=parse_address,
+        help="load address of the lowest object (default: its relocation base); the rest move with it",
+    )
+    c.add_argument("--out", type=Path, required=True)
+    c.add_argument(
+        "--json-map", type=Path, help="write the map (objects, bases, entry) as JSON here"
+    )
+    c.set_defaults(run=cmd_image)
+    c = sub.add_parser(
+        "services", help="INT n, DPMI, I/O ports, segment loads, far and 16-bit code"
+    )
+    c.add_argument("exe", type=Path)
+    c.add_argument("--json", action="store_true")
+    c.set_defaults(run=cmd_services)
     return p
 
 
