@@ -17,6 +17,8 @@ from dataclasses import dataclass
 from capstone import CS_ARCH_X86, CS_MODE_32, CS_MODE_64, Cs, CsError
 from capstone.x86 import X86_OP_IMM, X86_OP_MEM, X86_REG_INVALID, X86_REG_RIP
 
+from . import pefunctions
+from .pefunctions import Function
 from .pemodel import Image
 
 RIP_MODRM = re.compile(rb"[\x05\x0d\x15\x1d\x25\x2d\x35\x3d]")
@@ -25,12 +27,12 @@ REL32 = re.compile(rb"[\xe8\xe9]")
 
 @dataclass
 class Site:
-    """One instruction at rva; function is the containing function's start (x64 unwind table)."""
+    """One instruction at rva, with the function it lies in (pefunctions)."""
 
     rva: int
     text: str
     target: int
-    function: int | None = None
+    function: Function | None = None
 
     def as_json(self, image: Image) -> dict:
         return {
@@ -42,19 +44,29 @@ class Site:
         }
 
 
-def function_fields(function: int | None) -> dict:
-    """The containing function as every scan's JSON names it: its address when the x64 unwind
-    table covers the site, else null, with `function_known` saying which (x86 images and leaf
-    functions have no unwind entry), so a reader can sort without guessing."""
+def function_fields(function: Function | None) -> dict:
+    """The containing function as every scan's JSON names it: its start (or null), its name
+    from a table or the exports (or null), where the start came from (`table`, `unwind`,
+    `heuristic`, or null), and `function_known`, true only for a start from a table or the
+    unwind table, so a reader can sort without guessing and never takes a guess for a fact."""
     return {
-        "function": None if function is None else f"{function:#x}",
-        "function_known": function is not None,
+        "function": None if function is None else f"{function.start:#x}",
+        "function_name": None if function is None else function.name,
+        "function_source": None if function is None else function.source,
+        "function_known": function is not None and function.source != "heuristic",
     }
 
 
-def containing(image: Image, rva: int) -> int | None:
-    function = image.function_at(rva)
-    return function[0] if function else None
+def function_label(function: Function | None) -> str:
+    """The containing function for a text line: `0x401000 Name`, `~0x401000` for a guess."""
+    if function is None:
+        return "-"
+    mark = "~" if function.source == "heuristic" else ""
+    return f"{mark}{function.start:#x}" + (f" {function.name}" if function.name else "")
+
+
+def containing(image: Image, rva: int) -> Function | None:
+    return pefunctions.of(image).at(rva)
 
 
 def disassembler(image: Image) -> Cs:
@@ -332,7 +344,7 @@ def import_calls(image: Image, dll: str | None = None, name: str | None = None) 
                 "delay": row.delay,
                 "sites": uses,
                 "functions": sorted(
-                    {u["function"] for u in uses if u["function_known"]}, key=lambda f: int(f, 16)
+                    {u["function"] for u in uses if u["function"]}, key=lambda f: int(f, 16)
                 ),
             }
         )
@@ -380,6 +392,7 @@ def registry(
                     tail = [None] * (len(names) - len(tail)) + tail
                     row = {
                         "site": f"{insn.address - image.base:#x}",
+                        **function_fields(containing(image, insn.address - image.base)),
                         "registrar": f"{target:#x}",
                         "type": registrar.kind,
                         **dict(zip(names, tail, strict=True)),
@@ -395,3 +408,98 @@ def registry(
                 if found:
                     strings.append(found[1])
     return result
+
+
+def branch_target(insn) -> int | None:
+    """The VA a direct call or jump goes to (an immediate operand), else None."""
+    if insn.mnemonic != "call" and not insn.mnemonic.startswith(("j", "loop")):
+        return None
+    try:
+        operands = insn.operands
+    except CsError:
+        return None
+    if len(operands) == 1 and operands[0].type == X86_OP_IMM:
+        return operands[0].imm & (2**64 - 1)
+    return None
+
+
+def note(image: Image, insn) -> str:
+    """What the addresses an instruction names are: an import, a function, an export, a
+    string; empty when none is known."""
+    found = []
+    functions = pefunctions.of(image)
+    vas = references(insn, image.x64)
+    target = branch_target(insn)
+    if target is not None and target not in vas:
+        vas.append(target)
+    for va in vas:
+        rva = va - image.base
+        if rva in image.iat_slots:
+            found.append(image.iat_slots[rva].label)
+        elif functions.name_of(rva):
+            found.append(functions.name_of(rva))
+        elif (text_ := string_at(image, rva)) is not None:
+            value = text_[1] if len(text_[1]) <= 48 else text_[1][:45] + "..."
+            found.append(json_string(value))
+    return "; ".join(found)
+
+
+def json_string(value: str) -> str:
+    return '"' + value.encode("unicode_escape").decode("ascii").replace('"', '\\"') + '"'
+
+
+def listing(image: Image, start: int, end: int | None = None, count: int | None = None) -> list:
+    """Instructions from start (an RVA) up to end or count of them, whichever comes first;
+    an undecodable byte is a `db` row. Each row: rva, va, bytes, instruction, note, and the
+    function's name (`label`, or null) and where the start came from (`start`) where the
+    function map has one there."""
+    cs = disassembler(image)
+    functions = pefunctions.of(image)
+    section = image.section_at(start)
+    if section is None:
+        raise ValueError(f"{start:#x} is in no section")
+    limit = section.rva + section.data_size
+    stop = limit if end is None else min(end, limit)
+    rows: list[dict] = []
+    at = start
+    while at < stop and (count is None or len(rows) < count):
+        insn = decode(image, cs, at, min(15, stop - at))
+        row = {"rva": f"{at:#x}", "va": f"{image.va(at):#x}"}
+        if functions.is_start(at):
+            row["start"] = functions.source
+            row["label"] = functions.name_of(at)
+        if insn is None:
+            byte = image.read(at, 1)
+            row.update(bytes=byte.hex(), instruction=f"db {byte[0]:#04x}", note="")
+            at += 1
+        else:
+            row.update(
+                bytes=bytes(insn.bytes).hex(), instruction=text(insn), note=note(image, insn)
+            )
+            at += insn.size
+        rows.append(row)
+    return rows
+
+
+def histogram(image: Image, ranges: list[tuple[int, int]]) -> dict:
+    """Mnemonic counts over the code in the ranges ((RVA, size) each), most frequent first;
+    undecodable bytes are counted apart."""
+    cs = Cs(CS_ARCH_X86, CS_MODE_64 if image.x64 else CS_MODE_32)
+    cs.skipdata = True
+    counts: dict[str, int] = {}
+    undecoded = 0
+    for start, size in ranges:
+        for _address, length, mnemonic, _ops in cs.disasm_lite(
+            image.read(start, size), image.va(start)
+        ):
+            if mnemonic == ".byte":
+                undecoded += length
+            else:
+                counts[mnemonic] = counts.get(mnemonic, 0) + 1
+    ordered = dict(sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])))
+    return {
+        "instructions": sum(counts.values()),
+        "distinct": len(counts),
+        "undecoded_bytes": undecoded,
+        "mnemonics": ordered,
+    }

@@ -20,12 +20,41 @@ One command over a PE image (x86 or x64), with `--json` everywhere. Addresses ar
 at or above the image base a VA, below it an RVA. Every hit is a byte pattern confirmed by
 decoding the instruction with Capstone; a linear scan sees code a decompiler would not reach
 and misses references computed at run time, so treat a hit as a lead and an empty answer as no
-proof. Where the x64 unwind table covers an address, the result names the function it lies in
-(chained unwind entries followed to their primary function). Every JSON row of `refs`,
-`callers`, `strings` and `imports` carries `function` (that address, or `null`) and
-`function_known` (`false` in x86 images and for code without an unwind entry, such as leaf
-functions and thunks), so rows sort with a key like
-`(not r["function_known"], int(r["function"] or "0", 16))`.
+proof. Every hit names the function it lies in (next section). Every JSON row of `refs`,
+`callers`, `strings`, `imports` and `registry` carries `function` (its start, or `null`),
+`function_name`, `function_source` (`table`, `unwind`, `heuristic` or `null`) and
+`function_known` (true for a start from a table or the unwind table only), so rows sort with a
+key like `(not r["function_known"], int(r["function"] or "0", 16))`.
+
+### The containing function, x86 too: `--functions`
+
+Every `pe` command takes `--functions TSV` (repeatable) and `--game NAME`. One source answers:
+
+| Source | When | What |
+|---|---|---|
+| `table` | `--functions` given | the TSVs' starts and names: `rea-ghidra functions` output, a port's `function_entries.tsv` (starts only) or `functions.tsv` (with a `game` column, picked by `--game`); the address column is the first of `entry`, `address`, `va`, `rva`, `start`, else the first column; `name` and `size` are read when present. Tables merge, so one can give the starts and another the names |
+| `unwind` | an x64 image with an unwind table | the RUNTIME_FUNCTION entries, chained entries followed to their primary function |
+| `heuristic` | neither (x86, or x64 without `.pdata`) | the entry point, exports, TLS callbacks, rel32 call targets (two callers, or one after padding or a `ret`), `push ebp; mov ebp, esp` after padding or a `ret`, and the first byte after a `ret` followed by int3/nop padding |
+
+With a table or the heuristic the function is the nearest start at or below the address in the
+same section; a table's `size` (Ghidra's body in bytes) bounds it, so an address past it lies in
+no function rather than the wrong one. A partial table (named functions only) gives code between
+two names to the one before it: give the whole entry list with the names. Text output marks a
+heuristic start with `~` (`in ~0x41d2d8`); JSON says `"function_source": "heuristic"` and
+`"function_known": false`. A heuristic start can be missing (a function reached only through a
+pointer, without a frame) or extra (bytes in data that look like a `ret` and padding).
+
+```sh
+rea-suite pe imports game/Game.exe --dll DINPUT.dll \
+  --functions re/function_entries.tsv --functions re/functions.tsv --game sp
+rea-suite pe refs game/Game.exe --string cfg --json      # x86 without a table: heuristic starts
+```
+
+Checked 2026-11-11 on a 4.7 MB MSVC 6 x86 executable against its port's Ghidra entry list (33,947
+starts): the heuristic found 22,779 starts in 0.4 s, and named the same function as the list for
+546 of the 618 import call sites; of the other 72, half split a function the list keeps whole
+(the `jmp [slot]` thunks, `call; jmp` initializers) and half missed a start. With the list and
+the port's names, `imports` and `refs` name every site.
 
 ### The image: `info`
 
@@ -168,8 +197,77 @@ keeps its addresses and what it tested; this gives the table.
 Checked 2026-11-10 on a 61 MB x64 retail executable: the 97 options of its two blocks, with the
 same names, types, sites and string defaults as the table that port generated with its own tool.
 
+### Disassembly: `disasm`
+
+```sh
+rea-suite pe disasm game/Game.exe 0x4a8f20                      # 24 instructions from there
+rea-suite pe disasm game/Game.exe Renderer_Draw --count 40 --functions re/functions.tsv
+rea-suite pe disasm game/Game.exe 0x4a8f37 --function           # the whole function it lies in
+rea-suite pe disasm game/Game.exe 0x4a8f20 --to 0x4a8f80 --json
+rea-suite pe disasm game/Game.exe --histogram                   # mnemonics over every code section
+rea-suite pe disasm game/Game.exe 0x4a8f20 --function --histogram
+```
+
+Capstone, linear, from the given address (a VA, an RVA, or a name from `--functions` or the
+exports). Each instruction is noted with what its addresses are: an import (`; KERNEL32.dll!Sleep`
+for `call [slot]`), a named function, a string. A function start from the function map is a
+label line (`Name:`, `sub_401000:` for an unnamed table start, `~sub_401000:` for a heuristic
+one). `--function` runs from the containing function's start to the next start (or its unwind
+entry's end, or the table's size; at most 64 KiB) and leaves out the padding after it. An
+undecodable byte is a `db` row. `--histogram` counts mnemonics over the selection, or over every
+code section (up to their virtual size, so the file's alignment padding is not counted) when no
+address is given; undecodable bytes are counted apart.
+
+### Resources: `resources`
+
+```sh
+rea-suite pe resources game/Launcher.exe                         # every resource, decoded briefly
+rea-suite pe resources game/Launcher.exe --type DIALOG --name 101 --json
+rea-suite pe resources game/Game.exe --type GROUP_ICON --extract work/game-res
+```
+
+pefile walks the resource directory; the resources are read by their documented layouts:
+
+| Type | Decoded |
+|---|---|
+| `DIALOG` | DLGTEMPLATE and DLGTEMPLATEEX: style, size, title, font; each control's id (IDC_STATIC as `-1`), class (`Button`, `Edit`, ... or a registered name), text, style and position; creation data as hex |
+| `MENU` | MENU and MENUEX: the item tree with ids, separators, popups |
+| `STRING` | each block's strings with their ids (block - 1) * 16 + index |
+| `ACCELERATOR` | key with modifiers (`Ctrl+O`, `F1`) and command id |
+| `VERSION` | the fixed file and product versions, every string table, the translations |
+| `MESSAGETABLE` | message ids and texts |
+| `GROUP_ICON`, `GROUP_CURSOR`, `ICON`, `CURSOR`, `BITMAP` | sizes and bit depths (PNG or DIB) |
+| `MANIFEST` | its text (JSON) |
+| others | size and the first 16 bytes (JSON `head`) |
+
+The text output is a few lines per resource (single icon and cursor images are left out unless
+`--type` asks for them); `--json` holds everything, and `--type` (a name or number, repeatable) and
+`--name` narrow either. A resource a reader cannot decode gets an `error` member; the walk goes
+on. `--extract DIR` writes `resources.json` and per type a folder: each icon or cursor group as
+an `.ico` or `.cur` plus a `.png` per image (stored PNGs as they are; 1, 4, 8, 24 and 32-bit
+DIBs converted, transparency from the alpha channel or the AND mask), bitmaps as `.bmp`
+(the file header added), manifests as `.xml`, the rest raw (`.bin`). A name in several languages
+gets the language in its file name. The executable's own folder is refused as `DIR`, so a game
+installation is never written.
+
+Checked 2026-11-11 on Windows binaries: a resource DLL with 76 resources (19 dialogs, 6 menus,
+string tables, accelerators) in 0.1 s with no errors; an icon group of 13 images (4, 8 and 32
+bits, one PNG) converted and viewed; and a game's icon group exported byte for byte the same as
+that port's own `extract_icon.py` produced.
+
+### Port scripts these replace
+
+| Port script | Now |
+|---|---|
+| CoD1 `tools/x86dis.py` (disassemble `ADDR:COUNT`) | `pe disasm <exe> ADDR --count N` |
+| CoD1 `tools/mnem_hist.py` (mnemonic histogram of `.text`) | `pe disasm <exe> --histogram` |
+| CoD1 `tools/peinfo.py` | `pe info --imports --exports` |
+| CoD1 `tools/extract_icon.py` (icon group to `.ico`) | `pe resources <exe> --type GROUP_ICON --extract DIR` (same bytes); the port keeps its copy while its build embeds the icon |
+| Rogue Spear's pefile script for menus, dialogs and string tables, and `inspect_pe_resources` ([known issue 7](REA-KNOWN-ISSUES.md)) | `pe resources` |
+| Rogue Spear's objdump and `resolve_containing_procedure` per `xrefs` hit | `pe refs`/`callers`/`imports` with `--functions re/function_entries.tsv`, `pe disasm` |
+
 Tests: `uv run --no-sync python -m unittest rea_suite.test_pe` in `common/` (synthetic x64 and
-x86 programs from `samples.py`, no game bytes).
+x86 programs and a resource section of every decoded kind, built in `samples.py`; no game bytes).
 
 ## Remedy packages: `rea-suite rmdp`
 

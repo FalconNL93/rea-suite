@@ -327,3 +327,227 @@ def program_dll() -> tuple[bytes, dict[str, int]]:
         },
     )
     return image, {"alpha": 0x1000, "beta": 0x1010, "late_slot": 0x2420}
+
+
+def resource_section(entries: list[tuple[int | str, int | str, int, bytes]], rva: int) -> bytes:
+    """A .rsrc section at rva holding (type, name, language, data) entries: the three-level
+    directory (named entries before numbered ones, as the format orders them), the data
+    entries, the names and the data, each aligned to 4."""
+    tree: dict = {}
+    for kind, name, lang, data in entries:
+        tree.setdefault(kind, {}).setdefault(name, {})[lang] = data
+
+    def ordered(keys) -> list:
+        return sorted(k for k in keys if isinstance(k, str)) + sorted(
+            k for k in keys if isinstance(k, int)
+        )
+
+    # sizes first: directories, then data entries, then strings, then data
+    directories = []  # (key path, children keys)
+
+    def plan(node: dict, path: tuple) -> None:
+        directories.append((path, ordered(node)))
+        for key in ordered(node):
+            if isinstance(node[key], dict):
+                plan(node[key], (*path, key))
+
+    plan(tree, ())
+    places, at = {}, 0
+    for path, keys in directories:
+        places[path] = at
+        at += 16 + 8 * len(keys)
+    leaves = [
+        (k, n, lang)
+        for k in ordered(tree)
+        for n in ordered(tree[k])
+        for lang in ordered(tree[k][n])
+    ]
+    leaf_at = {}
+    for leaf in leaves:
+        leaf_at[leaf] = at
+        at += 16
+    names = sorted({key for path, keys in directories for key in keys if isinstance(key, str)})
+    name_at = {}
+    for name in names:
+        name_at[name] = at
+        at = align(at + 2 + 2 * len(name), 4)
+    data_at = {}
+    for leaf in leaves:
+        data_at[leaf] = at
+        at = align(at + len(tree[leaf[0]][leaf[1]][leaf[2]]), 4)
+    out = bytearray(at)
+    for path, keys in directories:
+        named = sum(isinstance(k, str) for k in keys)
+        head = struct.pack("<IIHHHH", 0, 0, 0, 0, named, len(keys) - named)
+        body = b""
+        for key in keys:
+            ident = (0x80000000 | name_at[key]) if isinstance(key, str) else key
+            if len(path) == 2:
+                target = leaf_at[(*path, key)]
+            else:
+                target = 0x80000000 | places[(*path, key)]
+            body += struct.pack("<II", ident, target)
+        _put(out, places[path], head + body)
+    for leaf in leaves:
+        data = tree[leaf[0]][leaf[1]][leaf[2]]
+        _put(out, leaf_at[leaf], struct.pack("<IIII", rva + data_at[leaf], len(data), 0, 0))
+        _put(out, data_at[leaf], data)
+    for name in names:
+        _put(out, name_at[name], struct.pack("<H", len(name)) + name.encode("utf-16-le"))
+    return bytes(out)
+
+
+def _w(text: str) -> bytes:
+    return text.encode("utf-16-le") + b"\0\0"
+
+
+def _pad4(data: bytes) -> bytes:
+    return data.ljust(align(len(data), 4), b"\0")
+
+
+def _version_node(key: str, value: bytes | str | None, children: list[bytes] = ()) -> bytes:
+    text = isinstance(value, str)
+    raw = _w(value) if text else (value or b"")
+    head = struct.pack("<HHH", 0, len(raw) // 2 if text else len(raw), 1 if text else 0)
+    body = _pad4(head + _w(key)) + _pad4(raw) + b"".join(_pad4(c) for c in children)
+    return struct.pack("<H", len(body)) + body[2:]
+
+
+def icon_dib(width: int, height: int, bpp: int, pixels: bytes, mask: bytes) -> bytes:
+    """An icon image: BITMAPINFOHEADER (height doubled for the mask), pixels bottom-up, then
+    the AND mask; pixels and mask already padded to their rows."""
+    header = struct.pack("<IiiHHIIiiII", 40, width, height * 2, 1, bpp, 0, 0, 0, 0, 0, 0)
+    return header + pixels + mask
+
+
+def program_resources() -> tuple[bytes, dict]:
+    """An x86 image with one resource of each kind `pe resources` decodes: a DIALOG and a
+    DIALOGEX with controls, a MENU and a MENUEX, a string table block, accelerators, version
+    information, a message table, an icon group of a 32-bit DIB and a PNG, a cursor group, a
+    bitmap, a manifest and a named RCDATA. Returns the image and what a test checks."""
+    dlg = struct.pack("<IIHhhhh", 0x80C800C0, 0, 2, 0, 0, 200, 100) + b"\0\0" + b"\0\0"
+    dlg += _w("About") + struct.pack("<H", 8) + _w("MS Sans Serif")
+    dlg = _pad4(dlg) + struct.pack("<IIhhhhH", 0x50010001, 0, 10, 70, 50, 14, 1)
+    dlg += b"\xff\xff\x80\x00" + _w("OK") + b"\0\0"
+    dlg = _pad4(dlg) + struct.pack("<IIhhhhH", 0x50000000, 0, 10, 10, 100, 8, 0xFFFF)
+    dlg += b"\xff\xff\x82\x00" + _w("Version 1") + b"\0\0"
+    dlgex = struct.pack("<HHIIIHhhhh", 1, 0xFFFF, 0, 0, 0x80C80048, 1, 0, 0, 160, 80)
+    dlgex += (
+        b"\0\0" + b"\0\0" + _w("Launcher") + struct.pack("<HHBB", 9, 400, 0, 1) + _w("Segoe UI")
+    )
+    dlgex = _pad4(dlgex) + struct.pack("<IIIhhhhI", 0, 0, 0x50010000, 5, 5, 60, 14, 1001)
+    dlgex += _w("SysListView32") + _w("&Play") + struct.pack("<H", 2) + b"\xab\xcd"
+    menu = struct.pack("<HH", 0, 0)
+    menu += struct.pack("<H", 0x10) + _w("&File")
+    menu += struct.pack("<HH", 0, 40001) + _w("&Open")
+    menu += struct.pack("<HH", 0, 0) + _w("")
+    menu += struct.pack("<HH", 0x80, 40002) + _w("E&xit")
+    menu += struct.pack("<HH", 0x80, 40003) + _w("&Help")
+    menuex = struct.pack("<HHI", 1, 4, 0)
+    menuex += _pad4(struct.pack("<IIIH", 0, 0, 0, 0x81) + _w("&Game"))
+    menuex += struct.pack("<I", 0)
+    menuex += _pad4(struct.pack("<IIIH", 0, 8, 50001, 0) + _w("&Start"))
+    menuex += _pad4(struct.pack("<IIIH", 0x800, 0, 0, 0x80) + _w(""))
+    table = b"".join(
+        struct.pack("<H", len(s)) + s.encode("utf-16-le") for s in ["", "Hello", *[""] * 13, "Last"]
+    )  # block 2: ids 16..31
+    accel = struct.pack("<HHHH", 0x09, ord("O"), 40001, 0) + struct.pack(
+        "<HHHH", 0x81, 0x70, 40100, 0
+    )
+    fixed = struct.pack("<13I", 0xFEEF04BD, 0x10000, 0x10002, 0x30004, 0x10002, 0, 0x3F, 0,
+                        0x40004, 1, 0, 0, 0)  # fmt: skip
+    strings = _version_node("040904b0", None, [
+        _version_node("CompanyName", "Example"), _version_node("FileVersion", "1.2.3.4")])  # fmt: skip
+    version = _version_node("VS_VERSION_INFO", fixed, [
+        _version_node("StringFileInfo", None, [strings]),
+        _version_node("VarFileInfo", None, [_version_node("Translation", struct.pack("<HH", 0x409, 0x4B0))]),
+    ])  # fmt: skip
+    message = b"Disk full\r\n\0\0"
+    messages = struct.pack("<IIII", 1, 7, 7, 16) + struct.pack("<HH", 4 + len(message), 0) + message
+    rows = b"\x00\x00\xff\xff" + b"\xff\x00\x00\x80"  # bottom row: red opaque, blue half
+    rows += b"\x00\xff\x00\xff" + b"\x00\x00\x00\x00"  # top row: green opaque, transparent
+    dib = icon_dib(2, 2, 32, rows, b"\0" * 8)
+    tiny_png = (
+        PNG_SIGNATURE
+        + struct.pack(">I", 13)
+        + b"IHDR"
+        + struct.pack(">IIBBBBB", 256, 256, 8, 6, 0, 0, 0)
+    ) + b"\0" * 4  # only the header matters to the reader
+    group_icon = struct.pack("<HHH", 0, 1, 2)
+    group_icon += struct.pack("<BBBBHHIH", 2, 2, 0, 0, 1, 32, len(dib), 1)
+    group_icon += struct.pack("<BBBBHHIH", 0, 0, 0, 0, 1, 32, len(tiny_png), 2)
+    mono = icon_dib(1, 1, 1, b"\x80\0\0\0", b"\0\0\0\0")
+    mono = mono[:40] + b"\0\0\0\0\xff\xff\xff\0" + mono[40:]  # palette: black, white
+    cursor = struct.pack("<HH", 0, 0) + mono
+    group_cursor = struct.pack("<HHH", 0, 2, 1) + struct.pack("<HHHHIH", 1, 2, 1, 1, len(cursor), 5)
+    bitmap = struct.pack("<IiiHHIIiiII", 40, 1, 1, 1, 24, 0, 4, 0, 0, 0, 0) + b"\x00\x00\xff\x00"
+    manifest = b'<?xml version="1.0"?><assembly/>'
+    entries = [
+        (5, 101, 0x409, dlg), (5, "LAUNCHER", 0x409, dlgex), (4, 102, 0x409, menu),
+        (4, 103, 0x409, menuex), (6, 2, 0x409, table), (9, 104, 0x409, accel),
+        (16, 1, 0x409, version), (11, 1, 0x409, messages), (3, 1, 0x409, dib),
+        (3, 2, 0x409, tiny_png), (14, 105, 0x409, group_icon), (1, 5, 0x409, cursor),
+        (12, 106, 0x409, group_cursor), (2, 107, 0x409, bitmap), (24, 1, 0x409, manifest),
+        (10, "CONFIG", 0x409, b"key=value"), (10, "CONFIG", 0x407, b"Schluessel=Wert"),
+    ]  # fmt: skip
+    rsrc_rva = 0x2000
+    rsrc = resource_section(entries, rsrc_rva)
+    image = pe(
+        [(".text", b"\xc3"), (".rsrc", rsrc)],
+        directories={2: (rsrc_rva, len(rsrc))},
+    )
+    return image, {"dib": dib, "png": tiny_png, "cursor": cursor, "bitmap": bitmap}
+
+
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+
+
+def program_x86_functions() -> tuple[bytes, dict[str, int]]:
+    """An x86 program for naming containing functions without an unwind table: `main` (frame,
+    pushes a string, calls `helper`, an import and `leaf`, loads `callback`'s address),
+    `helper` (frame, reads a global), `leaf` (no frame, one caller, after padding) and
+    `callback` (no frame, no caller: found by the ret and padding before it). Assembled with
+    Keystone."""
+    from keystone import KS_ARCH_X86, KS_MODE_32, Ks
+
+    base = 0x400000
+    at = {"main": 0x1000, "helper": 0x1020, "leaf": 0x1040, "callback": 0x1060,
+          "hello": 0x2000, "leafstr": 0x2008, "global": 0x2010, "iat": 0x2040}  # fmt: skip
+    va = {k: base + v for k, v in at.items()}
+    functions = {
+        "main": ["push ebp", "mov ebp, esp", f"push {va['hello']:#x}", f"call {va['helper']:#x}",
+                 f"call dword ptr [{va['iat']:#x}]", f"call {va['leaf']:#x}",
+                 f"mov eax, {va['callback']:#x}", "pop ebp", "ret"],
+        "helper": ["push ebp", "mov ebp, esp", f"mov eax, dword ptr [{va['global']:#x}]", "pop ebp",
+                   "ret"],
+        "leaf": ["xor eax, eax", f"push {va['leafstr']:#x}", "add esp, 4", "ret"],
+        "callback": ["mov eax, 1", "ret"],
+    }  # fmt: skip
+    ks = Ks(KS_ARCH_X86, KS_MODE_32)
+    code = bytearray(b"\xcc" * 0x70)
+    sites = {}
+    for name, lines in functions.items():
+        address = at[name]
+        for line in lines:
+            encoded = bytes(ks.asm(line, base + address)[0])
+            sites.setdefault(name, []).append(address)
+            _put(code, address - 0x1000, encoded)
+            address += len(encoded)
+    at["main_push"] = sites["main"][2]
+    at["main_call_iat"] = sites["main"][4]
+    at["leaf_push"] = sites["leaf"][1]
+    data = bytearray(0x100)
+    _put(data, 0x00, b"hello\0")
+    _put(data, 0x08, b"leaf\0")
+    _put(data, 0x40, struct.pack("<II", 0x2080, 0))  # IAT
+    _put(data, 0x60, struct.pack("<II", 0x2080, 0))  # lookup table
+    _put(data, 0x80, b"\0\0GetTickCount\0")
+    _put(data, 0xA0, b"KERNEL32.dll\0")
+    _put(data, 0xC0, struct.pack("<5I", 0x2060, 0, 0, 0x20A0, 0x2040))
+    image = pe(
+        [(".text", bytes(code)), (".rdata", bytes(data))],
+        base=base,
+        entry=at["main"],
+        directories={1: (0x20C0, 40), 12: (0x2040, 8)},
+    )
+    return image, at

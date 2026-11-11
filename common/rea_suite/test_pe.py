@@ -1,16 +1,19 @@
-"""The PE model and scans on synthetic programs (samples.program_x64/x86): RTTI, references,
-callers, strings, containing functions."""
+"""The PE model and scans on synthetic programs (samples.program_*): RTTI, references,
+callers, strings, containing functions from the unwind table, a function table or the
+heuristic, disassembly and resources."""
 
 from __future__ import annotations
 
 import contextlib
 import io
 import json
+import struct
 import tempfile
 import unittest
+import zlib
 from pathlib import Path
 
-from rea_suite import pe, rtti, samples, scan, sites
+from rea_suite import pe, pefunctions, peresources, rtti, samples, scan, sites
 from rea_suite.pemodel import Image
 
 
@@ -218,7 +221,9 @@ class Scans(unittest.TestCase):
 
     def test_rip_relative_references_to_a_string(self) -> None:
         (site,) = scan.refs(self.image, self.at["hello"])
-        self.assertEqual((site.rva, site.function), (0x1000, 0x1000))
+        self.assertEqual(
+            (site.rva, site.function.start, site.function.source), (0x1000, 0x1000, "unwind")
+        )
         self.assertTrue(site.text.startswith("lea rax"), site.text)
 
     def test_a_string_is_found_by_its_text_in_either_encoding(self) -> None:
@@ -382,6 +387,222 @@ class Cli(unittest.TestCase):
         other = self.exe.with_name("notes.txt")
         other.write_text("hello")
         self.assertEqual(run("rtti", str(other))[0], 2)
+
+
+class X86Functions(unittest.TestCase):
+    def setUp(self) -> None:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.root = Path(tmp.name)
+        data, self.at = samples.program_x86_functions()
+        self.image = Image(data)
+
+    def table(self, name: str, text: str) -> Path:
+        path = self.root / name
+        path.write_text(text)
+        return path
+
+    def test_heuristic_starts_without_a_table(self) -> None:
+        at = self.at
+        found = pefunctions.heuristic_starts(self.image)
+        self.assertEqual(found, {at["main"], at["helper"], at["leaf"], at["callback"]})
+        row = scan.refs(self.image, at["leafstr"])[0].as_json(self.image)
+        self.assertEqual(
+            (row["function"], row["function_source"], row["function_known"]),
+            (f"{at['leaf']:#x}", "heuristic", False),
+        )
+
+    def test_a_ghidra_table_names_the_function_and_bounds_it_by_size(self) -> None:
+        at = self.at
+        tsv = self.table(
+            "functions.tsv",
+            "entry\tsize\tname\tthunk\tcallers\n00401000\t31\tmain\t0\t0\n"
+            "00401020\t11\thelper\t0\t1\n",
+        )
+        self.image.functions = pefunctions.Functions.from_tables(self.image, [tsv])
+        (site,) = scan.refs(self.image, at["hello"])
+        self.assertEqual((site.function.start, site.function.name), (at["main"], "main"))
+        self.assertEqual(site.as_json(self.image)["function_known"], True)
+        # leaf lies past helper's 11 bytes: in no function the table names
+        self.assertIsNone(scan.refs(self.image, at["leafstr"])[0].function)
+
+    def test_tables_merge_starts_and_names_and_pick_a_game(self) -> None:
+        entries = self.table("entries.tsv", "entry\n00401000\n00401020\n00401040\n")
+        names = self.table(
+            "names.tsv",
+            "game\taddress\tname\twhat\nsp\t0x00401040\tLeaf_Clear\t\nmp\t0x401040\tOther\t\n",
+        )
+        functions = pefunctions.Functions.from_tables(self.image, [entries, names], "sp")
+        self.assertEqual(functions.at(self.at["leaf_push"]).name, "Leaf_Clear")
+        self.assertIsNone(functions.at(self.at["main_push"]).name)
+        self.assertEqual(functions.address_of("Leaf_Clear"), self.at["leaf"])
+
+    def test_imports_name_the_function_from_the_table(self) -> None:
+        tsv = self.table("t.tsv", "00401000\tmain\n00401020\thelper\n")
+        self.image.functions = pefunctions.Functions.from_tables(self.image, [tsv])
+        (row,) = scan.import_calls(self.image)
+        (site,) = row["sites"]
+        self.assertEqual(
+            (site["rva"], site["function_name"], site["function_source"]),
+            (f"{self.at['main_call_iat']:#x}", "main", "table"),
+        )
+
+
+class Disassembly(unittest.TestCase):
+    def setUp(self) -> None:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.exe = Path(tmp.name) / "program.exe"
+        data, self.at = samples.program_x86_functions()
+        self.exe.write_bytes(data)
+        self.tsv = self.exe.with_name("functions.tsv")
+        self.tsv.write_text("entry\tname\n00401000\tmain\n00401020\thelper\n")
+
+    def test_a_listing_notes_strings_imports_and_names(self) -> None:
+        code, out = run("disasm", str(self.exe), "main", "--count", "6",
+                        "--functions", str(self.tsv))  # fmt: skip
+        self.assertEqual(code, 0)
+        lines = out.splitlines()
+        self.assertEqual(lines[0], "main:")
+        self.assertIn('push 0x402000  ; "hello"', out)
+        self.assertIn("call 0x401020  ; helper", out)
+        self.assertIn("call dword ptr [0x402040]  ; KERNEL32.dll!GetTickCount", out)
+        self.assertEqual(len([line for line in lines if line.startswith("  0x")]), 6)
+
+    def test_a_whole_function_stops_at_the_next_start_without_its_padding(self) -> None:
+        code, out = run("disasm", str(self.exe), "0x401042", "--function", "--json")
+        self.assertEqual(code, 0)
+        rows = json.loads(out)
+        self.assertEqual((rows[0]["rva"], rows[0]["start"]), ("0x1040", "heuristic"))
+        self.assertEqual(rows[-1]["instruction"], "ret")
+
+    def test_to_an_address_and_a_histogram(self) -> None:
+        code, out = run("disasm", str(self.exe), "0x401020", "--to", "0x401023", "--json")
+        self.assertEqual([r["instruction"] for r in json.loads(out)], ["push ebp", "mov ebp, esp"])
+        code, out = run("disasm", str(self.exe), "main", "--function", "--histogram", "--json",
+                        "--functions", str(self.tsv))  # fmt: skip
+        found = json.loads(out)
+        self.assertEqual(found["mnemonics"]["call"], 3)
+        self.assertEqual(found["instructions"], 9)
+        code, out = run("disasm", str(self.exe), "--histogram")
+        self.assertEqual(code, 0)
+        self.assertIn("int3", out)
+
+    def test_an_unknown_name_is_refused(self) -> None:
+        self.assertEqual(run("disasm", str(self.exe), "Nowhere")[0], 2)
+
+
+class Resources(unittest.TestCase):
+    def setUp(self) -> None:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.root = Path(tmp.name)
+        data, self.parts = samples.program_resources()
+        self.image = Image(data)
+        self.found = peresources.resources(self.image)
+
+    def one(self, kind: str, name) -> dict:
+        (row,) = [r for r in self.found if r["type"] == kind and r["name"] == name]
+        self.assertNotIn("error", row)
+        return row
+
+    def test_dialogs_with_their_controls(self) -> None:
+        about = self.one("DIALOG", 101)
+        self.assertEqual((about["kind"], about["title"], about["font"]["name"]),
+                         ("dialog", "About", "MS Sans Serif"))  # fmt: skip
+        self.assertEqual(
+            [(c["id"], c["class"], c["text"]) for c in about["controls"]],
+            [(1, "Button", "OK"), (-1, "Static", "Version 1")],
+        )
+        launcher = self.one("DIALOG", "LAUNCHER")
+        (play,) = launcher["controls"]
+        self.assertEqual((launcher["kind"], launcher["font"]["weight"]), ("dialogex", 400))
+        self.assertEqual((play["id"], play["class"], play["text"], play["extra"]),
+                         (1001, "SysListView32", "&Play", "abcd"))  # fmt: skip
+
+    def test_menus_in_both_formats(self) -> None:
+        plain = self.one("MENU", 102)["items"]
+        self.assertEqual([i["text"] for i in plain], ["&File", "&Help"])
+        self.assertEqual([(i.get("id"), i.get("separator", False)) for i in plain[0]["items"]],
+                         [(40001, False), (0, True), (40002, False)])  # fmt: skip
+        (game,) = self.one("MENU", 103)["items"]
+        self.assertEqual(game["items"][0]["id"], 50001)
+        self.assertTrue(game["items"][1]["separator"])
+
+    def test_strings_accelerators_messages_and_version(self) -> None:
+        self.assertEqual(self.one("STRING", 2)["strings"],
+                         [{"id": 17, "text": "Hello"}, {"id": 31, "text": "Last"}])  # fmt: skip
+        self.assertEqual(
+            [e["key"] for e in self.one("ACCELERATOR", 104)["entries"]], ["Ctrl+O", "F1"]
+        )
+        self.assertEqual(self.one("MESSAGETABLE", 1)["messages"], [{"id": 7, "text": "Disk full"}])
+        version = self.one("VERSION", 1)
+        self.assertEqual(
+            (version["file_version"], version["product_version"]), ("1.2.3.4", "1.2.0.0")
+        )
+        self.assertEqual(version["strings"]["040904b0"]["CompanyName"], "Example")
+        self.assertEqual(version["translations"], ["0409:04b0"])
+
+    def test_filters_by_type_and_name(self) -> None:
+        rows = peresources.resources(self.image, ["rcdata"], ["CONFIG"])
+        self.assertEqual(sorted(r["lang"] for r in rows), ["0x0407", "0x0409"])
+        self.assertEqual(len(peresources.resources(self.image, ["5"])), 2)
+
+    def test_export_writes_icons_cursors_bitmaps_and_raw_data(self) -> None:
+        out = self.root / "out"
+        peresources.export(self.image, peresources.walk(self.image), out)
+        ico = (out / "group_icon" / "105.ico").read_bytes()
+        self.assertEqual(struct.unpack_from("<HHH", ico), (0, 1, 2))
+        size, offset = struct.unpack_from("<II", ico, 6 + 8)
+        self.assertEqual(ico[offset : offset + size], self.parts["dib"])
+        self.assertEqual((out / "group_icon" / "105" / "256x256-32bpp-2.png").read_bytes(),
+                         self.parts["png"])  # fmt: skip
+        cur = (out / "group_cursor" / "106.cur").read_bytes()
+        self.assertEqual(struct.unpack_from("<HHH", cur), (0, 2, 1))
+        self.assertEqual(cur[22:], self.parts["cursor"][4:])
+        self.assertTrue((out / "bitmap" / "107.bmp").read_bytes().startswith(b"BM"))
+        self.assertEqual((out / "rcdata" / "CONFIG-0407.bin").read_bytes(), b"Schluessel=Wert")
+        self.assertTrue((out / "manifest" / "1.xml").is_file())
+
+    def test_a_32_bit_icon_converts_to_png_with_its_alpha(self) -> None:
+        converted = peresources.dib_to_png(self.parts["dib"])
+        self.assertTrue(converted.startswith(samples.PNG_SIGNATURE))
+        width, height = struct.unpack_from(">II", converted, 16)
+        self.assertEqual((width, height), (2, 2))
+        (idat,) = [converted[i + 8 : i + 8 + struct.unpack_from(">I", converted, i)[0]]
+                   for i in range(8, len(converted) - 8)
+                   if converted[i + 4 : i + 8] == b"IDAT"]  # fmt: skip
+        pixels = zlib.decompress(idat)
+        # top row first: green opaque, transparent; then red opaque, blue at half alpha
+        self.assertEqual(pixels, b"\0" + bytes([0, 255, 0, 255, 0, 0, 0, 0])
+                         + b"\0" + bytes([255, 0, 0, 255, 0, 0, 255, 128]))  # fmt: skip
+
+    def test_a_one_bit_image_takes_transparency_from_its_mask(self) -> None:
+        mono = self.parts["cursor"][4:]
+        converted = peresources.dib_to_png(mono)
+        idat = converted[converted.index(b"IDAT") + 4 :]
+        self.assertEqual(zlib.decompress(idat)[:5], b"\0\xff\xff\xff\xff")
+
+    def test_a_truncated_resource_reports_an_error(self) -> None:
+        resource = next(r for r in peresources.walk(self.image) if r.type_name == "DIALOG")
+        resource.size = 20
+        self.assertIn("error", peresources.decode(self.image, resource))
+
+    def test_cli_text_json_and_extract(self) -> None:
+        exe = self.root / "game" / "program.exe"
+        exe.parent.mkdir()
+        exe.write_bytes(samples.program_resources()[0])
+        code, out = run("resources", str(exe), "--type", "dialog")
+        self.assertEqual(code, 0)
+        self.assertIn("dialog 101 (lang 0x0409, ", out)
+        self.assertIn("  id 1      Button         'OK'", out)
+        code, out = run("resources", str(exe), "--json", "--type", "version")
+        self.assertEqual(json.loads(out)[0]["file_version"], "1.2.3.4")
+        self.assertEqual(run("resources", str(exe), "--extract", str(exe.parent / "x"))[0], 2)
+        code, _ = run("resources", str(exe), "--extract", str(self.root / "x"))
+        self.assertEqual(code, 0)
+        listed = json.loads((self.root / "x" / "resources.json").read_text())
+        self.assertEqual(len(listed), 17)
 
 
 if __name__ == "__main__":

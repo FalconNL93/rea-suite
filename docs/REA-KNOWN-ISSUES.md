@@ -41,11 +41,13 @@ Reproduced with a 15 KB i686 PE built with mingw, by asking for a procedure at a
    target-<hash>.exe", again with about 600 KB of log in the error (item 3).
 6. **`close_binary` takes no `document`**, so an agent cannot close only its own binary.
 7. **`inspect_pe_resources` is too large and too shallow:** its output is very large, and it does not
-   decode menus, dialogs or string tables (pefile does).
+   decode menus, dialogs or string tables (pefile does). `rea-suite pe resources` decodes them, with
+   `--type`/`--name` to keep the answer small ([port tools](PORT-TOOLS.md)).
 8. **Ghidra's string list misses three-letter strings**, such as file extensions.
 
 **Workaround:** one binary per REA session (one agent each), or `rea-ghidra --project <project>` for
-headless Ghidra directly, and `objdump` / pefile for PE resources and short strings. Both worked on
+headless Ghidra directly, `rea-suite pe resources` for PE resources, and `rea-suite pe refs --string`
+for short strings. Both worked on
 Rogue Spear.
 
 ## Large images outlast the Ghidra startup deadline

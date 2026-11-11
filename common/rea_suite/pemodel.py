@@ -39,6 +39,12 @@ class Section:
         return self.rva + max(self.size, self.raw_size)
 
     @property
+    def data_size(self) -> int:
+        """Bytes of the section the file holds that the image uses: the raw data up to the
+        virtual size (the rest of the raw data is the file alignment's padding)."""
+        return min(self.raw_size, self.size) if self.size else self.raw_size
+
+    @property
     def executable(self) -> bool:
         return bool(self.flags & (EXECUTE | CODE))
 
@@ -97,6 +103,9 @@ class Image:
             for s in self.pe.sections
         ]
         self._starts = [s.rva for s in self.sections]
+        # Function starts from a table (pefunctions.Functions); pefunctions.of() sets the
+        # default (unwind table or heuristic) on first use when a caller gave none.
+        self.functions = None
 
     @classmethod
     def open(cls, path: Path) -> Image:

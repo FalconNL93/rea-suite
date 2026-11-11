@@ -12,7 +12,7 @@
     .\platforms\windows\rea-suite.ps1 xbox360 <command> [options]  # Xbox 360 XEX/PE in your Ghidra project
     .\platforms\windows\rea-suite.ps1 functions <config> check|add|find|convert  # a port's function index and gate
     .\platforms\windows\rea-suite.ps1 steamstub <exe>...  # SteamStub DRM signs
-    .\platforms\windows\rea-suite.ps1 pe <command> <exe> ...  # PE scans: RTTI, references, callers, strings
+    .\platforms\windows\rea-suite.ps1 pe <command> <exe> ...  # PE scans: RTTI, references, callers, strings, disasm, resources
     .\platforms\windows\rea-suite.ps1 rmdp list|extract|find|inner <index.bin> ...  # Remedy packages
     .\platforms\windows\rea-suite.ps1 le info|dump-object <exe> ...  # LE/LX executables (DOS extenders)
     .\platforms\windows\rea-suite.ps1 frida <script.js> --pid|--name|--spawn ...  # Frida script, JSON lines
