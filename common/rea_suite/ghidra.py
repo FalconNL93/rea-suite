@@ -3,8 +3,9 @@
 Extensions are version-locked to Ghidra. For every Ghidra install they are
 resolved again: a prebuilt release zip for that exact Ghidra version is used
 when one exists, otherwise (with `build: true`) the release's source is built
-with Ghidra's own Gradle wrapper. Results land in <ghidra>/Ghidra/Extensions,
-which Ghidra treats as installed for both the GUI and analyzeHeadless.
+with Ghidra's own Gradle wrapper; a `commit` pin builds that commit's source.
+Results land in <ghidra>/Ghidra/Extensions, which Ghidra treats as installed
+for both the GUI and analyzeHeadless.
 """
 
 from __future__ import annotations
@@ -135,12 +136,18 @@ def _sync_one(
     if marker and marker["ghidra"] == version:
         marker = normalize_location(install, name, marker)
     repo = spec["github"]
+    commit = spec.get("commit")
     pinned = str(spec.get("version", "latest"))
-    pattern = re.compile(spec["asset"].replace("{ghidra}", re.escape(version)))
-    candidates = [github.release(repo, pinned)] if pinned != "latest" else github.releases(repo)
+    if commit and not spec.get("build"):
+        raise LookupError("a commit pin is built from source: set build: true")
+    candidates = []
+    if not commit:
+        pattern = re.compile(spec["asset"].replace("{ghidra}", re.escape(version)))
+        candidates = [github.release(repo, pinned)] if pinned != "latest" else github.releases(repo)
 
-    # Newest release that ships a build for this exact Ghidra version.
-    newest, tag, asset = None, None, None
+    # Newest release that ships a build for this exact Ghidra version; a pinned commit is
+    # always built from its source.
+    newest, tag, asset = ({"tag_name": commit} if commit else None), None, None
     for release in candidates:
         newest = newest or release
         matches = sorted(a["name"] for a in release["assets"] if pattern.search(a["name"]))

@@ -98,6 +98,9 @@ def releases(repo: str, limit: int = 15):
 
 
 def source_url(repo: str, tag: str) -> str:
+    """The source archive of a release tag, or of a commit given by its full hash."""
+    if re.fullmatch(r"[0-9a-f]{40}", tag):
+        return f"https://github.com/{repo}/archive/{tag}.tar.gz"
     return f"https://github.com/{repo}/archive/refs/tags/{urllib.parse.quote(tag, safe='')}.tar.gz"
 
 

@@ -47,6 +47,8 @@
 #              `{github, version, assets: {<platform>: regex}, copy: {<glob>: <dir>}}`,
 #              `{os}` in a dir is Ghidra's native directory name).
 #              Optional extensions set `component: <name>`; deselection leaves installed copies.
+#              `commit: <full hash>` builds that commit's source instead (no release lookup;
+#              `build: true` required), for a fix that came after the newest release.
 # plugins:     files from another release copied into the install dir:
 #              `copy: {<glob in archive>: <dir in install>}`.
 
@@ -102,6 +104,14 @@ tools:
         asset: '^ghidra_{ghidra}_PUBLIC_\d+_XEXLoaderWV\.zip$'
         build: true
         subdir: XEXLoaderWV
+      # LE/LX loader (DOS/4GW and DOS/16 LE, DOS32A, OS/2 LX, VxD): objects at their bases, every
+      # fixup applied, typed headers; per-object base and selector overrides. Pinned to a commit:
+      # Ghidra 12.1's compiler-spec fix and the Watcom ABI came after its newest release (v12.0.1).
+      # Wanted by the Theme Park port (DOS/4GW, 2026-11-11); move it with the Ghidra pin.
+      lxloader:
+        github: yetmorecode/ghidra-lx-loader
+        commit: 60bae5199fdada5b3b825741a94bfbbe04cb7a5f
+        build: true
       # UEFI, PCI option ROM and other firmware loaders
       firmware-utils:
         github: al3xtjames/ghidra-firmware-utils

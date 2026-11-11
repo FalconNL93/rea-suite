@@ -24,9 +24,10 @@ with the reason when it is dropped.
 - **`rea-suite dosbox`**: a wrapper around DOSBox-X's debugger as an analysis aid for DOS games: log
   the INT calls (DOS, DPMI, the extender's) and real-mode callbacks of a run as JSON lines, the way
   `rea-suite frida` logs a Windows game. Wanted by the Theme Park port (2026-11-11).
-- **Ghidra support for LE/LX**: Ghidra has no LE loader. Evaluate the community loader extensions
-  (license, the Ghidra versions they build for, fixups applied) before one joins a component; until
-  then, load `rea-suite le dump-object` output raw at each object's base (2026-11-11).
+- **REA's open_binary for LE/LX**: Ghidra loads LE through ghidra-lx-loader (`rea-ghidra analyze`), but
+  REA's own format check refuses an MZ image with an LE header before any provider sees it
+  ("unsupported LE executable in MZ image", provider_id=ghidra too, 2026-11-11). Wanted in rea-agents:
+  pass LE/LX to the Ghidra provider when the loader is installed, so MCP sessions open DOS/4GW games.
 
 ## Console games
 

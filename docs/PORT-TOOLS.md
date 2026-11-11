@@ -234,6 +234,8 @@ rea-suite le dump-object game/MAIN.EXE 3 --base 0x400000 --object-base 1=0x10000
   chosen bases. `--base` places the dumped object (default: its relocation base); the other objects
   move by the same amount, so the module keeps its layout, unless `--object-base N=ADDR` places one.
   Load the output raw at `--base` in Ghidra, Rizin or Unicorn, and each other object at its own base.
+  Ghidra itself needs no dump: the ghidra-lx-loader extension loads the executable whole
+  (`rea-ghidra analyze game/MAIN.EXE`), every object at its base and every fixup applied.
   Left as they are, and counted on stderr: imports, selectors, 16-bit offsets, 8-bit and alias fixups.
   Iterated, compressed and invalid pages are left as zeros, with a warning.
 
