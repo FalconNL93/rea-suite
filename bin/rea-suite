@@ -28,7 +28,8 @@
 #                                            Xbox 360 images (--help)
 #   rea-suite steamstub <exe>...            SteamStub DRM signs (.bind, entropy, timestamps)
 #   rea-suite pe <command> <exe> ...        PE scans without a project: MSVC RTTI classes and
-#                                            vtables, references, callers, strings (--help)
+#                                            vtables, references, callers, strings, disassembly,
+#                                            resources; containing functions on x86 (--help)
 #   rea-suite rmdp list|extract|find|inner <index.bin> ...  Remedy packages (Alan Wake,
 #                                            Remastered, American Nightmare, Quantum Break,
 #                                            Control): list, extract, search, level containers

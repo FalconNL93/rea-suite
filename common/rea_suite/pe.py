@@ -11,11 +11,22 @@
   rea-suite pe imports <exe> [--dll D] [--function F] every call site of imported functions
   rea-suite pe registry <exe> --range S:N --registrar ADDR=TYPE:FIELDS [--stack-byte OFF]
                                                       settings a game registers, from its code
+  rea-suite pe disasm <exe> <addr|name>... [--count N | --to ADDR | --function] [--histogram]
+                                                      disassembly with imports, names and
+                                                      strings noted; a mnemonic histogram
+  rea-suite pe resources <exe> [--type T] [--name N] [--extract DIR]
+                                                      dialogs, menus, strings, version,
+                                                      accelerators; icons and cursors exported
 
 Addresses are hexadecimal; one at or above the image base is a VA, a smaller one an RVA. Every
-command takes --json. Results name the containing function from the x64 unwind table where it
-has one; in JSON `function` is its address or null, and `function_known` says which. These are byte scans confirmed by decoding each hit (pemodel.py, scan.py, rtti.py);
-for a full cross-reference picture use REA (`rea xrefs`, `search_strings`) or rea-ghidra.
+command takes --json. Results name the function they lie in: from --functions TSV (a
+`rea-ghidra functions` export or a port's function table; repeatable, --game picks a `game`
+column's rows), else the x64 unwind table, else starts guessed from the bytes (x86: call
+targets, frames, padding), marked heuristic (`~0x401000` in text). In JSON `function` is the
+start or null, `function_name` its name, `function_source` table, unwind or heuristic, and
+`function_known` is true for a table or unwind start only. These are byte scans confirmed by
+decoding each hit (pemodel.py, pefunctions.py, scan.py, rtti.py, peresources.py); for a full
+cross-reference picture use REA (`rea xrefs`, `search_strings`) or rea-ghidra.
 """
 
 from __future__ import annotations
@@ -26,16 +37,12 @@ import re
 import sys
 from pathlib import Path
 
-from rea_suite import rtti, scan, sites
+from rea_suite import pefunctions, peresources, rtti, scan, sites
 from rea_suite.pemodel import Image
 
 
 def number(text: str) -> int:
     return int(text, 0) if text.lower().startswith("0x") else int(text, 16)
-
-
-def hexa(value: int | None) -> str:
-    return "-" if value is None else f"{value:#x}"
 
 
 def emit(args, rows: list, line) -> None:
@@ -166,7 +173,16 @@ def cmd_rtti(args, image: Image) -> int:
 
 
 def site_line(image: Image):
-    return lambda s: f"{s.rva:#x}  {s.text:<40}  in {hexa(s.function)}"
+    return lambda s: f"{s.rva:#x}  {s.text:<40}  in {scan.function_label(s.function)}"
+
+
+def row_function(row: dict) -> str:
+    """A JSON row's function fields as site_line shows them."""
+    if not row.get("function"):
+        return "-"
+    mark = "~" if row.get("function_source") == "heuristic" else ""
+    name = f" {row['function_name']}" if row.get("function_name") else ""
+    return f"{mark}{row['function']}{name}"
 
 
 def cmd_refs(args, image: Image) -> int:
@@ -203,7 +219,13 @@ def cmd_strings(args, image: Image) -> int:
     rows = scan.strings_in(
         image, image.address(number(args.start)), number(args.size), args.min_length
     )
-    emit(args, rows, lambda r: f"{r['rva']}  {r['string']}  {r['encoding']:<5}  {r['text']!r}")
+    emit(
+        args,
+        rows,
+        lambda r: (
+            f"{r['rva']}  {r['string']}  {r['encoding']:<5}  {r['text']!r}  in {row_function(r)}"
+        ),
+    )
     return 0
 
 
@@ -223,7 +245,7 @@ def cmd_imports(args, image: Image) -> int:
         for u in r["sites"]:
             thunk = f" through thunk {u['thunk']}" if "thunk" in u else ""
             print(
-                f"  {u['rva']}  {u['kind']:<9} {u['instruction']:<36} in {u['function'] or '-'}{thunk}"
+                f"  {u['rva']}  {u['kind']:<9} {u['instruction']:<36} in {row_function(u)}{thunk}"
             )
     return 0 if rows else 1
 
@@ -268,8 +290,170 @@ def cmd_registry(args, image: Image) -> int:
         for r in rows:
             named = "  ".join(f"{f}={r[f]!r}" for f in registrars[int(r["registrar"], 16)].fields)
             stored = f"  stored={r['stored']!r}" if "stored" in r else ""
-            print(f"{r['site']}  {r['type']:<8} {named}{stored}")
+            print(f"{r['site']}  {r['type']:<8} {named}{stored}  in {row_function(r)}")
     print(f"{len(rows)} registrations", file=sys.stderr)
+    return 0 if rows else 1
+
+
+def resolve(image: Image, text: str) -> int:
+    """An address (hex, VA or RVA) or a function's name from --functions or the exports."""
+    found = image.functions.address_of(text) if image.functions else None
+    if found is None:
+        found = next((e.rva for e in image.exports if e.name == text), None)
+    if found is not None:
+        return found
+    try:
+        return image.address(number(text))
+    except ValueError:
+        raise ValueError(f"neither an address nor a known function name: {text!r}") from None
+
+
+def cmd_disasm(args, image: Image) -> int:
+    functions = pefunctions.of(image)
+    try:
+        starts = [resolve(image, a) for a in args.at]
+        end = image.address(number(args.to)) if args.to else None
+    except ValueError as exc:
+        print(f"disasm: {exc}", file=sys.stderr)
+        return 2
+    selections = []
+    for start in starts:
+        if args.function:
+            found = functions.at(start)
+            if found is None:
+                print(f"disasm: no function known at {start:#x}", file=sys.stderr)
+                return 1
+            selections.append((found.start, functions.end_of(found.start), None))
+        elif end is not None:
+            selections.append((start, end, None))
+        else:
+            selections.append((start, None, args.count))
+    listings = []
+    for start, stop, count in selections:
+        try:
+            rows = scan.listing(image, start, stop, count)
+        except ValueError as exc:
+            print(f"disasm: {exc}", file=sys.stderr)
+            return 1
+        while args.function and len(rows) > 1 and rows[-1]["instruction"] in ("int3", "nop"):
+            rows.pop()  # the padding before the next function
+        listings.append(rows)
+    if args.histogram:
+        ranges = [(int(rows[0]["rva"], 16), sum(len(r["bytes"]) // 2 for r in rows))
+                  for rows in listings if rows]  # fmt: skip
+        if not selections:
+            ranges = [(s.rva, s.data_size) for s in image.code_sections()]
+        found = scan.histogram(image, ranges)
+        if args.json:
+            print(json.dumps(found, indent=1))
+            return 0
+        print(
+            f"{found['instructions']} instructions, {found['distinct']} mnemonics, "
+            f"{found['undecoded_bytes']} undecoded bytes"
+        )
+        for mnemonic, count in found["mnemonics"].items():
+            print(f"  {count:>9}  {mnemonic}")
+        return 0
+    if not selections:
+        print(
+            "disasm: give an address or a name (or --histogram for the whole image)",
+            file=sys.stderr,
+        )
+        return 2
+    if args.json:
+        print(json.dumps(listings if len(listings) > 1 else listings[0], indent=1))
+        return 0
+    for rows in listings:
+        if rows and "start" not in rows[0]:
+            found = functions.at(int(rows[0]["rva"], 16))
+            print(f"; in {scan.function_label(found)}")
+        for r in rows:
+            if "start" in r:
+                mark = "~" if r["start"] == "heuristic" else ""
+                print(f"{mark}{r['label'] or 'sub_' + r['va'][2:]}:")
+            note = f"  ; {r['note']}" if r["note"] else ""
+            print(f"  {r['va']}  {r['bytes']:<20} {r['instruction']}{note}")
+        print()
+    return 0
+
+
+def resource_line(r: dict) -> list[str]:
+    """A decoded resource for text output: one heading line and its items, briefly."""
+    head = f"{r['type'].lower()} {r['name']} (lang {r['lang']}, {r['size']} bytes)"
+    if "error" in r:
+        return [f"{head}: {r['error']}"]
+    kind = r["type"]
+    if kind == "DIALOG":
+        font = f", font {r['font']['size']} {r['font']['name']!r}" if "font" in r else ""
+        controls = len(r["controls"])
+        lines = [
+            f"{head}: {r['kind']} {r['title']!r} {r['cx']}x{r['cy']}{font}, {controls} controls"
+        ]
+        for c in r["controls"]:
+            lines.append(
+                f"  id {c['id']:<6} {c['class']:<14} {c['text']!r:<24} style {c['style']}  "
+                f"{c['x']},{c['y']} {c['cx']}x{c['cy']}"
+            )
+        return lines
+    if kind == "MENU":
+        lines = [f"{head}: {r['kind']}"]
+
+        def items(entries: list, depth: int) -> None:
+            for i in entries:
+                if i.get("separator"):
+                    lines.append("  " * depth + "-----")
+                    continue
+                ident = f"  id {i['id']}" if "id" in i and "items" not in i else ""
+                lines.append("  " * depth + f"{i['text']!r}{ident}")
+                items(i.get("items", []), depth + 1)
+
+        items(r["items"], 1)
+        return lines
+    if kind == "STRING":
+        return [head, *(f"  {s['id']:<6} {s['text']!r}" for s in r["strings"])]
+    if kind == "MESSAGETABLE":
+        return [head, *(f"  {m['id']:#010x} {m['text']!r}" for m in r["messages"])]
+    if kind == "ACCELERATOR":
+        return [head, *(f"  {e['key']:<16} id {e['id']}" for e in r["entries"])]
+    if kind == "VERSION":
+        lines = [
+            f"{head}: file {r.get('file_version', '?')}, product {r.get('product_version', '?')}"
+        ]
+        for table, entries in r["strings"].items():
+            lines += [f"  [{table}] {k}: {v!r}" for k, v in entries.items()]
+        return lines
+    if kind in ("GROUP_ICON", "GROUP_CURSOR"):
+        sizes = ", ".join(f"{i['width']}x{i['height']} {i['bpp']}bpp" for i in r["images"])
+        return [f"{head}: {sizes}"]
+    if kind in ("BITMAP", "ICON", "CURSOR"):
+        bpp = f" {r['bpp']}bpp" if "bpp" in r else ""
+        return [f"{head}: {r['format']} {r['width']}x{r['height']}{bpp}"]
+    return [head]
+
+
+def cmd_resources(args, image: Image) -> int:
+    rows = peresources.resources(image, args.type, args.name)
+    if args.extract:
+        out = (args.caller_cwd / args.extract).resolve()
+        if out.is_relative_to((args.caller_cwd / args.exe).resolve().parent):
+            print(
+                "resources: --extract into the executable's own folder is refused", file=sys.stderr
+            )
+            return 2
+        chosen = [r for r in peresources.walk(image)
+                  if peresources.matches(r, args.type, args.name)]  # fmt: skip
+        written = peresources.export(image, chosen, out)
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "resources.json").write_text(json.dumps(rows, indent=1) + "\n", encoding="utf-8")
+        print(f"{len(written) + 1} files written to {out}", file=sys.stderr)
+    if args.json:
+        print(json.dumps(rows, indent=1))
+    elif not args.extract:
+        shown = [r for r in rows if r["type"] not in ("ICON", "CURSOR")] if not args.type else rows
+        for r in shown:
+            for line in resource_line(r):
+                print(line)
+        print(f"{len(rows)} resources", file=sys.stderr)
     return 0 if rows else 1
 
 
@@ -286,6 +470,15 @@ def parser() -> argparse.ArgumentParser:
         c = sub.add_parser(name, help=help)
         c.add_argument("exe", type=Path)
         c.add_argument("--json", action="store_true")
+        c.add_argument(
+            "--functions",
+            action="append",
+            default=[],
+            type=Path,
+            metavar="TSV",
+            help="function starts and names (rea-ghidra functions, a port's table); repeatable",
+        )
+        c.add_argument("--game", help="only --functions rows whose `game` column is this")
         c.set_defaults(run=run)
         return c
 
@@ -331,6 +524,33 @@ def parser() -> argparse.ArgumentParser:
     c.add_argument("--stack-byte", help="report the byte stored to [rsp+OFF] before each call")
     c.add_argument("--config", type=Path, help="JSON with ranges, registrars, stack_byte")
     c.add_argument("--markdown", action="store_true", help="a Markdown table")
+    c = command("disasm", "disassembly with imports, function names and strings noted", cmd_disasm)
+    c.add_argument("at", nargs="*", help="addresses (hex) or function names")
+    span = c.add_mutually_exclusive_group()
+    span.add_argument("--count", type=int, default=24, help="instructions from each (default 24)")
+    span.add_argument("--to", help="end address (exclusive)")
+    span.add_argument(
+        "--function", action="store_true", help="the whole function each address lies in"
+    )
+    c.add_argument(
+        "--histogram",
+        action="store_true",
+        help="mnemonic counts over the selection, or every code section when none is given",
+    )
+    c = command("resources", "dialogs, menus, string tables, version, icons", cmd_resources)
+    c.add_argument(
+        "--type",
+        action="append",
+        default=[],
+        help="DIALOG, MENU, STRING, ... or a number; repeatable",
+    )
+    c.add_argument("--name", action="append", default=[], help="a resource name or id; repeatable")
+    c.add_argument(
+        "--extract",
+        type=Path,
+        metavar="DIR",
+        help="write icons (.ico/.cur and .png), bitmaps, manifests, the rest raw, resources.json",
+    )
     return p
 
 
@@ -344,6 +564,13 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, ValueError) as exc:
         print(f"pe: {args.exe}: {exc}", file=sys.stderr)
         return 2
+    if args.functions:
+        tables = [args.caller_cwd / t for t in args.functions]
+        try:
+            image.functions = pefunctions.Functions.from_tables(image, tables, args.game)
+        except (OSError, UnicodeDecodeError) as exc:
+            print(f"pe: --functions: {exc}", file=sys.stderr)
+            return 2
     return args.run(args, image)
 
 
