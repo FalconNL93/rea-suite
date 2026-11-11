@@ -303,6 +303,9 @@ layouts.
 
 ## Linear executables: `rea-suite le`
 
+The route for a whole DOS game, from its installer to what a recompilation needs, is
+[DOS-GAMES.md](DOS-GAMES.md); this section is the tool's reference.
+
 DOS games built with Watcom C and a DOS extender (DOS/4GW, PMODE/W, DOS/32A, CauseWay) are LE
 executables: a real-mode MZ stub that starts the extender, then a 32-bit flat module in pages with a
 fixup table. VxDs are LE too, and OS/2's 32-bit programs LX. Ghidra and REA read neither format

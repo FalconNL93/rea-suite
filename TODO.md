@@ -30,6 +30,18 @@ with the reason when it is dropped.
     lost evidence that way. Wanted: refuse an existing path unless `overwrite` is set, as close_binary
     does. Workaround: a new bundle file name per session.
 
+- **DOS games, from the Theme Park port** (2026-11-11; the route is docs/DOS-GAMES.md):
+  - `rea-suite dosbox --profile dos4gw`: skip the extender's own calls, leave INT 21h to DOSBox-X's log,
+    narrow INT 31h and set `memsize=64`. Under the debugger DOS/4GW's loading took 2 to 4 minutes at about
+    20 ms a stop.
+  - A filter or a field for the program's own calls (its flat CS against the extender's), so a log needs no
+    post-filtering.
+  - An `IN`/`OUT` log for a set of ports (the VGA DAC, the PIT), the last gap between a run and the census.
+  - `le services`: a confidence mark on a gap-decoded site (inside a printable run, after an unconditional
+    jump). Theme Park's seven `ins`/`outs` sites were all text.
+  - A Watcom C runtime FunctionID set (or signatures) for Ghidra, so cstrt386, the heap, int386x and stdio
+    are named without doing it by hand.
+
 ## Console games
 
 - **ghidra-allegrex (PSP)**: REA 6.8.0 has a PSP Allegrex profile that expects this Ghidra
