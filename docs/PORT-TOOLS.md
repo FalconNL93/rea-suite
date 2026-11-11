@@ -534,6 +534,11 @@ For a run with nobody at the keyboard: memory written to files at a trigger, byt
 memory, and keys, mouse positions and clicks at times. All three go through the debugger (a build
 with it; `--ints ''` keeps tracing off and still opens the channel for them).
 
+Found on Theme Park (DOS/4GW, 2026-11-11): a game without a frame limiter runs its idle timeouts in
+frames, so on a fast host an attract demo can start within seconds of a menu; a script acts within a
+second there. Its driver space may differ from the picture (640x400 against 320x200): positions are in
+the driver's space. Inline `--input` items are separated by white space or `;`.
+
 - **`--dump ADDR:LEN@TRIGGER`** (repeatable) writes LEN bytes (decimal, or `0x` hex) from ADDR into
   `dump-NN-<trigger>.bin` in the run's folder, once, the first time TRIGGER comes, and a record:
 

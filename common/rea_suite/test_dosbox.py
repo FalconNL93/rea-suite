@@ -810,3 +810,14 @@ class Options(unittest.TestCase):
         args = p.parse_args(["run", "--seconds", "5", "MAIN.EXE", "-nosound", "/m"])
         self.assertEqual(dosbox.misplaced_options(args, p), [])
         self.assertEqual(args.args, ["-nosound", "/m"])
+
+
+class InputSeparators(unittest.TestCase):
+    def test_semicolons_separate_inline_items_as_spaces_do(self) -> None:
+        from rea_suite import dosbox_actions
+
+        spaced = dosbox_actions.parse_input('t=1:ENTER t=2:"a;b" t=3:click')
+        semis = dosbox_actions.parse_input('t=1:ENTER;t=2:"a;b"; t=3:click;')
+        self.assertEqual(
+            [(s.t, s.kind, s.value) for s in semis], [(s.t, s.kind, s.value) for s in spaced]
+        )

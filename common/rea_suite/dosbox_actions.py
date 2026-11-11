@@ -337,27 +337,30 @@ class Step:
     source: str = field(compare=False, default="")
 
 
-INPUT_ITEM = re.compile(r't=(?P<t>[0-9.]+):(?P<action>"[^"]*"|\S+)')
+INPUT_ITEM = re.compile(r't=(?P<t>[0-9.]+):(?P<action>"[^"]*"|[^\s;]+)')
+GAP = re.compile(r"[\s;]*")  # items are separated by white space or ';' (one inline argument)
 
 
 def parse_input(script: str) -> list[Step]:
     """`t=10:ENTER t=12:"abc" t=13:ctrl+F6 t=14:RIGHT*2 t=15:mouse:160,100 t=15.5:click
-    t=16:click:right t=17:down:left t=18:up:left t=19:move:-8,4` (one item a word, or a line
-    of a file; # starts a comment) -> the steps in time order."""
+    t=16:click:right t=17:down:left t=18:up:left t=19:move:-8,4` (items separated by white space
+    or ';', one a line in a file; # starts a comment) -> the steps in time order."""
     text = "\n".join(line.split("#", 1)[0] for line in script.splitlines())
     steps: list[Step] = []
     pos = 0
     for m in INPUT_ITEM.finditer(text):
-        if text[pos : m.start()].strip():
-            raise ValueError(f"--input: {text[pos : m.start()].strip()!r} is not t=SECONDS:ACTION")
+        if not GAP.fullmatch(text[pos : m.start()]):
+            raise ValueError(
+                f"--input: {text[pos : m.start()].strip(' ;')!r} is not t=SECONDS:ACTION"
+            )
         pos = m.end()
         try:
             t = float(m["t"])
         except ValueError:
             raise ValueError(f"--input {m[0]!r}: t= takes seconds") from None
         steps.extend(_action_steps(t, m["action"], m[0]))
-    if text[pos:].strip():
-        raise ValueError(f"--input: {text[pos:].strip()!r} is not t=SECONDS:ACTION")
+    if not GAP.fullmatch(text[pos:]):
+        raise ValueError(f"--input: {text[pos:].strip(' ;')!r} is not t=SECONDS:ACTION")
     for i, s in enumerate(sorted(steps)):
         s.seq = i
     return sorted(steps)
