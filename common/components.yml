@@ -72,6 +72,11 @@ components:
     winget: [Oracle.VirtualBox]
     brew: [qemu, "cask:utm"]
 
+  dos:
+    description: DOS games - DOSBox-X with its debugger (rea-suite dosbox); on Linux built from source (needs component `build`), the headers for that here
+    apt: [libncurses-dev, libpng-dev, zlib1g-dev, libx11-dev, libxext-dev, libasound2-dev]
+    tools: [dosbox-x]
+
   playstation:
     description: PS1/PS2 disc preparation (dumpsxiso/mkpsxiso) and PS1 media (jPSXdec); also enables exact-version PSX and Emotion Engine Ghidra loaders
     tools: [mkpsxiso, jpsxdec]

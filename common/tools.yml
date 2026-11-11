@@ -30,7 +30,8 @@
 #              `version: head` follows the newest commit of the default branch
 #              (for projects without releases; needs `build:`).
 # build:       how to build from source when no asset exists for the platform
-#              (common/rea_suite/build.py): `{cargo: <crate>}` or `{cmake: true}`.
+#              (common/rea_suite/build.py): `{cargo: <crate>}`, `{cmake: true}` or
+#              `{script: <path>}` (a suite script run on the release's source).
 #              Rebuilt only when the version changes; off with REA_TOOLS_NO_BUILD=1.
 # url:         per-platform direct download instead of `github` (for self-updating
 #              tools); `version` is then just a label
@@ -640,6 +641,28 @@ tools:
         tracy-profiler: tracy-profiler.exe
         tracy-capture: tracy-capture.exe
         tracy-csvexport: tracy-csvexport.exe
+
+  # --- component: dos ---
+
+  # DOSBox-X with its debugger (rea-suite dosbox). The macOS and Windows releases are built with
+  # the heavy debugger and SDL2_net, which its debugger control channel (`mcp_server`) needs; Linux
+  # has no release binary and the distributions build without the debugger, so Linux builds the
+  # release's source as upstream's CI does (platforms/linux/build-dosbox-x.sh, a few minutes).
+  # `bin:` the SDL2 builds in the macOS and Windows zips.
+  dosbox-x:
+    github: joncampbell123/dosbox-x
+    version: latest
+    assets:
+      macos: '^dosbox-x-macosx-arm64-\d{4}\.\d{2}\.\d{2}\.zip$'
+      windows: '^dosbox-x-vsbuild-win64-\d{4}\.\d{2}\.\d{2}-portable\.zip$'
+    build: {script: platforms/linux/build-dosbox-x.sh}
+    bin:
+      linux:
+        dosbox-x: bin/dosbox-x
+      macos:
+        dosbox-x: dosbox-x-sdl2/dosbox-x.app/Contents/MacOS/dosbox-x
+      windows:
+        dosbox-x: 'bin/x64/Release SDL2/dosbox-x.exe'
 
   # --- component: steam ---
 

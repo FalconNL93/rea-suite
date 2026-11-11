@@ -34,3 +34,11 @@ linux-perf          perf
 
 # ZArchive native source build (component game-archives)
 libzstd-dev         zstd
+
+# DOSBox-X source build (component dos); not yet checked on Arch
+libncurses-dev      ncurses
+libpng-dev          libpng
+zlib1g-dev          zlib
+libx11-dev          libx11
+libxext-dev         libxext
+libasound2-dev      alsa-lib

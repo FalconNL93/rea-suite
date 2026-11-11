@@ -30,3 +30,11 @@ scrcpy              -
 
 # ZArchive native source build (component game-archives)
 libzstd-dev         libzstd-devel
+
+# DOSBox-X source build (component dos); not yet checked on Fedora or RHEL
+libncurses-dev      ncurses-devel
+libpng-dev          libpng-devel
+zlib1g-dev          zlib-ng-compat-devel|zlib-devel
+libx11-dev          libX11-devel
+libxext-dev         libXext-devel
+libasound2-dev      alsa-lib-devel
