@@ -2,7 +2,7 @@
 
 Tools that came out of the game ports (first the Alan Wake II port, 2026-11) and work for any
 Windows game: scans of the executable from the file alone, passive Frida observers, a virtual
-pad and a window harness for testing input. A game's addresses, names and switches never live
+pad and a run harness that drives and watches a game. A game's addresses, names and switches never live
 here: they come in as arguments or a file of the port's own.
 
 What REA already does is not repeated: `search_strings`, `xrefs`, `find_xrefs_to_name` and the
@@ -350,7 +350,9 @@ A press is `TIME:BUTTON[+BUTTON][:HOLD]`: `A B X Y`, `UP DOWN LEFT RIGHT`, `STAR
 `--idle-pad` plugs in a pad that never moves first, so the scripted one gets the second XInput
 slot: what a remote-play or streaming host leaves behind, and a common cause of "the game ignores
 my pad". Every event is a JSON line with `t` from the plug-in (`plugged` with the XInput user
-index, `press`, `unplugged`), which the window harness below lines its captures up with.
+index, `press`, `unplugged`). With `--stdin` it takes its presses live, one a line
+(`A+B:0.5`), and unplugs `--tail` seconds after stdin closes: that is how `rea-suite run` below
+presses, only while the game's window is in front.
 
 What it needs:
 
@@ -367,34 +369,129 @@ binds against a ViGEmClient.dll (x64) with `rea-suite pe`. The pad itself was no
 suite yet; the Alan Wake II port's original of this script drove that game with the same DLL and
 calls on 2026-11-10.
 
-## Window harness: `platforms/windows/window-oracle.ps1` (Windows)
+## Run harness: `rea-suite run` (Windows)
 
-Watches one process's window while an input driver plays a schedule, and keeps what it saw:
-the answer to "did the game react to that press?" without a person watching. It launches the
-program (`-Exe`) or waits for a running one (`-ProcessName`, `-ProcessId`), starts the input
-driver (`-Pad`: `rea-suite pad` with the same schedule; or any `-InputCommand`), and times every
-capture from the driver's start (for the pad, its `plugged` line). For each input at time T it
-saves `before<i>.png` at T - `Before` (0.6 s) and `after<i>.png` at T + `After` (1.2 s), then
-`final.png`; inputs closer together than Before + After get their captures late. Captures use
-`PrintWindow` on the process's main window only, so other windows, notifications and the desktop
-never appear in them. It focuses the window once, four seconds before the first input, unless
-`-NoFocus`. `events.jsonl` logs each step with `t` on the driver's clock; `report.json` holds the
-process, its loaded modules (path, base, version), its TCP connections and UDP endpoints, and the
-DNS client cache (system-wide, so it shows names the process may have looked up).
+One bounded, observed run of a Windows program, driven by a script, so a port does not write its
+own harness. It starts the program with its arguments, environment and working folder, runs the
+script's steps, keeps watching, ends it and writes a report; `--attach NAME|PID` watches a
+program started some other way (a launcher) and leaves it running unless `--close`. Under WSL
+the front end (`common/rea_suite/run_harness.py`) translates the paths and runs the engine
+(`platforms/windows/run-harness.ps1`) in Windows' PowerShell 7 (`pwsh.exe`); on Windows it is
+`.\platforms\windows\rea-suite.ps1 run`.
 
-```powershell
-# Launch the game, press DOWN three times and A with a virtual pad, capture around each press
-.\platforms\windows\window-oracle.ps1 -Exe D:\work\run\Game.exe -Schedule 30:DOWN,33:DOWN,36:DOWN,39:A `
-  -Pad -PadArguments --idle-pad -Seconds 50 -Close -Out work\pad-idle
-# The game is started some other way (a launcher): wait for it, then watch
-.\platforms\windows\window-oracle.ps1 -ProcessName Game -Schedule 20:START -Pad -NoFocus
+```sh
+# 4 minutes of the game, a capture every 30 s, the install proven unchanged
+rea-suite run --seconds 240 --capture-every 30 --snapshot /mnt/d/Games/Game \
+  --env GAME_DATA=D:\\work\\run1\\data --out /mnt/d/work/run1/observe --start /mnt/d/work/run1/Game.exe -windowed
+# a script, message boxes answered, the display taken first where heavy exists
+heavy run --display --name "game menu" -- rea-suite run --script menu.steps --answer 'minimum spec=OK' \
+  --start 'D:\Games\Game\Game.exe'
+rea-suite run --script menu.steps --dry-run --start Game.exe    # any platform: check the script
 ```
 
-Output goes to `-Out` (default `work\window-oracle\<time>`, ignored by git). Captures need an
-unlocked desktop; a full-screen exclusive game may come out black (run it windowed).
+On Windows, quote a program argument that starts with one dash (`'-windowed'`), or PowerShell
+takes it for one of its own parameters. `--start` comes last: everything after it is the
+program's.
 
-Checked 2026-11-10 on Windows 11 with PowerShell 7 against a process without a window (`PING.EXE`)
-and a stand-in input driver: launch, the timeline from the driver's start (each before/after at
-its time to within 0.1 s), the skipped captures logged, the report (modules) written, the driver
-stopped. Captures of a real window were not run here (no visible windows in automated checks);
-the Alan Wake II port's original of this harness took them with the same `PrintWindow` call.
+The script, one step a line (`--script FILE`, or `--steps 'wait 5; key ENTER'`), `#` comments:
+
+| Step | Does |
+|---|---|
+| `wait SECONDS` | pause |
+| `at SECONDS` | wait until this long after the start |
+| `wait-window [SECONDS]` | until the program has a window (60); fails after |
+| `focus` | bring the window to the front; fails when it does not come |
+| `key CHORD [hold S]` | keys joined by `+` (`ENTER`, `ctrl+shift+F6`, `GRAVE`, `sc:0x29`, `sc:0xE01C`), held 0.1 s, released in reverse |
+| `text "STRING"` | characters (`KEYEVENTF_UNICODE`): for menus and consoles that read characters |
+| `click X Y [left\|right\|middle] [hold S]` | at the window's client coordinates, the pixels of a capture |
+| `move X Y` | the mouse to client coordinates |
+| `pad BUTTONS [hold S]` | a press of `rea-suite pad`'s buttons (`A`, `A+B`, `DOWN`, `LT`, `LX-`); `--pad-dll`, `--idle-pad` |
+| `capture [NAME]` | a capture now (`captures/NAME.png`) |
+| `close` | end the run now |
+
+What it keeps to, and why (the ports' lessons):
+
+- **Input only into the game.** Keys go out by `SendInput` with scan codes (`KEYEVENTF_SCANCODE`,
+  the extended flag for arrows, Insert, Delete and the like): what a game reading raw input or
+  DirectInput sees. Before every key down, click and pad press the engine checks that the
+  program's window is the foreground window (one focus attempt first); otherwise the step is
+  `refused` and the report names the window that was in front. A click also checks that no
+  other window covers its point. Alan Wake II found virtual-key-only and posted keys unreliable
+  while real foreground mouse input worked, and a stray key once landed in a Game Bar bar.
+- **The window stays in front** for the whole run (`--no-keep-front` to leave it): some engines
+  only tick while active, and their captures stay black until then (Alan Wake Remastered). Every
+  time another program takes the front, the report has a `focus-lost` with that program's name,
+  title and window class. The program's own dialogs are left in front.
+- **Captures**: `PrintWindow` of the client area first (only the window, whatever covers it), on
+  its own thread with a deadline (`--capture-timeout`, 2 s), since it blocks while some games
+  load; when it blocks, fails or comes out black and the window is in front, the window's area of
+  the screen instead. Each capture records its method, size and whether it is black. Periodic
+  (`--capture-every`), on `capture` steps and a `final.png`. The engine is per-monitor DPI aware.
+- **Message boxes** (`#32770`) of any process in the program's tree are recorded with title,
+  text and buttons, and answered by `--answer BUTTON` or `--answer 'REGEX=BUTTON'` (matched against
+  title and text, first rule wins): a button by its text or a standard name (OK, Cancel, Yes, No,
+  Retry, Continue, ...), clicked with a posted `BN_CLICKED`, so a hung dialog cannot block the
+  engine. A task dialog's text is not readable from outside; it gets `TDM_CLICK_BUTTON`.
+- **Samples** every `--sample-every` seconds (5) to `samples.jsonl`: the process tree (children by
+  parent id and the job's members), the modules of every process in it (added and removed since
+  the last sample; a 32-bit game's own modules too, through `EnumProcessModulesEx`), and its TCP
+  connections and UDP endpoints (IPv4 and IPv6).
+- **The install unchanged**: `--snapshot DIR` (repeatable) records every file's size and
+  modification time and a SHA-256 of executables and DLLs (`.exe .dll .sys .asi .ocx .drv .cpl
+  .scr .com`) before and after, links recorded and not followed (`install-before.json`,
+  `install-after.json`); any change is an error.
+- **Nothing left running.** The program starts suspended inside a job object that kills
+  everything in it when the job closes, even when the engine itself dies, and resumes only once
+  it is inside. The end is the `close` step, `--seconds` (120) or the program's own exit: the
+  window gets `WM_CLOSE` first (the player's way out, so the game and its services end as they
+  would), and after `--close-grace` (15 s) the job and every process seen in the tree are killed.
+  A process still alive after that is an error (`left-running`).
+
+`--out` (default `work/run/<time>`) holds `plan.json` (what the front end parsed), `events.jsonl`
+(every step, capture, dialog, focus change, with `t` in seconds from the start), `samples.jsonl`,
+`captures/`, `pad.jsonl` and `pad.err`, and `report.json` (`"format": "rea-suite-run/1"`): the
+program, argument list, working folder and the environment's names (never its values), the pid,
+exit code (also as hex, an NTSTATUS for a crash), how it ended (`exit`, `wm_close`, `killed`,
+`left-running`) and why, timings (start, window after, ended after), the steps with their
+status (`done`, `refused`, `failed`, `not-run`), captures, dialogs, focus changes, window titles,
+the processes, modules and endpoints seen, the install's changes, and `findings`, worst first.
+Exit 0: the run went as scripted; 1: an error finding (a step refused or failed, the install
+changed, something left running); 2: a bad script or arguments, no Windows, or the program did
+not start.
+
+**The display.** A run with a window needs a connected, unlocked desktop, and it takes the
+keyboard, the mouse and the front window. On the shared development machine run it under
+`heavy run --display` where `heavy` exists (ci-images): the report says whether the display lock
+was held (`display_lock`, from `FALCON_HEAVY_DISPLAY_PID`), and nothing depends on it.
+
+### What it replaces in the Alan Wake ports
+
+| Port script | Now |
+|---|---|
+| AW2 `focus-owned.ps1` | the `focus` step; the window kept in front for the whole run |
+| AW2 `capture-owned.ps1` (PrintWindow) | `capture`, `--capture-every` (PrintWindow first) |
+| AW2 `capture-owned-screen.ps1` | the same: the screen area is the fallback while the window is in front |
+| AW2 `click-owned-real.ps1` | `click X Y` (SendInput, front verified, the point not covered) |
+| AW2 `click-owned.ps1`, `key-owned.ps1` (posted messages) | none: posted input proved unreliable; `click` and `key` |
+| AW2 `send-owned-key.ps1` (virtual key) | `key NAME` (scan codes instead) |
+| AW2 `send-owned-key-scan.ps1`, `send-owned-enter-scan.ps1` | `key NAME`, `key ENTER` |
+| AW2 `hold-owned-key.ps1` | `key NAME hold SECONDS` |
+| AW2 `stop-owned-loader-controller.ps1` | none needed: the job object ends everything the run started |
+| AWR `run-harness.ps1` | `rea-suite run --seconds 240 --capture-every 30 --sample-every 5 --answer OK --snapshot <install> --env ... --start awr.exe ...`; its `-Pad` schedule as `pad` steps after `at`, its `-Keys` as `key` and `text` steps |
+
+AWR's port-specific parts stay with the port: its environment (`--env AWR_DATA_DIR=... --env
+GM_SDK_HOME=...`) and its watch for Epic processes (in the report, any process in the game's tree
+is listed; a service started outside the tree is not). The earlier `window-oracle.ps1` is gone:
+its pad schedule with captures around each press is `pad` and `capture` steps.
+
+Checked 2026-11-11 from WSL against Windows 11 (PowerShell 7.6, pwsh.exe), with windowless
+programs only (`cmd.exe` running `PING.EXE`): the start with arguments, environment and working
+folder, the job (the child `PING.EXE` ended with it), samples of the tree and its modules, the
+end by timeout with the kill, the program's own early exit (later steps `not-run`), a `key` step
+refused without a window, an install change found (exit 1), and `--attach` with `--close`. The
+C# compiles under PowerShell 7.6 (.NET 10). Not run here: anything with a visible window (focus,
+keys, clicks, text, pad presses, captures, message boxes), since automated checks open no windows
+on the shared display; the Win32 calls are the ones the Alan Wake ports' scripts used, except the
+PNG writer and the GDI capture, which replace System.Drawing. The step parser, the report and
+the snapshot diff are unit tested (`uv run --no-sync python -m unittest rea_suite.test_run_harness`
+in `common/`).
