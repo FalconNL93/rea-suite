@@ -71,6 +71,31 @@ so it is paid once:
   games/ci-images, where installed) and keep a snapshot, so later calls reuse its answers:
   `heavy run --name rea-ghidra -- rea analyze game/Game.exe --provider ghidra --snapshot work/game.snapshot`
   (REA snapshots cache answers, not the Ghidra database).
+- The MCP client has a tool deadline of its own, separate from REA's: Alan Wake II's first import
+  (2026-11-09) outlasted the client's 450 s and then REA's 900 s. Raise the client's in its
+  registration (Codex: `mcp_servers.rea.tool_timeout_sec`; `rea-suite agents` checks it) and REA's
+  as above; a client timeout without an REA error says nothing about REA's deadline.
 - For scripted work on a big image, `rea-ghidra analyze` (no deadline) keeps a Ghidra project
   that later queries open read-only; `rea-suite pe` answers RTTI, reference and caller questions
   from the bytes without any analysis ([port tools](PORT-TOOLS.md)).
+
+## Keeping a session's evidence and names
+
+Found with rea-agents 6.8.0 by the Max Payne, Call of Duty and Theme Park ports (2026-11-03 to
+2026-11-11). An REA session holds its names and evidence in memory; closing it the default way
+loses them.
+
+10. **`close_binary` drops the session's evidence and names.** Names set with `set_address_name`
+    survive only when the session is closed with a `snapshot_path`; the evidence behind a finding
+    survives only in a bundle exported before the close.
+11. **Evidence ids from `execute_rizin_command` are in no bundle.** Record what a Rizin command
+    showed in the target's own notes.
+12. **`export_evidence_bundle` overwrites a file of the same name** without asking (also in
+    [TODO](../TODO.md), "Upstream wishes for REA").
+13. **`export_evidence_bundle` and `close_binary` refuse a folder that does not exist yet**, and a
+    refused `close_binary` leaves the session open.
+14. **Imports are named `<DLL>::<function>`** (`GDI32.DLL::StartDocA`); the bare name answers
+    `name_not_found` ([imports by ordinal](../README.md#imports-by-ordinal-mfc42-and-others)).
+
+**Workaround:** create the folder first, export the bundle under a new name per session
+(`work/<target>/evidence-<date>-<n>.json`), then close with a `snapshot_path`.

@@ -422,6 +422,15 @@ Faults found in REA's own tools, with their workarounds, are in
   [interception description](https://github.com/microsoft/Detours/wiki/OverviewInterception)
   explains why displaced instructions need a trampoline. Those Windows rules do not imply
   that the same patch bytes work on another architecture or OS.
+- Static evidence shows that code exists, not that it runs. An import is no call: C++ vtables
+  import base-class methods the program never calls. A static call graph ends at every virtual
+  or computed call. "No callers" in Ghidra is no proof either, since its import can leave code
+  that is never made into a function (a key handler, a start-up's `system()` call); cross-check
+  with a scan of the bytes themselves (`rea-suite pe callers` and `pe refs` for PE, `rea-suite le
+  services` for LE, which decodes the code outside Ghidra's functions too). A check found by its strings and calls may sit behind a function
+  compiled to `xor al,al; ret`, so read the guard around it before mapping it. Narrow statically,
+  then confirm with a runtime trace (Wine's `+relay`, `rea-suite frida`, `rea-suite dosbox`)
+  before declaring something unused or live.
 - Keep absent observations and unsupported formats explicit. For example,
   [capa documents limitations](https://github.com/mandiant/capa/blob/master/doc/limitations.md)
   for packed applications and wrapper functions; no match does not establish no capability.
@@ -609,6 +618,11 @@ rr and perf need hardware performance counters. With `kernel.perf_event_paranoid
 (Ubuntu's default) both work for your own processes, user-space only; perf needs 1 or
 lower (`sudo sysctl kernel.perf_event_paranoid=1`) to see kernel time, and kernel symbols
 need `kernel.kptr_restrict=0`.
+
+For a periodic hitch, look at CPU per thread first (`top -H -p <pid>`, or each thread's
+`/proc/<pid>/task/<tid>/stat`): it tells a busy game thread from a polling or worker thread
+before any profile. Then profile the thread that bursts with `perf record --call-graph dwarf -p
+<pid>`, which unwinds without frame pointers; a release binary that keeps its symbols is enough.
 
 WSL2 (checked on kernel 6.18.54.1-microsoft-standard-WSL2, AMD Ryzen 9 5950X): perf
 counts and samples user space (`perf stat`, `perf record -g`) and hotspot reads the
@@ -865,6 +879,17 @@ rea-ghidra functions --project ~/Games/port/ghidra Game.exe | cut -f1 > re/funct
 `analyze --force` runs the auto-analysis again on the program already in the project; it never
 imports over it, so names, types and comments made there stay. To start from nothing, delete the
 project folder. This is the x86/x64 PE counterpart of `rea-suite xbox360 analyze|decomp|xrefs|functions`.
+
+- **Decompile the addresses the question needs**, in one batch, not the whole program: a
+  whole-program decompile of a game ran past 25 minutes on decompiler timeouts.
+- **The largest functions can hang the decompiler.** `decomp` gives up on a function after
+  120 s; an REA session on the same function sat at full CPU until its calls timed out. Disassemble
+  those with Rizin instead (`rizin -q -c 'pD <size> @ <address>' <file> > out.txt`).
+- **One process per project.** Ghidra locks a project for a whole run, so a second agent's
+  read-only queries fail with "locked by another process". Give parallel agents a copy of the
+  project each, or a route that needs none (`rea-suite pe`, or `rea-suite le dump-image` and Rizin).
+- **zsh does not split `$VAR`**: `rea-ghidra decomp game.exe $addrs` passes one argument and
+  decompiles nothing. Use an array (`"${addrs[@]}"`) or `${=addrs}`.
 REA's own Ghidra provider gives up on a first import after 330 s by default, too short for a large
 game; raise `REA_GHIDRA_STARTUP_TIMEOUT_MS` first ([known issues](docs/REA-KNOWN-ISSUES.md), item 9).
 Tests: `uv run --no-sync python -m unittest rea_suite.test_rea_ghidra` in `common/` (a stand-in
@@ -906,6 +931,9 @@ come from `platforms/macos/Brewfile` instead of apt. Differences:
   Wine, rr, perf and hotspot ([Porting old games](#porting-old-games)).
 - gdb (pwndbg) cannot debug native macOS processes; it works on core files and remote
   targets. Use LLDB (Xcode CLT) for local processes.
+- Ghidra refuses a universal Mach-O (x86_64 and arm64e, as `/usr/bin/true`); thin it first
+  (`lipo /usr/bin/true -thin x86_64 -output work/true`) and open it in REA with
+  `provider_id=ghidra`, since without one the choice between providers is ambiguous.
 - Rizin comes from Homebrew (upstream ships only a .pkg); Cutter, ImHex and ILSpy are
   the `.app` bundles from the release `.dmg`/zip, started through `tools/bin`.
 - Wireshark's cask installs ChmodBPF for capture permissions; it asks for your password
