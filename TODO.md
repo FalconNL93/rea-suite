@@ -24,11 +24,15 @@ with the reason when it is dropped.
 - **`rea-suite dosbox`**: a wrapper around DOSBox-X's debugger as an analysis aid for DOS games: log
   the INT calls (DOS, DPMI, the extender's) and real-mode callbacks of a run as JSON lines, the way
   `rea-suite frida` logs a Windows game. Wanted by the Theme Park port (2026-11-11).
-- **REA's open_binary for LE/LX**: Ghidra loads LE through ghidra-lx-loader (`rea-ghidra analyze`), but
-  REA's own format check refuses an MZ image with an LE header before any provider sees it
-  ("unsupported LE executable in MZ image", provider_id=ghidra too, 2026-11-11). Wanted in rea-agents:
-  pass LE/LX to the Ghidra provider when the loader is installed, so MCP sessions open DOS/4GW games.
-  Until then, `rea-suite le dump-image` output loads raw at its base, every object in place.
+- **Upstream wishes for REA (rea-agents, not changed from here)**, both found by the Theme Park port
+  (2026-11-11):
+  - open_binary for LE/LX: REA's own format check refuses an MZ image with an LE header before any
+    provider sees it ("unsupported LE executable in MZ image", provider_id=ghidra too), though Ghidra
+    loads it through ghidra-lx-loader. Wanted: hand LE/LX to the Ghidra provider when the loader is
+    installed. Workaround: `rea-ghidra analyze`, or `rea-suite le dump-image` loaded raw.
+  - export_evidence_bundle overwrites an existing file of the same name without asking, and an agent
+    lost evidence that way. Wanted: refuse an existing path unless `overwrite` is set, as close_binary
+    does. Workaround: a new bundle file name per session.
 
 ## Console games
 
