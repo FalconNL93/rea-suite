@@ -556,6 +556,8 @@ rea-suite dosbox run --ints 21:3d --dump 0:400@exit --dump 1A2B30:0x8000@open:DA
 rea-suite dosbox parse work/dosbox/<run>/dosbox-x.log --program MAIN.EXE  # a log taken elsewhere
 rea-suite dosbox run --ints '' --regions tp.toml --input-file tp.keys game/GAME.EXE  # the oracle
 rea-suite dosbox compare work/dosbox/<run>/regions.jsonl port.jsonl --regions tp.toml   # below
+rea-suite dosbox run --ints '' --opl-log work/tp-opl.jsonl game/GAME.EXE  # the music oracle, below
+rea-suite dosbox compare-opl work/tp-opl.jsonl port-opl.txt
 ```
 
 Records have `t` (seconds since the start) and `kind`:
@@ -588,6 +590,8 @@ Records have `t` (seconds since the start) and `kind`:
 - A `dump`, `poke` or `sync` that waited for the program's own protected-mode code has `wanted`,
   and when its first stop was elsewhere `moved` (`from`, that stop's CS:EIP, its `mode`, the `stops`
   passed over and the seconds `waited`) and, if it waited in vain, `gave_up` (below).
+- **`opl`** (`--opl-log`): the OPL capture converted at the end (`file`, `writes`, `captures`,
+  `hardware`, `note` when there was nothing to capture or DOSBox-X did not close it; below).
 - **`start`**, **`exit`** (`code`, `timed_out`), **`error`**.
 
 Exit 0 when it ran, 1 when DOSBox-X failed or `--seconds` ended it, 2 when there is no DOSBox-X or
@@ -862,6 +866,100 @@ reads the block in the program's own code (selector A7h). With `mode = "any"` th
 was read where its BREAK landed and failed in both of two runs: in CWSDPMI's 16-bit protected-mode
 code (0018:3EDF, "no 32-bit selector covers it") and in its real mode (0824:4059, "above what real
 mode addresses").
+
+### Music: OPL register writes (`--opl-log`, `compare-opl`)
+
+A music oracle: one song's OPL (AdLib, OPL2, OPL3) register writes in the original, captured by
+DOSBox-X, held against the writes the port's emulated chip receives. Theme Park's tprun writes its
+side with `TP_OPL_LOG`.
+
+```sh
+rea-suite dosbox run --ints '' --opl-log work/tp-opl.jsonl --set "cpu cycles=fixed 60000" \
+  --input-file tp-music.keys --seconds 120 --mount work/tp work/tp/THEME/MAIN.EXE
+rea-suite dosbox compare-opl work/tp-opl.jsonl work/tp-port-opl.txt --start-b 46
+```
+
+**The capture** is DOSBox-X's own raw OPL capture (DROv2, `src/hardware/adlib.cpp`), started by its
+`DX-CAPTURE /O` command around the program, so it costs nothing per write and works with or without
+the debugger. It covers every port DOSBox-X routes to its OPL: 388h-38Bh, and the Sound Blaster's
+220h-223h and 228h-229h at its configured base. What the capture keeps, and so what `compare-opl`
+compares on both sides:
+
+- **From the first key-on.** The capture starts at the first write that keys a note on (B0h-B8h with
+  bit 5, or BDh with rhythm on and a drum struck), and writes first the registers set before it, key-on
+  bits off, all at time 0.
+- **Sound registers only**, a write that leaves a register as it was dropped. The timers (02h-04h of
+  bank 0) never reach it.
+- **Milliseconds of emulated time** (DOSBox-X's PIC clock), counted from that first key-on.
+- **A new file after 30 s without a write.** The run joins the files in order; a later file's times go
+  on from the previous one's last write plus 30 s, as the true gap is not recorded.
+- **Closed when DOSBox-X quits**, on the program's end or `--seconds` (DOSBox-X takes SIGTERM as a
+  quit). A capture it did not close reads as far as it got, and the `opl` record says so.
+
+The `.dro` files stay in the run's folder (`opl/`); `--opl-log FILE` is their conversion.
+
+**The OPL log** (`--opl-log`) is JSON lines, UTF-8:
+
+- **Line 1, the header**: `{"format": "rea-opl", "version": 1}`, plus `producer`, `source` (`dro`),
+  `hardware` (`opl2`, `dual-opl2` or `opl3`: the capture's guess, `opl3` only once a
+  four-operator channel is on), `captures` (the `.dro` files) and
+  `unclosed` (those DOSBox-X did not close).
+- **Then a line per register write**, in order: `t` (seconds), `bank` (0, or 1 for an OPL3's second
+  register set at 38Ah/38Bh), `reg` and `value` (hex strings; a JSON number is read as a number).
+  A port may write `port` (hex) instead of `bank` and `reg`, a line per port write, as below.
+
+  ```json
+  {"format": "rea-opl", "version": 1, "producer": "rea-suite dosbox", "source": "dro", "hardware": "opl3", "captures": ["opl_000.dro"]}
+  {"t": 0.0, "bank": 0, "reg": "20", "value": "01"}
+  {"t": 0.22, "bank": 0, "reg": "b0", "value": "32"}
+  ```
+
+**`compare-opl A B`** reads three formats, told apart by their start: an OPL log, a `.dro` capture
+taken elsewhere, or a port's text log of port writes, a write a line, `#` comments allowed:
+
+```text
+<seconds, any clock> <port, hex> <byte, hex>
+46.012345 388 B0
+46.012345 389 32
+```
+
+An address port (388h, 38Ah for bank 1; 220h, 222h, 228h) latches the register, a data port (389h,
+38Bh; 221h, 223h, 229h) writes it; a data write before any address is skipped. Both logs are
+normalized as the capture records a song (above), each from its first key-on at or after
+`--start-a`/`--start-b` (seconds on that log's own clock: the port's log may hold an earlier tune), so a
+capture and a port's full log of the same song are equal. Then each register's values are compared in
+order, and each pair's times, from the first key-on, may drift apart by `--tolerance` (default 0.05 s;
+`--ignore-timing` compares the values only). Only the time both logs cover is compared (`--until`
+shortens it). The report is the earliest difference: a different value, a write one side lacks, or a
+drift beyond the tolerance, with the register named (bank and register in three hex digits, its channel
+and operator), its recent writes on both sides (`--context`, value@seconds) and its channel's
+registers on both sides just before it, a difference marked `*`. Exit 0 when equal, 1 on a difference,
+2 on bad input.
+
+```text
+A: work/tp-opl.jsonl (from its first key-on at 0.000 s)
+B: work/tp-port-opl.txt (from its first key-on at 46.000 s)
+4 write(s) agree, then at 0.220 s (value):
+0A0 (channel 0: F-number low), write 2 of that register: A C0 at 0.220 s, B C1 at 0.220 s
+ A: 98@0.000 C0@0.220
+ B: 98@0.000 C1@0.220
+ channel 0 just before 0.220 s (A / B):
+  020 01/01   040 10/10   060 00/00   080 00/00   0E0 00/00
+  ...
+```
+
+- Run the original at a fixed speed (`cpu cycles=fixed ...`): the song's tempo comes from the timer
+  the game programs, but a game that does its own work between notes writes at times its speed moves.
+- Pick the song's start on the port's side with `--start-b` when its log holds more than the song.
+- A difference in a timbre register (20h-95h, E0h-F5h, C0h) is the instrument; in A0h-B8h the notes.
+
+Checked 2026-11-12 on Linux by `test_dosbox_opl.py` (a DRO built in the test: codes, both delays,
+bank 1, an unclosed one, bad ones; two captures joined; port and JSON logs read; normalizing; equal,
+a different value, drift beyond the tolerance, a missing write, the song's start, bad input) and,
+opt-in, `test_dosbox.py`'s `RealRun`: a .COM writing an instrument, the OPL3 enable and bank 1, then
+three notes 220 ms apart, captured under DOSBox-X and compared with the same writes as a port's text
+log (equal; then a different key-off, exit 1). A run of a program writing for 11 s, ended by `--seconds 4`, left a closed
+capture (its header's totals written) with the writes up to 3.84 s.
 
 ### How it works
 

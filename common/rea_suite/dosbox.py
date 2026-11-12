@@ -4,6 +4,7 @@ video BIOS, one JSON object a line.
   rea-suite dosbox run PROGRAM [ARG...] [options]   run it, log its interrupts and DOSBox-X's log
   rea-suite dosbox parse LOGFILE [options]          a DOSBox-X log file (taken elsewhere) as JSON lines
   rea-suite dosbox compare A B [--regions FILE]     two region sequences: the first difference
+  rea-suite dosbox compare-opl A B                  two OPL logs (--opl-log, a port's): the first difference
   rea-suite dosbox info                             which DOSBox-X, and whether it has the debugger
 
 An analysis aid for DOS games, the way `rea-suite frida` is for Windows games: a comparison run of
@@ -31,19 +32,23 @@ With nobody at the keyboard: --dump ADDR:LEN@TRIGGER writes memory to a file of 
 t=12:"abc" t=13:mouse:160,100 t=13.5:click' types keys (DOSBox-X's integration device) and places
 the pointer and clicks (INT 33h 0004h run from the debugger at a stop in the program's own code).
 --regions FILE reads named memory regions at sync points into a sequence file, which `compare` holds
-against a port's own (dosbox_regions.py).
+against a port's own (dosbox_regions.py). --opl-log FILE has DOSBox-X capture the program's OPL
+(AdLib) register writes and writes them as JSON lines, which `compare-opl` holds against a port's
+own (dosbox_opl.py).
 
 Options come before PROGRAM; everything after it is the program's arguments. docs/PORT-TOOLS.md
 ("DOS programs") has the details, the limits and the sources.
 
 Records: {"t": seconds since the start, "kind": ...} with kind `int` (and `return`, `callback`) from
 the debugger, `dos-int` (INT 21h from the log), `file`, `log` (any other log line: group, severity,
-message), `e9` (port E9h text), `message` (DOSBox-X's own lines), `start`, `exit`, `error`.
+message), `e9` (port E9h text), `message` (DOSBox-X's own lines), `opl` (--opl-log), `start`, `exit`,
+`error`.
 DOSBox-X's records carry `cycle`, its instruction counter, which orders them; the debugger's and the
 log's records are interleaved by the time they were read.
 
 Exit 0: ran; 1: DOSBox-X failed or was stopped by --seconds; 2: no DOSBox-X, or --ints without a
-build that has the debugger and its control channel. `compare`: 0 equal, 1 a difference, 2 bad input.
+build that has the debugger and its control channel. `compare`, `compare-opl`: 0 equal, 1 a
+difference, 2 bad input.
 """
 
 from __future__ import annotations
@@ -67,6 +72,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from rea_suite import dosbox_actions as acts
+from rea_suite import dosbox_opl as opl
 from rea_suite import dosbox_regions as rg
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -74,6 +80,7 @@ WORK = ROOT / "work" / "dosbox"
 DEFAULT_INTS = "21,31,33,10"
 # DOSBox-X log groups switched on for every run, at debug level (names as in its [log] section).
 DEFAULT_GROUPS = "files,dosmisc,exec,mouse,int10"
+OPL_CAPTURES = "opl"  # the subfolder of the run's folder DOSBox-X writes its raw OPL captures to
 MEMFILE = "REAMEM.BIN"  # the debugger's MEMDUMPBIN target, in DOSBox-X's working folder
 CALL_STRUCT = 0x32  # DPMI real-mode call structure
 MOUSE_BP = ("int", 0x33, "mouse")  # the INT 33h breakpoint set while a pointer move waits
@@ -535,6 +542,12 @@ def dosbox_command(
         settings["cpu core"] = "normal"  # only the normal core checks interrupt breakpoints
     if actions and actions.steps:
         settings["cpu integration device"] = "true"  # the input goes in through it
+    capture = ""
+    if getattr(args, "opl_log", None):
+        # DX-CAPTURE /O starts DOSBox-X's raw OPL capture before the program (it begins writing at
+        # the first key-on); the capture ends when DOSBox-X does. /-D: no pause after the program.
+        settings["dosbox captures"] = str(run_dir / OPL_CAPTURES)
+        capture = "DX-CAPTURE /O /-D "
     if not args.window:
         # no MIDI either: DOSBox-X's default tries a TiMidity server and can hang connecting to it
         settings.update({"midi mididevice": "none", "mixer nosound": "true"})
@@ -550,7 +563,7 @@ def dosbox_command(
         cmd += ["-c", f"cd {folder}"]
     if args.dpmi:
         cmd += ["-c", "Z:\\BIN\\CWSDPMI.EXE -p"]  # DOSBox-X's built-in DPMI host, resident
-    cmd += ["-c", ("DEBUGBOX " if port else "") + command, "-c", "exit"]
+    cmd += ["-c", capture + ("DEBUGBOX " if port else "") + command, "-c", "exit"]
     return cmd
 
 
@@ -1344,6 +1357,8 @@ def run(args) -> int:
         if sequence:
             sequence.close()
     emit(tail.flush())
+    if args.opl_log:
+        out.write(opl_record(args.caller_cwd / args.opl_log, run_dir / OPL_CAPTURES))
     out.write(
         {
             "kind": "exit",
@@ -1357,6 +1372,23 @@ def run(args) -> int:
     if interrupted or (proc.returncode and not status and not timed_out):
         status = status or 1
     return status
+
+
+def opl_record(path: Path, captures: Path) -> dict:
+    """DOSBox-X's raw OPL captures of the run, converted to the --opl-log file."""
+    files = sorted(captures.glob("*.dro")) if captures.is_dir() else []
+    record: dict = {"kind": "opl", "file": str(path)}
+    try:
+        record.update(opl.convert_captures(files, path, "rea-suite dosbox"))
+    except (OSError, ValueError) as exc:
+        return {**record, "kind": "error", "error": f"OPL capture: {exc}"}
+    if not files:
+        record["note"] = (
+            "no key-on: DOSBox-X's capture starts at the first note, and none was played"
+        )
+    elif "unclosed" in record:
+        record["note"] = "DOSBox-X did not close the capture: the last writes may be missing"
+    return record
 
 
 def stop_process(proc: subprocess.Popen) -> None:
@@ -1497,6 +1529,13 @@ def parser() -> argparse.ArgumentParser:
         type=Path,
         help="the sequence file (default regions.jsonl in the run's folder)",
     )
+    r.add_argument(
+        "--opl-log",
+        type=Path,
+        metavar="FILE",
+        help="capture the OPL (AdLib/OPL3) register writes with DOSBox-X's raw OPL capture and write "
+        "them to FILE as JSON lines, for `compare-opl` (docs/PORT-TOOLS.md)",
+    )
     r.add_argument("--returns", action="store_true", help="log the registers each call returns")
     r.add_argument("--nested", action="store_true", help="also calls made by BIOS code")
     r.add_argument(
@@ -1544,6 +1583,42 @@ def parser() -> argparse.ArgumentParser:
         "--context", type=int, default=16, help="bytes shown each side of the difference"
     )
     c.set_defaults(run=rg.compare)
+
+    o = sub.add_parser(
+        "compare-opl",
+        help="two OPL logs (a run's and a port's): the first difference",
+        description="Compares two OPL logs (an --opl-log file, a DOSBox-X .dro capture, or a port's "
+        "'SECONDS PORT BYTE' lines), each from its first key-on: every register's values in order, "
+        "and how far each write's time drifts. Reports the first difference with the register's "
+        "recent writes and its channel's registers on both sides. Exit 0 when equal, 1 on a "
+        "difference, 2 on bad input.",
+    )
+    o.add_argument("a", type=Path, help="an OPL log (the original's run, usually)")
+    o.add_argument("b", type=Path, help="the other (the port's)")
+    o.add_argument(
+        "--start-a",
+        type=float,
+        default=0.0,
+        metavar="SECONDS",
+        help="A's song starts at its first key-on at or after this time (A's own clock)",
+    )
+    o.add_argument("--start-b", type=float, default=0.0, metavar="SECONDS", help="the same for B")
+    o.add_argument(
+        "--until",
+        type=float,
+        metavar="SECONDS",
+        help="compare this long from the first key-on (default: until the shorter log ends)",
+    )
+    o.add_argument(
+        "--tolerance",
+        type=float,
+        default=0.05,
+        metavar="SECONDS",
+        help="how far a write's time may drift between the two (default 0.05)",
+    )
+    o.add_argument("--ignore-timing", action="store_true", help="compare the values only")
+    o.add_argument("--context", type=int, default=6, help="earlier writes shown of the register")
+    o.set_defaults(run=opl.compare)
 
     i = sub.add_parser("info", help="which DOSBox-X runs")
     i.add_argument("--dosbox")

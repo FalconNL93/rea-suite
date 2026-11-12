@@ -214,6 +214,10 @@ rea-suite dosbox compare work/dosbox/<run>/regions.jsonl <port's sequence> --reg
   loop back-edges) see time differently, so their frames at the same tick differ even when both are
   right. A verdict between them, such as a bisection's, compares a static screen or the regions at input
   sync points (Theme Park, 2026-11-12: 4 of 4 sync points equal between DOSBox-X and the port).
+- **The music has its own oracle.** `rea-suite dosbox run --opl-log FILE` captures the original's
+  OPL register writes (DOSBox-X's raw OPL capture) and `rea-suite dosbox compare-opl` holds them
+  against the port's own log of its chip's writes, from each side's first key-on
+  ([PORT-TOOLS.md](PORT-TOOLS.md#music-opl-register-writes---opl-log-compare-opl)).
 
 *Feeds:* the object bases the loader uses, the first-frame call list (which bounds the core's
 first work and the layer's first services), and the oracle: region sequences the port's game tests

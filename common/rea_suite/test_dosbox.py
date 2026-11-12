@@ -762,6 +762,61 @@ INPUT_PM_HIGH = (
 )
 
 
+# OPL writes from a table of (register, value) pairs: FFh n waits n timer ticks (55 ms each), FDh b
+# writes bank b from then on (38Ah/38Bh for bank 1), FEh ends. A timer reset, an instrument and the
+# OPL3 enable before the first key-on, a new note 220 ms later, a key-off 220 ms after that.
+OPL = """org 100h
+        mov si, writes
+.next:  lodsw
+        cmp al, 0FFh
+        je .wait
+        cmp al, 0FEh
+        je .done
+        cmp al, 0FDh
+        je .bank
+        mov dx, [port]
+        out dx, al
+        inc dx
+        mov al, ah
+        out dx, al
+        jmp .next
+.bank:  mov word [port], 388h
+        test ah, ah
+        jz .next
+        mov word [port], 38Ah
+        jmp .next
+.wait:  mov cl, ah
+        xor ax, ax
+        mov es, ax
+.tick:  mov bx, [es:46Ch]
+.same:  cmp bx, [es:46Ch]
+        je .same
+        dec cl
+        jnz .tick
+        jmp .next
+.done:  mov ax, 4C00h
+        int 21h
+port    dw 388h
+writes  db 04h, 60h, 04h, 80h, 20h, 01h, 40h, 10h, 60h, 0F0h, 80h, 77h, 0A0h, 98h
+        db 23h, 01h, 43h, 00h, 63h, 0F0h, 83h, 77h, 0C0h, 31h
+        db 0FDh, 1, 05h, 01h, 0C0h, 30h, 0FDh, 0
+        db 0B0h, 31h
+        db 0FFh, 4, 0A0h, 0C0h, 0B0h, 32h
+        db 0FFh, 4, 0B0h, 12h
+        db 0FEh, 0
+"""
+
+# The same song as a port's TP_OPL_LOG lists it: every port write, from the port's own clock.
+OPL_PORT = [
+    (0, 0x388, [(0x04, 0x60), (0x04, 0x80), (0x20, 0x01), (0x40, 0x10), (0x60, 0xF0), (0x80, 0x77),
+                (0xA0, 0x98), (0x23, 0x01), (0x43, 0x00), (0x63, 0xF0), (0x83, 0x77), (0xC0, 0x31)]),
+    (0, 0x38A, [(0x05, 0x01), (0xC0, 0x30)]),
+    (0, 0x388, [(0xB0, 0x31)]),
+    (0.22, 0x388, [(0xA0, 0xC0), (0xB0, 0x32)]),
+    (0.44, 0x388, [(0xB0, 0x12)]),
+]  # fmt: skip
+
+
 @unittest.skipUnless(os.environ.get("REA_DOSBOX_INTEGRATION"), "runs DOSBox-X")
 class RealRun(unittest.TestCase):
     def run_program(self, source: str, name: str, *options: str) -> list[dict]:
@@ -880,6 +935,43 @@ class RealRun(unittest.TestCase):
             with contextlib.redirect_stdout(io.StringIO()) as out:
                 self.assertEqual(dosbox.main(argv), 1)
             self.assertIn("sync point 1 (end #1), region 'state': offset 0x4", out.getvalue())
+
+    def test_opl_writes_captured_and_compared_with_a_ports_log(self) -> None:
+        scratch = ROOT / "work" / "test-dosbox"
+        scratch.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=scratch) as tmp:
+            ours = Path(tmp) / "opl.jsonl"
+            records = self.run_program(OPL, "OPL.COM", "--ints", "", "--opl-log", str(ours))
+            (record,) = [r for r in records if r["kind"] == "opl"]
+            self.assertNotIn("unclosed", record)  # DOSBox-X closed the capture when it quit
+            writes = [json.loads(line) for line in ours.read_text().splitlines()[1:]]
+            keys = [(w["bank"], w["reg"], w["value"]) for w in writes]
+            self.assertIn((1, "05", "01"), keys)
+            self.assertIn((1, "c0", "30"), keys)
+            self.assertNotIn((0, "04", "80"), keys)  # the timers are no sound
+            self.assertEqual(keys[-3:], [(0, "a0", "c0"), (0, "b0", "32"), (0, "b0", "12")])
+            # 4 ticks of the BIOS clock each: 220 ms, give or take a tick
+            self.assertAlmostEqual(writes[-1]["t"] - writes[-2]["t"], 0.22, delta=0.06)
+
+            def port_log(key_off: int) -> Path:
+                path = Path(tmp) / "port.txt"
+                lines = []
+                for t, port, pairs in OPL_PORT:
+                    for reg, value in pairs:
+                        value = key_off if (t, reg) == (0.44, 0xB0) else value
+                        lines += [
+                            f"{46 + t:.6f} {port:X} {reg:02X}",
+                            f"{46 + t:.6f} {port + 1:X} {value:02X}",
+                        ]
+                path.write_text("\n".join(lines) + "\n")
+                return path
+
+            argv = ["compare-opl", "--tolerance", "0.08", str(ours)]
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                self.assertEqual(dosbox.main([*argv, str(port_log(0x12))]), 0, out.getvalue())
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                self.assertEqual(dosbox.main([*argv, str(port_log(0x13))]), 1)
+            self.assertIn("0B0 (channel 0: key on/block/F-number high), write 3", out.getvalue())
 
     def test_an_input_sync_in_a_dpmi_program_waits_for_its_own_code(self) -> None:
         from rea_suite import dosbox_regions as rg
