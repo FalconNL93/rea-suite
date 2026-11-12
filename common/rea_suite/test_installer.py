@@ -1,14 +1,16 @@
-"""Installer pieces: 7z archives (no downloads)."""
+"""Installer pieces: 7z archives, AppDistrib releases (no downloads)."""
 
 from __future__ import annotations
 
+import io
+import json
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from rea_suite import archive
+from rea_suite import appdistrib, archive
 
 
 class SevenZip(unittest.TestCase):
@@ -41,6 +43,36 @@ class SevenZip(unittest.TestCase):
             self.assertRaisesRegex(LookupError, "rea-suite setup"),
         ):
             archive.extract(self.root / "tool.7z", self.root / "out", 0)
+
+
+MANIFESTS = {
+    "pcsx-redux/dev-linux-x64/manifest.json": {"builds": [{"id": 9}, {"id": 12}]},
+    "pcsx-redux/dev-linux-x64/manifest-12.json": {
+        "path": "/storage/assets/aa/bb/PCSX-Redux-1234abcd-linux-x86_64.zip",
+        "manifest": {"version": "1234abcd"},
+    },
+}
+
+
+class AppDistrib(unittest.TestCase):
+    def fake_open(self, url: str, timeout: int = 60):
+        path = url.removeprefix(f"{appdistrib.BASE}/storage/manifests/")
+        return io.BytesIO(json.dumps(MANIFESTS[path]).encode())
+
+    def test_the_newest_build_reads_as_a_release(self) -> None:
+        with patch.object(appdistrib, "_open", self.fake_open):
+            release = appdistrib.release("pcsx-redux", "dev-linux-x64")
+        self.assertEqual(release["tag_name"], "1234abcd")
+        self.assertEqual(
+            release["assets"],
+            [
+                {
+                    "name": "PCSX-Redux-1234abcd-linux-x86_64.zip",
+                    "browser_download_url": "https://distrib.app/storage/assets/aa/bb/"
+                    "PCSX-Redux-1234abcd-linux-x86_64.zip",
+                }
+            ],
+        )
 
 
 if __name__ == "__main__":

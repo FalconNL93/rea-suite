@@ -35,6 +35,9 @@
 #              Rebuilt only when the version changes; off with REA_TOOLS_NO_BUILD=1.
 # url:         per-platform direct download instead of `github` (for self-updating
 #              tools); `version` is then just a label
+# appdistrib:  `{org, channels: {<platform>: <channel>}}` instead of `github`: the newest
+#              build of a distrib.app channel (PCSX-Redux), installed like a release
+#              (`assets`, `bin`, rollback); its version is the build's own
 #
 # Tools listed under a component in common/components.yml are only installed
 # when that component is selected.

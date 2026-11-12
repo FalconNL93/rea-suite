@@ -18,7 +18,7 @@ from pathlib import Path
 
 import yaml
 
-from . import build, components, ghidra, github
+from . import appdistrib, build, components, ghidra, github
 from .archive import extract
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -34,6 +34,7 @@ class Tool:
     name: str
     version: str = "latest"
     github: str | None = None
+    appdistrib: dict = field(default_factory=dict)
     dotnet_tool: str | None = None
     url: dict[str, str] = field(default_factory=dict)
     assets: dict[str, str] = field(default_factory=dict)
@@ -53,6 +54,7 @@ class Tool:
             follows_pip=version.startswith("pip:"),
             build=spec.get("build") or {},
             github=spec.get("github"),
+            appdistrib=spec.get("appdistrib") or {},
             dotnet_tool=spec.get("dotnet-tool"),
             url=spec.get("url") or {},
             assets=spec.get("assets", {}),
@@ -121,6 +123,13 @@ def pick_assets(tool: Tool, release: dict) -> list[dict]:
     return picked
 
 
+def latest_release(tool: Tool) -> dict:
+    """The release to install: GitHub's, or the newest build of an AppDistrib channel."""
+    if tool.appdistrib:
+        return appdistrib.release(tool.appdistrib["org"], tool.appdistrib["channels"][PLATFORM])
+    return github.release(tool.github, tool.version)
+
+
 def install_github(tool: Tool, state: dict[str, str], force_latest: bool) -> None:
     if force_latest and tool.version not in ("latest", "head"):
         print(f"{tool.name}: pinned to {tool.version}")
@@ -128,7 +137,7 @@ def install_github(tool: Tool, state: dict[str, str], force_latest: bool) -> Non
         commit = build.head_commit(tool.github)
         release, tag = {"tag_name": commit}, commit[:12]
     else:
-        release = github.release(tool.github, tool.version)
+        release = latest_release(tool)
         tag = release["tag_name"]
     tool_dir = TOOLS_DIR / tool.name
     dest = tool_dir / tag
@@ -447,13 +456,13 @@ def cmd_status(args: argparse.Namespace) -> None:
     for tool in select(load_tools(), args.tools):
         installed = state.get(tool.name, "-")
         latest = "-"
-        if tool.github:
+        if tool.github or tool.appdistrib:
             try:
                 if tool.version == "head":
                     latest = build.head_commit(tool.github)[:12]
                 else:
-                    latest = github.release(tool.github)["tag_name"]
-            except (OSError, subprocess.CalledProcessError) as exc:
+                    latest = latest_release(tool)["tag_name"]
+            except (OSError, LookupError, subprocess.CalledProcessError) as exc:
                 latest = f"? ({exc})"
         if tool.follows_pip:
             marker = f"  (follows the Python package: {tool.version})"
@@ -556,7 +565,7 @@ def cmd_prune(args: argparse.Namespace) -> None:
     state = load_state()
     for tool in select(load_tools(), args.tools):
         tool_dir = TOOLS_DIR / tool.name
-        if not tool.github or not tool_dir.is_dir():
+        if not (tool.github or tool.appdistrib) or not tool_dir.is_dir():
             continue
         for entry in tool_dir.iterdir():
             if entry.name in ("current", state.get(tool.name)) or not entry.is_dir():
