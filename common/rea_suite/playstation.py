@@ -15,6 +15,9 @@ from pathlib import Path, PurePosixPath
 
 from rea_suite.archive import seven_zip
 
+# ELF type of an IOP module (IRX): an SCE-specific relocatable, R3000 code for the IOP.
+IRX_TYPE = 0xFF80
+
 
 def digest(path: Path) -> str:
     with path.open("rb") as stream:
@@ -35,11 +38,15 @@ def executable(path: Path) -> dict | None:
             "payload_offset": 2048,
         }
     if head.startswith(b"\x7fELF\x01\x01") and len(head) >= 52:
-        machine = struct.unpack_from("<H", head, 18)[0]
+        elf_type, machine = struct.unpack_from("<HH", head, 16)
         if machine == 8:
             flags = struct.unpack_from("<I", head, 36)[0]
+            if elf_type == IRX_TYPE:
+                kind = "ps2-irx"
+            else:
+                kind = "ps2-ee" if flags & 0x00FF0000 == 0x00920000 else "mips-elf"
             return {
-                "kind": "ps2-ee" if flags & 0x00FF0000 == 0x00920000 else "mips-elf",
+                "kind": kind,
                 "entry": hex(struct.unpack_from("<I", head, 24)[0]),
                 "flags": hex(flags),
             }

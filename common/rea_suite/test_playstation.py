@@ -26,11 +26,11 @@ def psx() -> bytes:
     return bytes(data)
 
 
-def elf(flags: int = 0x20924001) -> bytes:
+def elf(flags: int = 0x20924001, elf_type: int = 2) -> bytes:
     data = bytearray(4096 + 32)
     data[:7] = b"\x7fELF\x01\x01\x01"
     struct.pack_into(
-        "<HHIIIIIHHHHHH", data, 16, 2, 8, 1, 0x100000, 52, 0, flags, 52, 32, 1, 40, 0, 0
+        "<HHIIIIIHHHHHH", data, 16, elf_type, 8, 1, 0x100000, 52, 0, flags, 52, 32, 1, 40, 0, 0
     )
     struct.pack_into("<8I", data, 52, 1, 4096, 0x100000, 0x100000, 32, 32, 5, 4096)
     struct.pack_into("<3I", data, 4096, 0x2408002A, 0x03E00008, 0)
@@ -80,6 +80,11 @@ class ProjectTests(unittest.TestCase):
         self.assertEqual(result["boot_executable"]["kind"], "ps2-ee")
         self.assertEqual({p["kind"] for p in result["executables"]}, {"ps2-ee", "mips-elf"})
         self.assertIsNone(playstation.inventory(self.disc / "MODULE.IRX", 100)["system"])
+
+    def test_iop_modules_are_listed_as_irx(self):
+        (self.disc / "SIO2MAN.IRX").write_bytes(elf(0, playstation.IRX_TYPE))
+        (program,) = playstation.inventory(self.disc, 100)["executables"]
+        self.assertEqual(program["kind"], "ps2-irx")
 
     def test_no_guessed_boot_with_multiple_executables(self):
         for n in ("one", "two"):
