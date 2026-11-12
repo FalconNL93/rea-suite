@@ -14,6 +14,8 @@ What lies around this page:
 - The DOS route, [DOS-GAMES.md](DOS-GAMES.md): the same shape for another x86 target, recompiled onto
   the same runtime.
 - The port's platform work (the master, the SDK, the port checklist): master-server's docs/PORTING.md.
+- What xboxrecomp, Microsoft's own Xbox recompiler and the other recompilers solved, and how:
+  [RECOMPILATION.md](RECOMPILATION.md).
 - The runtime an x86 game is recompiled onto: winrt's core (games/winrt: `recomp/image.h`, the
   interpreter and static recompiler in `src/cpu/`, the Direct3D 8 layer in `docs/d3d8.md`).
 

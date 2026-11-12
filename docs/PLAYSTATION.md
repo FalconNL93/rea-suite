@@ -92,7 +92,7 @@ Checked 2026-11-12 against the upstream repositories and release pages linked. T
 | [maspsx](https://github.com/mkst/maspsx) | makes GCC's assembly assemble as PsyQ's ASPSX did, for matching PS1 code | no: no release or package; decompilation projects carry it as a submodule |
 | [asm-differ](https://github.com/simonlindholm/asm-differ), [m2c](https://github.com/matt-kempster/m2c) | assembly diff; MIPS assembly to a C draft | no: no release (the PyPI name `m2c` belongs to another project); projects carry them as submodules, [decomp.me](https://decomp.me) runs both online |
 | [decompals/old-gcc](https://github.com/decompals/old-gcc) | the GCC 2.x builds PsyQ shipped, for matching | no: a project's own toolchain, downloaded by its build (Linux x86_64 releases) |
-| [psy-q-splitter](https://github.com/sozud/psy-q-splitter), [psyz](https://github.com/Fancy2209/psyz) | decompiling the PsyQ libraries themselves | no: source only, niche |
+| [psy-q-splitter](https://github.com/sozud/psy-q-splitter), [psyz](https://github.com/Xeeynamo/psyz) | splitting the PsyQ libraries; replacing them with native code for a PC build | no: source only, niche |
 | [PCSX-Redux](https://github.com/pcsx-redux/pcsx-redux) | PS1 debugger, GDB server, Lua, psyq-obj-parser | yes |
 | [DuckStation](https://github.com/stenzek/duckstation) | accurate PS1 emulation, debugger | no: PCSX-Redux covers RE; DuckStation's source tree has no GDB server any more (2026-11-12) and its license is CC BY-NC-ND 4.0 |
 | [PCSX2](https://github.com/PCSX2/pcsx2) | PS2 debugger (EE/IOP), symbol import, PINE | yes. It has **no GDB stub** (none in its source tree, 2026-11-12) |

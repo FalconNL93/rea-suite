@@ -263,6 +263,8 @@ The routes from a disc to a port, a decompilation or a recompilation are [PS1](d
 ZAR/WUA and QuickBMS.
 
 Original Xbox (2001): [the route](docs/XBOX-CLASSIC.md) from the disc image to what a recompilation needs.
+What the static recompilers, decompilation projects and engine reimplementations already solved, per
+platform: [RECOMPILATION.md](docs/RECOMPILATION.md).
 Ghidra loads an XBE through the ghidra-xbe extension (`rea-ghidra analyze default.xbe --project ...`),
 which names the kernel imports and, with XbSymbolDatabase, the XDK's statically linked library
 functions. Without Ghidra (REA itself does not open an XBE):
@@ -613,7 +615,9 @@ would block ordinary native analysis on unsupported hosts/targets.
 ## Porting old games
 
 Component `porting` (`rea-suite select`) brings the tools for running, tracing and
-profiling an original Windows game while you recompile, interpret or rewrite it.
+profiling an original Windows game while you recompile, interpret or rewrite it. Which approach fits
+which platform, and what the existing recompilers and reimplementations teach:
+[RECOMPILATION.md](docs/RECOMPILATION.md).
 
 ### Tracing the original binary
 

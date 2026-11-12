@@ -15,6 +15,8 @@ What lies around this page:
 - The port's platform work (the master, the SDK, the port checklist): master-server's docs/PORTING.md.
 - The runtime the code is recompiled onto: winrt's core (games/winrt: `recomp/image.h`,
   `cpu/hooks.h`, `cpu/segments.h`, `guest/call.h`).
+- What other recompilers and reimplementations of DOS games did, pcrecomp's DOS/4GW host above all:
+  [RECOMPILATION.md](RECOMPILATION.md).
 
 ## 1. The installer, unpacked as data
 

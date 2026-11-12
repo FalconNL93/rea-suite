@@ -127,8 +127,9 @@ objdiff                                   # GUI: per-function match of the build
   submodules, as they carry m2c and asm-differ; the suite does not install them
   ([PLAYSTATION.md](PLAYSTATION.md#what-the-communities-use-and-what-the-suite-has)).
 - [decomp.me](https://decomp.me) has the PsyQ compiler presets for one function at a time.
-- PsyQ library code is linked from the original objects in most projects; [psyz](https://github.com/Fancy2209/psyz)
-  is a matching decompilation of the libraries.
+- PsyQ library code is linked from the original objects in most projects. For a native build,
+  [psyz](https://github.com/Xeeynamo/psyz) replaces the PsyQ libraries with native code (sotn-decomp's
+  PC build uses it); it aims at compatibility, not accuracy.
 
 *Feeds:* source that builds back to the original, function by function, which a port compiles natively.
 
@@ -144,7 +145,9 @@ What a recompilation of a PS1 executable needs, whichever recompiler is used:
   name that edge.
 - **Recompilers**: [psxrecomp](https://github.com/mstan/psxrecomp) (to C, PolyForm Noncommercial) and
   [RecompOne](https://github.com/flafmg/RecompOne) (to C#, MIT). Both are source only and are taken by
-  a port as its own dependency; the suite does not build them.
+  a port as its own dependency; the suite does not build them. What each solves and how (overlays
+  captured and compiled at run time, the BIOS recompiled, frame rate above the guest's VBlank) is in
+  [RECOMPILATION.md](RECOMPILATION.md).
 
 ## 8. Patching and rebuilding the CD
 

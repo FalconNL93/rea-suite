@@ -134,6 +134,8 @@ What a recompilation of a PS2 game needs, whichever recompiler is used:
   with a runtime for memory, syscalls and IOP modules; stubs and patches are set in a TOML file, and
   SDK functions are bound by name or by address in a stripped game. It is source only (CMake,
   submodules, GPL), so a port takes it as its own dependency; the suite does not build it.
+- How PS2Recomp runs the IOP and the VUs, and how OpenGOAL rewrote each VU1 microprogram as a PC
+  renderer: [RECOMPILATION.md](RECOMPILATION.md).
 
 ## 8. Patching and rebuilding
 
