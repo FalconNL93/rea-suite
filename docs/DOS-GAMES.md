@@ -73,8 +73,9 @@ rea-ghidra decomp MAIN.EXE 0x... 0x... --project <port>/re/ghidra
   their INT 21h and DPMI calls, and the `int n; ret` stub table that int386x calls through. A
   reimplementation project's function list (OpenPark counts its Watcom and HMI functions) is a map
   to confirm, not evidence.
-- Decompile targeted addresses only. Ghidra's decompiler can hang on the largest functions (the
-  suite's README, "Headless Ghidra from the shell").
+- Decompile the addresses the question needs. An LE's data object holds its bss as zeros, which Kaiju
+  types as Alignment and which hangs the decompiler; `rea-ghidra analyze` clears it (the suite's README,
+  "Headless Ghidra from the shell").
 - In zsh, pass address lists as arrays: `rea-ghidra decomp $addrs` decompiles nothing.
 
 *Feeds:* names and function boundaries for the recompiler and the map of each unit a change lives
