@@ -262,6 +262,17 @@ The LE is recompiled onto winrt's core (its static recompiler and CPU, no PC emu
   - A game waits on flags its interrupt handlers set, in loops with no system call or port access, so input
     and timer delivery at the hooks alone never reaches it: the CPU needs asynchronous interrupt points
     (winrt's core, from Theme Park's "Buy Land" stop, 2026-11-12).
+  - INT 21h 48h in protected mode hands out DOS (conventional) memory with a selector in AX, never extended
+    memory. Watcom's near heap falls back to 48h for blocks up to 64 KiB once DPMI 0501h refuses, and a game that
+    grabs all memory at start-up keeps its C library alive only on the DOS block it frees. Map 48h to 0501h and
+    every later `fopen` fails before it reaches DOS: the symptom is a missing file, not a memory error (Theme
+    Park's SNDSETUP.INF, 2026-11-12).
+  - A sound library's timer calls its events with far calls. Without far CALL in the core, answer the library's
+    timer API at its edge with a host scheduler that runs the callbacks from interrupt points; that also removes
+    the ISR and the PIT programming (Theme Park's HMI SOS: 36 hook points, 2026-11-12).
+  - When the game's timer changes source (its own INT 8 without sound, the sound library's events with it), the
+    host's own periodic work (presenting, scripted input) needs a clock of its own at a fixed rate. Otherwise the
+    window stops presenting and scripts stall the moment sound comes on.
 - **The fastest way to the first frame** is a headless runner (snapshots to files, a trace switch for the DOS
   calls) and a layer that refuses each unknown service with its number and its caller, then fixing the stops
   one at a time against the run of step 5: Theme Park's title screen took 13 stops (STI, INT 21h 48h, port
