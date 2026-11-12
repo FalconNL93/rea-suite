@@ -145,8 +145,14 @@ python_env() { # [--upgrade]
   uv sync "${args[@]}"
 }
 
+# common/uv-tools.txt plus the selected components' `uv-tools`, one requirement per line
+uv_tool_specs() {
+  sed -e 's/#.*//' -e '/^[[:space:]]*$/d' -e 's/[[:space:]]*$//' common/uv-tools.txt
+  components values uv-tools
+}
+
 uv_tools() { # [--upgrade]
-  step "isolated CLI tools (common/uv-tools.txt)"
+  step "isolated CLI tools (common/uv-tools.txt, components)"
   local line spec platform reinstall=
   # Launchers used to live in .runtime/uv-tools/bin; recreate them in UV_TOOL_BIN_DIR once.
   if [[ -d .runtime/uv-tools/bin ]]; then rm -rf .runtime/uv-tools/bin; reinstall=1; fi
@@ -161,7 +167,7 @@ uv_tools() { # [--upgrade]
     else
       uv tool install "$spec"
     fi
-  done < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' -e 's/[[:space:]]*$//' common/uv-tools.txt)
+  done < <(uv_tool_specs)
 }
 
 rea_agents_version() {
@@ -438,10 +444,11 @@ cmd_doctor() {
   while read -r tool; do
     [[ "$tool" != *" @"* || "${tool##* @}" == "$OS" ]] || continue
     tool="${tool%% @*}"
+    tool="${tool%%[[<>=~!]*}" # the package's name: no extras or version
     if [[ -d "$UV_TOOL_DIR/$tool" ]]; then ok "uv tool" "$tool"; else
       bad "uv tool" "$tool missing; run rea-suite setup"
     fi
-  done < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' -e 's/[[:space:]]*$//' common/uv-tools.txt)
+  done < <(uv_tool_specs)
 
   step "tools.yml"
   rea-tools check || problems=$((problems + 1))

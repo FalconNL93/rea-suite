@@ -85,11 +85,12 @@ function Python-Env([switch]$Upgrade) {
     Invoke-Checked uv sync @groups
 }
 function Uv-Tools([switch]$Upgrade) {
-    Step 'isolated CLI tools (common/uv-tools.txt)'
+    Step 'isolated CLI tools (common/uv-tools.txt, components)'
     # Launchers used to live in .runtime\uv-tools\bin; recreate them in UV_TOOL_BIN_DIR once.
     $reinstall = Test-Path "$Root\.runtime\uv-tools\bin"
     if ($reinstall) { Remove-Item -Recurse -Force "$Root\.runtime\uv-tools\bin" }
-    foreach ($line in Get-Content "$Root\common\uv-tools.txt") {
+    # common/uv-tools.txt plus the selected components' `uv-tools`
+    foreach ($line in @(Get-Content "$Root\common\uv-tools.txt") + @(Components values uv-tools)) {
         $line = ($line -replace '#.*', '').Trim()
         if (-not $line -or ($line -match ' @(\w+)$' -and $Matches[1] -ne 'windows')) { continue }
         $spec = $line -replace ' @\w+$', ''

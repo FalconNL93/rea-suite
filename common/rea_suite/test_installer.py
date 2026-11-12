@@ -1,9 +1,10 @@
-"""Installer pieces: 7z archives, AppDistrib releases (no downloads)."""
+"""Installer pieces: 7z archives, AppDistrib releases, components' uv tools (no downloads)."""
 
 from __future__ import annotations
 
 import io
 import json
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -11,6 +12,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 from rea_suite import appdistrib, archive
+
+ROOT = Path(__file__).resolve().parents[2]
 
 
 class SevenZip(unittest.TestCase):
@@ -73,6 +76,27 @@ class AppDistrib(unittest.TestCase):
                 }
             ],
         )
+
+
+class ComponentUvTools(unittest.TestCase):
+    def test_both_scripts_install_and_check_components_uv_tools(self) -> None:
+        shell = (ROOT / "bin" / "rea-suite").read_text()
+        self.assertIn("components values uv-tools", shell)
+        self.assertEqual(shell.count("done < <(uv_tool_specs)"), 2)  # setup and doctor
+        self.assertIn(
+            "Components values uv-tools",
+            (ROOT / "platforms" / "windows" / "rea-suite.ps1").read_text(),
+        )
+
+    @unittest.skipUnless(shutil.which("bash"), "needs bash")
+    def test_doctor_checks_the_package_name_of_a_spec(self) -> None:
+        name = subprocess.run(
+            ["bash", "-c", 'tool="splat64[mips]>=0.50"; echo "${tool%%[[<>=~!]*}"'],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+        self.assertEqual(name, "splat64")
 
 
 if __name__ == "__main__":

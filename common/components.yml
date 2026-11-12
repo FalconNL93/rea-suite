@@ -11,12 +11,13 @@
 #                  platforms/macos/Brewfile, platforms/windows/winget.json);
 #                  a brew cask is written `cask:<name>`
 #   uv-groups:     dependency groups from pyproject.toml
+#   uv-tools:      CLI tools in their own uv environments, as in common/uv-tools.txt
 #   tools:         entries from common/tools.yml (installed only when selected)
 #   playwright:    browsers installed with rea-agents' own playwright-core (always the
 #                  build that version expects) into .runtime/ms-playwright
 #
 # Deselecting stops installing and checking a component; uv groups are removed on
-# the next sync, system packages and tools are left in place.
+# the next sync, system packages, uv tools and tools are left in place.
 
 components:
   build:
