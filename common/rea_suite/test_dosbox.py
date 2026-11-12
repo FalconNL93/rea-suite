@@ -193,6 +193,7 @@ class FakeDebugger:
         self.current: tuple[dict, bytes] = (regs(), b"")
         self.commands: list[str] = []
         self.memory: dict[str, bytes] = {}  # MEMDUMPBIN's address argument -> its bytes
+        self.selectors: dict[str, list[str]] = {}  # SELINFO's argument -> its answer
 
     def request(self, command: str = "", kind: str = "EXEC") -> list[str]:
         self.commands.append(command)
@@ -203,6 +204,8 @@ class FakeDebugger:
         if word == "EV":
             names = command.split()[1:]
             return [f"EV of '{' '.join(names)}' is:", " ".join(f"{state[n]:x}" for n in names)]
+        if word == "SELINFO":
+            return self.selectors.get(command.split()[1], ["SelectorInfo:", "", ""])
         if word == "MEMDUMPBIN":
             (self.memdir / dosbox.MEMFILE).write_bytes(self.memory.get(command.split()[1], code))
         return ["DEBUG: ok"]
@@ -713,6 +716,51 @@ sel32   dw 0
 sel9000 dw 0
 """
 
+# INPUT_PM, and before it waits for the key: its code selector at 9000:0030, and the pattern in a
+# block DPMI 0501h allocates above 1 MiB (CWSDPMI's first is at linear 400000h), whose address
+# goes to 9000:0034. Its mouse poll then runs mostly in real mode (the driver, through CWSDPMI),
+# where a BREAK lands and that block cannot be read.
+HIGH_BLOCK = """        mov [es:30h], cs
+        mov ax, 0501h
+        mov bx, 1
+        xor cx, cx
+        int 31h
+        jc fail32
+        mov [es:34h], cx
+        mov [es:36h], bx
+        mov [hibase], cx
+        mov [hibase+2], bx
+        xor eax, eax
+        mov cx, 1
+        int 31h
+        jc fail32
+        mov [selhi], ax
+        mov bx, ax
+        mov dx, [hibase]
+        mov cx, [hibase+2]
+        mov ax, 7
+        int 31h
+        mov bx, [selhi]
+        xor cx, cx
+        mov dx, 0FFFFh
+        mov ax, 8
+        int 31h
+        push es
+        mov es, [selhi]
+        xor edi, edi
+        mov esi, pattern
+        mov ecx, 16
+        rep movsb
+        pop es
+"""
+INPUT_PM_HIGH = (
+    INPUT_PM.replace(
+        "        xor ah, ah\n        int 16h\n",
+        HIGH_BLOCK + "        xor ah, ah\n        int 16h\n",
+    ).replace("bits 16\npattern", "fail32: mov ax, 4C02h\n        int 21h\nbits 16\npattern")
+    + "selhi   dw 0\nhibase  dd 0\n"
+)
+
 
 @unittest.skipUnless(os.environ.get("REA_DOSBOX_INTEGRATION"), "runs DOSBox-X")
 class RealRun(unittest.TestCase):
@@ -832,6 +880,34 @@ class RealRun(unittest.TestCase):
             with contextlib.redirect_stdout(io.StringIO()) as out:
                 self.assertEqual(dosbox.main(argv), 1)
             self.assertIn("sync point 1 (end #1), region 'state': offset 0x4", out.getvalue())
+
+    def test_an_input_sync_in_a_dpmi_program_waits_for_its_own_code(self) -> None:
+        from rea_suite import dosbox_regions as rg
+
+        scratch = ROOT / "work" / "test-dosbox"
+        scratch.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=scratch) as tmp:
+            regions = Path(tmp) / "regions.toml"
+            regions.write_text(
+                '[regions.ids]\naddr = "90030"\nlen = 8\n'
+                '[regions.high]\naddr = "400000"\nlen = 16\ntype = "ascii"\n'
+                '[[sync]]\nname = "key"\nat = "input:1"\n'
+            )
+            ours = Path(tmp) / "dosbox.jsonl"
+            records = self.run_program(
+                INPUT_PM_HIGH, "HIGH.COM", "--dpmi", "--ints", "", "--regions", str(regions),
+                "--sequence", str(ours), "--input", "t=1:ENTER t=3:click",
+            )  # fmt: skip
+            _, points = rg.read_sequence(ours)
+        (sync,) = [r for r in records if r["kind"] == "sync"]
+        ids = {e.region: e for e in points[0].entries}["ids"].data
+        cs, linear = struct.unpack("<H2xI", ids)
+        self.assertEqual(linear, 0x400000, "CWSDPMI put the block elsewhere: change the region")
+        self.assertEqual((sync["mode"], sync["at"][:4], sync["wanted"]), ("pm", f"{cs:04X}", "pm"))
+        self.assertNotIn("gave_up", sync)
+        high = {e.region: e for e in points[0].entries}["high"]
+        self.assertIsNone(high.error)
+        self.assertEqual(high.data, b"REA-DUMP-PATTERN")
 
 
 if __name__ == "__main__":

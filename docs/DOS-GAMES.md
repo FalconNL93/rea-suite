@@ -162,9 +162,14 @@ Traps and what fixed them:
   the code object at a call of the game's own, subtract each fixup's target offset from the value
   it holds, then build the image with those bases (`le dump-object --object-base`) and compare it
   byte for byte with the run's memory. The only differences should be the start-up's own stores.
-- **A `--dump` on a time trigger may stop in real mode** inside the extender, and then refuses a
-  high linear address ("no 32-bit selector covers it"). Trigger on the game's own call
-  (`open:<file>`, `int21:3D`) to stop in protected mode, or give `SEL:OFF`.
+- **A time or input trigger's BREAK may stop in real mode** inside the extender (Theme Park's
+  `input:9` stopped at 0C5D:10B5, DOS/4GW's keyboard path, right after the key), where the debugger
+  reads no higher than 10FFEFh ("above what real mode addresses") and takes a selector for a
+  segment. DOSBox-X's debugger has no read through the page tables in real mode, so the runner
+  waits instead: in a program that has run in protected mode, `t=` and `input:` dumps, pokes and
+  sync points act at the next stop in the game's own protected-mode code, with the rest of the
+  input held until then, and their records say where the first stop was (`moved`). A `gave_up`
+  record means none came within 5 s: trigger on the game's own call (`open:<file>`, `int21:3D`).
 - **Scripted clicks are timing-sensitive.** Doubling each click made runs reliable. Two DOSBox-X
   instances at once broke one of them: run one at a time.
 - **Ports are not traced.** The debugger traces interrupts. Port use comes from the census and from
@@ -182,11 +187,14 @@ rea-suite dosbox compare work/dosbox/<run>/regions.jsonl <port's sequence> --reg
 ```
 
 - Sync on the game's own calls (`open:<file>` or `int21:3D` with `repeat = true`, its INT 16h poll):
-  they stop at the same instruction in both runs, and in protected mode. A time or `input:N` sync
-  point lands wherever a BREAK does, possibly in the extender's real mode (the dump trap above, as an
-  `error` line); keep those for regions that hold still.
-- Take the regions' addresses from the object bases measured above (`SEL:OFF` through the flat data
-  selector is safe in any mode), and put frame counters and the like in `ignore`.
+  they stop at the same instruction in both runs, and in protected mode (`mode = "pm"` passes over
+  the extender's real-mode reflection of the same call). A time or `input:N` sync point waits for a
+  stop in the game's own protected-mode code (the trap above) but lands at no fixed instruction;
+  keep those for regions that hold still.
+- Take the regions' addresses from the object bases measured above, as linear addresses or
+  `SEL:OFF` through the flat data selector (both read in protected mode, where the game's own stops
+  are; in real mode a selector would be taken for a segment), and put frame counters and the like in
+  `ignore`.
 - Keep `--ints` empty: a sync point's triggers set their own breakpoints, and DOS/4GW's load stays
   as fast as it can under the debugger.
 - The regions file and the input script belong to the port's tests (no game bytes); the sequence files

@@ -585,6 +585,9 @@ Records have `t` (seconds since the start) and `kind`:
 - **`dump`**, **`poke`**, **`input`**: what `--dump`, `--poke` and `--input` did (below).
 - **`sync`**: a sync point of `--regions` (`sync`, `index`, `hit`, `trigger`, `mode`, `at`, the
   `regions` read, `errors` when some could not be; below).
+- A `dump`, `poke` or `sync` that waited for the program's own protected-mode code has `wanted`,
+  and when its first stop was elsewhere `moved` (`from`, that stop's CS:EIP, its `mode`, the `stops`
+  passed over and the seconds `waited`) and, if it waited in vain, `gave_up` (below).
 - **`start`**, **`exit`** (`code`, `timed_out`), **`error`**.
 
 Exit 0 when it ran, 1 when DOSBox-X failed or `--seconds` ended it, 2 when there is no DOSBox-X or
@@ -633,6 +636,21 @@ the driver's space. Inline `--input` items are separated by white space or `;`.
   `--ints` asks for them. Times are the host's clock, not the emulated one: each traced call
   stops the emulation for about 15 ms, so a run driven by times traces narrowly (`--ints 21:3d`, or
   `--ints ''`) and leaves margins.
+- **Where a time or input trigger acts in a protected-mode program.** A BREAK stops wherever the
+  CPU is, and in a DPMI program that can be its extender's real-mode side (a key just delivered runs
+  the extender's keyboard path there). In real and V86 mode the debugger reads no further than
+  10FFEFh and takes a selector for a segment, so a high linear address cannot be read and `SEL:OFF`
+  reads the wrong memory. So once the program has run in protected mode (seen in the register
+  reads the runner makes while it runs), `t=` and `input:` actions wait for a stop in the program's
+  own protected-mode code: its code selector (that of its own last traced call) or, before one is
+  known, a 32-bit code segment (DOS/4GW's own code and CWSDPMI's are 16-bit). Until then the
+  runner BREAKs again every 50 ms and stops at the program's own INT 21h, 31h, 33h, 16h and 10h
+  calls (breakpoints set for the wait; their real-mode reflections are run past), and holds the
+  rest of the `--input` script back, so the action never sees input that comes after its moment
+  (the script moves back by as much, as for a late item). After 5 seconds without such a stop it
+  takes the next stop as it is, and says so (`gave_up`). Any input waits likewise until the actions
+  due before it are taken, in any program. A real-mode program's actions act at the first stop.
+  A sync point can ask otherwise with `mode` (below).
 - **`--input SCRIPT`** (also `--keys`), or `--input-file FILE` (an item a line, `#` comments): items
   `t=SECONDS:ACTION`, on the records' clock, delivered once the program has started (an earlier
   time comes at its start). An item that comes late (`late` in its record) moves the rest of the
@@ -736,6 +754,7 @@ name = "level"                  # unique
 at = "open:DATA/LEVEL.DAT"      # a trigger, as --dump takes them (intNN[:AH[:AL]], open:, t=, input:N, start, exit)
 regions = ["money", "map"]      # optional: every region, in the file's order
 repeat = true                   # optional: every call or open is a sync point, not the first only (int and open triggers)
+mode = "pm"                     # optional: where its regions are read: auto (default), pm or any (below)
 
 [[sync]]
 name = "end"
@@ -747,6 +766,15 @@ A run with `--regions` reads each sync point's regions, in the listed order, whe
 and appends them to the **sequence file** (`--sequence FILE`, default `regions.jsonl` in the run's
 folder), with a `sync` record in the run's log. At one trigger, pokes come first, then dumps, then sync
 points.
+
+**`mode`** says where a sync point's regions may be read. `auto` (the default): a `t=` or `input:`
+sync point in a program that has run in protected mode waits for a stop in its own protected-mode
+code (as dumps do: "Where a time or input trigger acts" above), anything else reads where its
+trigger stops. `pm`: always that, from the program's start (a time or input stop moves on to the
+next such stop; a call made in real or V86 mode, as the extender's reflection of the program's own
+call, is passed over and the program's protected-mode call taken). `any`: where the trigger stops,
+as it lands. `start` and `exit` take no `pm`. Each region's line records the stop it was read at
+(`mode`, `at`) and how it got there (`wanted`, `moved`, `gave_up`).
 
 **The sequence file** is what a port writes from its own run, so it is specified here. JSON lines,
 UTF-8, one object a line:
@@ -768,7 +796,7 @@ UTF-8, one object a line:
   | `sha256` | optional | of the bytes, lowercase hex; checked when present |
   | `hit` | optional | how many times this sync point has come, this one included (for `repeat`) |
   | `type` | optional | the region's type, for display when `compare` has no regions file |
-  | anything else | optional | ignored by `compare`: the runner adds `addr`, `linear`, `mode`, `at` |
+  | anything else | optional | ignored by `compare`: the runner adds `addr`, `linear`, `mode`, `at` (the stop the region was read at), and `wanted`, `moved`, `gave_up` as in the `sync` record |
 
   ```json
   {"format": "rea-regions", "version": 1, "producer": "rea-suite dosbox", "sidecar": "regions.bin"}
@@ -807,10 +835,13 @@ What makes a good sync point:
   backbone. A protected-mode program's own call also stops in protected mode, where a linear `addr`
   reads.
 - **`t=SECONDS` and `input:N`** stop wherever a BREAK lands, a few milliseconds of the host's clock
-  after the moment, and that need not be the same place in two runs; they fit a region that holds
-  still (a level's map between moves), not a counter. A time stop can also land in the DOS
-  extender's real-mode code, where a high linear address cannot be read ("no 32-bit selector covers
-  it": an `error` line); give such a region as `SEL:OFF`, or sync on a call.
+  after the moment (in a protected-mode program, the first such stop in its own code: tens of
+  milliseconds, `moved` says how far), and that need not be the same place in two runs; they fit a
+  region that holds still (a level's map between moves), not a counter. Found on Theme Park
+  (DOS/4GW, 2026-11-12): `input:9` stopped at 0C5D:10B5, in DOS/4GW's real-mode keyboard path, and
+  every region failed with "29143C: above what real mode addresses (10FFEFh)", which is why such
+  sync points now wait for the program's own code. A `gave_up` line means the program never came
+  back to its own code within 5 seconds; sync on a call instead.
 - **Keep tracing narrow** (`--ints ''`): each stop costs about 15 ms and DOS/4GW's loading under the
   debugger is slow (DOS-GAMES.md, step 5). A sync point's own triggers set the breakpoints they need.
 - **Volatile fields** (a frame counter, a random seed the port seeds differently on purpose) go in
@@ -819,9 +850,18 @@ What makes a good sync point:
 Checked 2026-11-12 on Linux by `test_dosbox_regions.py` (the regions file, the sequence file written
 and read, the sidecar, `compare` on synthetic sequences: equal, a difference in the middle, a missing
 sync point and region, an unreadable region, types and `ignore`, bad input; the tracer's sync points
-against the stand-in debugger) and, opt-in, `test_dosbox.py`'s `RealRun`: the real-mode program above
-with sync points at its INT 16h call and its exit, compared with a sequence written for it (equal),
-then with one byte of the mouse position changed (exit 1, offset 4).
+against the stand-in debugger, and the wait for protected mode: Theme Park's real-mode stop passed
+over for the program's code, input held meanwhile, the program's own calls as stops, a 16-bit
+selector refused, giving up, `mode` `any` and `pm`, a call's reflection passed over) and, opt-in,
+`test_dosbox.py`'s `RealRun`: the real-mode program above with sync points at its INT 16h call and
+its exit, compared with a sequence written for it (equal), then with one byte of the mouse position
+changed (exit 1, offset 4); and the 32-bit DPMI program
+under CWSDPMI with a sync point at `input:1` reading a block DPMI 0501h placed at linear 400000h:
+its first BREAK lands in CWSDPMI's real mode (0824:xxxx), the sync point waits (about 50 ms) and
+reads the block in the program's own code (selector A7h). With `mode = "any"` the same sync point
+was read where its BREAK landed and failed in both of two runs: in CWSDPMI's 16-bit protected-mode
+code (0018:3EDF, "no 32-bit selector covers it") and in its real mode (0824:4059, "above what real
+mode addresses").
 
 ### How it works
 
@@ -861,7 +901,13 @@ Only DOSBox-X's own facilities, nothing patched:
   runner starts it in a hidden one.
 
 Limits: a linear `--dump` address in protected mode needs a 32-bit CS (a DOS extender's flat
-code; otherwise give `SEL:OFF`), and in real mode reaches 10FFEFh at most. A real-mode callback's breakpoint is placed at the next stop in real or V86 mode (in
+code; otherwise give `SEL:OFF`), and in real and V86 mode reaches 10FFEFh at most: the reads whose
+output the control channel returns (`MEMDUMPBIN`, `MEMDUMP`) go through `GetAddress`, which there
+is the segment times 16 plus a 16-bit offset; the linear and physical data views (`DV`, `DP`) draw
+only into the curses window; `MEMFIND`, the one unbounded read, starts from such an address and
+lists a line per byte; and with CR0.PG clear in real mode no page tables are in use to translate a
+protected-mode linear address anyway (src/debug/debug.cpp, v2026.10.01, read 2026-11-12). Hence
+the wait for protected mode above rather than a read through the paging translation. A real-mode callback's breakpoint is placed at the next stop in real or V86 mode (in
 protected mode the debugger reads BP's segment as a selector), so an entry that comes before any
 real-mode stop is missed; the DOS/4GW mouse path is not affected, since the extender's real-mode
 INT 33h 000Ch call names the callback. Interrupts a program raises without an `int` instruction

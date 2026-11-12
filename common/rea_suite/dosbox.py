@@ -79,6 +79,13 @@ CALL_STRUCT = 0x32  # DPMI real-mode call structure
 MOUSE_BP = ("int", 0x33, "mouse")  # the INT 33h breakpoint set while a pointer move waits
 MOUSE_PATIENCE = 0.5  # seconds to wait for the program's own INT 33h call before BREAKs
 MOUSE_RETRY = 0.05  # between BREAKs that land outside the program's code
+PM_RETRY = 0.05  # between BREAKs for an action that waits for the program's protected-mode code
+PM_PATIENCE = 5.0  # seconds such an action waits before it takes the stop it has (`gave_up`)
+MOVED_KEYS = ("wanted", "moved", "gave_up")  # what a sequence line says of such a wait
+# Interrupts a protected-mode program calls itself (DOS, DPMI, mouse, keyboard, video), whose
+# breakpoints stop in its own code while an action waits for that (the extender's real-mode
+# reflections of them stop too, and are run past).
+PM_TRAPS = (0x21, 0x31, 0x33, 0x16, 0x10)
 REGISTERS = (
     "EAX", "EBX", "ECX", "EDX", "ESI", "EDI", "EBP", "ESP", "EIP", "EFLAGS",
     "CS", "DS", "ES", "FS", "GS", "SS", "CR0",
@@ -586,6 +593,8 @@ class Tracer:
         self.ending = False  # the run's time is up: no more input or timed actions
         self.dumps = 0
         self.app_cs: int | None = None  # the program's protected-mode code selector, once seen
+        self.seen_pm = False  # the program has run in protected mode: a DPMI program
+        self.pm_break = 0.0  # when a BREAK may be made for actions waiting for protected mode
         self.mouse_break = 0.0  # when a BREAK may be made for the pointer
 
     def regs(self) -> dict[str, int]:
@@ -620,10 +629,12 @@ class Tracer:
                 # runs takes effect only at the next stop), then the program's own INT 33h calls
                 # for a while, then BREAKs spaced out (back to back they starve the program)
                 mouse = self.mouse_due() and time.monotonic() >= self.mouse_break
-                if not self.breaking and (self.due() or mouse):
+                if not self.breaking and (self.break_due() or mouse):
                     self.ch.request("", "BREAK")  # a stop for the actions due now
                     self.breaking = True
             regs = self.regs()
+            if self.started and cpu_mode(regs) == "pm":  # read while it runs, too
+                self.seen_pm = True
             same = same + 1 if regs == previous else 0
             previous = regs
             if same >= 1:
@@ -654,9 +665,12 @@ class Tracer:
         if any(acts.covers(spec, n, ax) for spec in self.logged):
             self.log_call(n, regs, record)
         for action in self.actions.memory():
-            if not action.done and action.trigger.matches_call(n, ax, record.get("path")):
-                detail = {"path": record["path"]} if action.trigger.kind == "open" else {}
-                self.act(action, regs, detail)
+            if action.done or not action.trigger.matches_call(n, ax, record.get("path")):
+                continue
+            if action.mode == "pm" and not self.own_pm(regs):  # its extender's reflection of it
+                continue
+            detail = {"path": record["path"]} if action.trigger.kind == "open" else {}
+            self.act(action, regs, detail)
 
     def log_call(self, n: int, regs: dict[str, int], record: dict) -> None:
         self.calls += 1
@@ -729,9 +743,10 @@ class Tracer:
         self.bps.keys.clear()
         self.done = True
 
-    def stop(self, regs: dict[str, int]) -> bool:
+    def stop(self, regs: dict[str, int], taken: bool = False) -> bool:
         """Handle one stop; False when it was none (a CPU waiting in `hlt` or in a DOSBox-X
-        callback agrees with itself too) and nothing was resumed."""
+        callback agrees with itself too) and nothing was resumed. `taken`: the actions due were
+        looked at for this stop already (a BREAK's)."""
         key = (regs["CS"], regs["EIP"])
         code = self.read(regs["CS"], regs["EIP"], 2)
         traced_int = code[:1] == b"\xcd" and code[1] in self.traced
@@ -759,6 +774,8 @@ class Tracer:
         # `int n` where the entry, a return or a callback lands is logged here.
         if traced_int:
             self.call(code[1], regs)
+            if self.waiting() and not taken:  # a call stops for certain: maybe where awaited
+                self.take_due(regs)
             if self.ends_program(code[1], regs):
                 for action in self.actions.pending("exit"):
                     self.act(action, regs)
@@ -790,9 +807,8 @@ class Tracer:
                     self.mouse_break = max(self.mouse_break, time.monotonic() + MOUSE_RETRY)
             if self.breaking:  # the stop the BREAK made, or a breakpoint's that came first
                 self.breaking = False
-                for action in self.due():
-                    self.act(action, regs)
-                if not self.stop(regs):
+                self.take_due(regs)
+                if not self.stop(regs, taken=True):
                     self.resume()
             elif not self.stop(regs):
                 if placed:  # the stop of the INT 33h breakpoint, gone now
@@ -812,6 +828,106 @@ class Tracer:
         """Actions due now: their time has come, or their --input item has been delivered."""
         return self.actions.due(self.now(), self.delivered)
 
+    def take_due(self, regs: dict[str, int]) -> None:
+        """At a BREAK's stop: the actions due, but those that wait for a better stop (holds)."""
+        for action in self.due():
+            if not self.holds(action, regs):
+                self.act(action, regs)
+        self.pm_traps(self.waiting())
+
+    def waiting(self) -> bool:
+        """Whether an action due waits for a stop in the program's protected-mode code."""
+        return any(a.moved is not None for a in self.due())
+
+    def pm_traps(self, on: bool) -> None:
+        """While an action waits, breakpoints on the interrupts the program calls itself
+        (PM_TRAPS) besides the BREAKs: a program that spends little time in its own code (one that
+        polls the mouse through its extender) is found at its next call. Set at a stop: one set
+        while the CPU runs takes effect only at the next."""
+        for n in PM_TRAPS:
+            key = ("int", n, "pm")
+            if on and key not in self.bps.keys and n not in self.traced:
+                self.ch.request(bpint(n, None, None))
+                self.bps.add(key)
+            elif not on and key in self.bps.keys:
+                self.ch.request(f"BPDEL {hexarg(self.bps.remove(key))}")
+        self.retrace()
+
+    def retrace(self) -> None:
+        """The interrupts whose `int` is a stop: --ints' and the triggers', and those of the
+        breakpoints set for a while (the mouse's, PM_TRAPS)."""
+        temporary = {k[1] for k in self.bps.keys if len(k) == 3 and k[0] == "int"}
+        self.traced = {n for n, _, _ in self.ints} | temporary
+
+    def break_due(self) -> bool:
+        """Whether to BREAK for the actions due: at once, unless all of them are waiting for the
+        program's protected-mode code, whose BREAKs are spaced out (back to back they starve it)."""
+        due = self.due()
+        if not due:
+            return False
+        return time.monotonic() >= self.pm_break or any(a.moved is None for a in due)
+
+    def wants_pm(self, action) -> bool:
+        """Whether a time or input action waits for a stop in the program's own protected-mode
+        code: asked for (`mode = "pm"`), or by default once the program has run in protected mode,
+        since a BREAK can land in its extender's real-mode side, where a high linear address or
+        a selector does not read (a selector reads as a segment there)."""
+        if action.trigger.kind not in acts.MOVABLE:
+            return False
+        return action.mode == "pm" or (action.mode == "auto" and self.seen_pm)
+
+    def own_pm(self, regs: dict[str, int]) -> bool:
+        """A stop in the program's own protected-mode code: its code selector (that of its own
+        last call), or, before one is seen, a 32-bit code segment (a DOS extender's own code and
+        a DPMI host's are 16-bit, a 32-bit program's flat code is not)."""
+        if cpu_mode(regs) != "pm":
+            return False
+        if self.app_cs is not None:
+            return regs["CS"] == self.app_cs
+        try:
+            return acts.parse_selinfo(self.ch.request("SELINFO CS"))[2]
+        except ValueError:
+            return False
+
+    def holds(self, action, regs: dict[str, int]) -> bool:
+        """Whether a due action waits for a later stop (wants_pm, and this one is elsewhere). It
+        waits PM_PATIENCE at most, then takes the stop it has; input waits with it (held)."""
+        if not self.wants_pm(action) or self.own_pm(regs):
+            return False
+        now = time.monotonic()
+        if action.moved is None:
+            action.moved = acts.Moved(cpu_mode(regs), at(regs), now)
+        elif now - action.moved.since >= PM_PATIENCE:
+            action.moved.gave_up = True
+            return False
+        else:
+            action.moved.stops += 1
+        self.pm_break = now + PM_RETRY
+        return True
+
+    def moved(self, action) -> dict:
+        """What a record and a sequence line say of an action that wanted protected mode: where its
+        first stop landed when it moved on from there, how long it waited and whether it gave up."""
+        if not self.wants_pm(action):
+            return {}
+        detail: dict = {"wanted": "pm"}
+        if action.moved is not None:
+            m = action.moved
+            detail["moved"] = {"from": m.at, "mode": m.mode, "stops": m.stops,
+                               "waited": round(time.monotonic() - m.since, 3)}  # fmt: skip
+            if m.gave_up:
+                detail["gave_up"] = True
+            action.moved = None
+        return detail
+
+    def held(self, step) -> bool:
+        """Input that waits: an action due before it has not been taken yet (an input item's, or
+        one at an earlier time), so a sync point never reads what came after its moment."""
+        for action in self.due():
+            if action.trigger.kind == "input" or action.trigger.seconds < step.t:
+                return True
+        return False
+
     def took(self, step) -> None:
         """A step delivered: its item is whole once no step of it is left."""
         if not any(s.item == step.item for s in self.steps):
@@ -830,6 +946,7 @@ class Tracer:
     def act(self, action, regs: dict[str, int], detail: dict | None = None) -> None:
         """A dump or a poke, once, or a sync point, at a stop (the mode and CS say how an address
         reads)."""
+        detail = {**self.moved(action), **(detail or {})}
         if isinstance(action, acts.Sync):
             self.sync(action, regs, detail)
             return
@@ -886,6 +1003,7 @@ class Tracer:
             line = {"addr": region.address.text, "mode": mode, "at": where}
             if linear is not None:
                 line["linear"] = f"{linear:08X}"
+            line.update({k: v for k, v in (detail or {}).items() if k in MOVED_KEYS})
             if self.sequence:
                 self.sequence.region(sync.name, region, data, error, sync.hits, **line)
         index = self.sequence.index if self.sequence else None
@@ -937,7 +1055,12 @@ class Tracer:
         """Keys and buttons due now, through the integration device (taken whether the emulation
         runs or stands at a stop), up to a mouse position, which needs a stop (place_mouse)."""
         now = self.now()
-        while self.steps and self.steps[0].t <= now and self.steps[0].kind in ("keys", "button"):
+        while (
+            self.steps
+            and self.steps[0].t <= now
+            and self.steps[0].kind in ("keys", "button")
+            and not self.held(self.steps[0])
+        ):
             step = self.steps.pop(0)
             self.took(step)
             values = acts.integration_values(step)
@@ -965,6 +1088,7 @@ class Tracer:
             bool(self.steps)
             and self.steps[0].kind in ("mouse", "move")
             and self.steps[0].t <= self.now()
+            and not self.held(self.steps[0])
         )
 
     def own_code(self, regs: dict[str, int]) -> bool:
@@ -1010,7 +1134,7 @@ class Tracer:
         self.mouse_break = 0.0
         if MOUSE_BP in self.bps.keys and not self.mouse_due():
             self.ch.request(f"BPDEL {hexarg(self.bps.remove(MOUSE_BP))}")
-            self.traced = {n for n, _, _ in self.ints}
+            self.retrace()
         self.deliver_input()  # keys and buttons after it, at this stop
         return True
 

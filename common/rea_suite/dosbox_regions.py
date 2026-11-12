@@ -104,7 +104,7 @@ def parse_regions(data: dict) -> RegionsFile:
         if not isinstance(spec, dict) or "name" not in spec or "at" not in spec:
             raise ValueError("regions file: each [[sync]] needs name and at")
         name = str(spec["name"])
-        unknown = set(spec) - {"name", "at", "regions", "repeat"}
+        unknown = set(spec) - {"name", "at", "regions", "repeat", "mode"}
         if unknown:
             raise ValueError(f"sync {name!r}: unknown key(s) {', '.join(sorted(unknown))}")
         if any(s.name == name for s in syncs):
@@ -115,13 +115,18 @@ def parse_regions(data: dict) -> RegionsFile:
             raise BadRegions(f"sync {name!r}: repeat is true or false")
         if repeat and trigger.kind not in REPEATABLE:
             raise ValueError(f"sync {name!r}: repeat needs an int or open trigger")
+        mode = spec.get("mode", "auto")
+        if mode not in acts.MODES:
+            raise ValueError(f"sync {name!r}: mode is one of {', '.join(acts.MODES)}")
+        if mode == "pm" and trigger.kind not in (*acts.MOVABLE, *acts.CALLS):
+            raise ValueError(f"sync {name!r}: mode pm needs an int, open, t= or input: trigger")
         names = spec.get("regions", list(regions))
         if not isinstance(names, list) or not names:
             raise ValueError(f"sync {name!r}: regions is a list of region names")
         missing = [n for n in names if n not in regions]
         if missing:
             raise ValueError(f"sync {name!r}: no region {', '.join(map(repr, missing))}")
-        syncs.append(acts.Sync(name, trigger, [regions[n] for n in names], repeat))
+        syncs.append(acts.Sync(name, trigger, [regions[n] for n in names], repeat, mode=mode))
     if not syncs:
         raise ValueError("regions file: no [[sync]]")
     return RegionsFile(regions, syncs)

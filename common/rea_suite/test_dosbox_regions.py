@@ -107,6 +107,10 @@ class RegionsFile(unittest.TestCase):
                             "sync": [{"name": "s", "at": "soon"}]},
             "unknown key": {"regions": {"a": {"addr": "0", "len": 1, "size": 2}},
                             "sync": [{"name": "s", "at": "exit"}]},
+            "bad mode": {"regions": {"a": {"addr": "0", "len": 1}},
+                         "sync": [{"name": "s", "at": "t=3", "mode": "rm"}]},
+            "pm at start": {"regions": {"a": {"addr": "0", "len": 1}},
+                            "sync": [{"name": "s", "at": "start", "mode": "pm"}]},
         }  # fmt: skip
         for why, data in cases.items():
             with self.assertRaises(ValueError, msg=why):
@@ -353,6 +357,156 @@ class SyncStops(unittest.TestCase):
                 t.deliver_input()
             self.assertEqual(t.delivered, {1, 2})
             self.assertEqual(t.due(), [sync])
+
+
+SELINFO_FLAT = ["SelectorInfo CS:", "CS: b:00000000 type:1B parbg", "    l:FFFFFFFF dpl : 0 11110"]
+REAL_MODE_STOP = regs(cs=0xC5D, eip=0x10B5)  # Theme Park's: DOS/4GW's real-mode keyboard path
+PROGRAM_STOP = regs(cs=0xA7, eip=0x2F3C1, cr0=1)  # the program's own 32-bit code
+
+
+class ProtectedModeSyncs(unittest.TestCase):
+    """Time and input sync points in a DPMI program wait for a stop in its own protected-mode code
+    (Theme Park, 2026-11-12: `input:9` stopped in DOS/4GW's real-mode side, and a region at linear
+    29143C could not be read there)."""
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dir = Path(self.tmp.name)
+        self.fake = FakeDebugger(self.dir)
+        self.fake.selectors["CS"] = SELINFO_FLAT
+        self.fake.memory["0A7:029143C"] = bytes.fromhex("10270000")
+        self.clock = [0.0]
+        self.writers: list[rg.SequenceWriter] = []
+
+    def tearDown(self) -> None:
+        for writer in self.writers:
+            writer.close()
+        self.tmp.cleanup()
+
+    def run_to_sync(self, mode: str = "auto", at: str = "input:1", dpmi: bool = True):
+        region = acts.Region("money", acts.parse_address("29143C"), 4, "i32")
+        sync = acts.Sync("after", acts.parse_trigger(at), [region], mode=mode)
+        actions = acts.Actions.from_args([], [], "t=0:ENTER t=1:ENTER", [sync])
+        t, records = tracer(self.fake, self.dir, actions=actions, ints="")
+        t.sequence = rg.SequenceWriter(self.dir / "run.jsonl", "rea-suite dosbox")
+        self.writers.append(t.sequence)
+        t.started, t.psp, t.seen_pm = True, 0x814, dpmi
+        t.now = lambda: self.clock[0]  # type: ignore[method-assign]
+        for now in (0.0, 0.05):  # the first ENTER, pressed and released
+            self.clock[0] = now
+            t.deliver_input()
+        return t, records, sync
+
+    def lines(self, t: dosbox.Tracer) -> list[dict]:
+        t.sequence.close()  # type: ignore[union-attr]
+        text = (self.dir / "run.jsonl").read_text().splitlines()
+        return [json.loads(line) for line in text[1:]]
+
+    def test_an_input_sync_moves_from_the_extenders_real_mode_to_the_programs_code(self) -> None:
+        t, records, sync = self.run_to_sync()
+        self.assertEqual(t.due(), [sync])
+        self.clock[0] = 1.2  # the second ENTER is due, but waits for the sync point
+        t.deliver_input()
+        self.assertEqual(len(t.steps), 2)
+        self.assertNotIn("input", [r["kind"] for r in records[2:]])
+        t.take_due(REAL_MODE_STOP)
+        self.assertEqual([r["kind"] for r in records], ["input", "input"])  # nothing read there
+        self.assertFalse(t.break_due())  # the next BREAK is spaced out
+        t.take_due(PROGRAM_STOP)
+        record = records[-1]
+        self.assertEqual((record["kind"], record["mode"], record["at"]),
+                         ("sync", "pm", "00A7:0002F3C1"))  # fmt: skip
+        self.assertEqual(record["wanted"], "pm")
+        self.assertEqual((record["moved"]["from"], record["moved"]["mode"],
+                          record["moved"]["stops"]), ("0C5D:10B5", "rm", 1))  # fmt: skip
+        self.assertNotIn("errors", record)
+        t.deliver_input()  # now the second ENTER, late, and its release moved back as much
+        self.assertEqual(records[-1]["late"], 0.2)
+        self.assertAlmostEqual(t.steps[0].t, 1.25)
+        (line,) = self.lines(t)
+        self.assertEqual(line["hex"], "10270000")
+        self.assertEqual((line["mode"], line["at"], line["wanted"]), ("pm", "00A7:0002F3C1", "pm"))
+        self.assertEqual(line["moved"]["from"], "0C5D:10B5")
+
+    def test_while_it_waits_the_programs_own_calls_are_stops_too(self) -> None:
+        t, records, _ = self.run_to_sync()
+        t.take_due(REAL_MODE_STOP)
+        for n in ("021", "031", "033", "016", "010"):
+            self.assertIn(f"BPINT {n}", self.fake.commands)
+        reflected = regs(eax=0x0300, cs=0xC5D, eip=0x300)  # the extender's own int 33h: run past
+        self.assertTrue(self.fake.stop(t, reflected, b"\xcd\x33"))
+        self.assertEqual(records[-1]["kind"], "input")
+        self.assertTrue(self.fake.stop(t, {**PROGRAM_STOP, "EAX": 3}, b"\xcd\x33"))
+        self.assertEqual((records[-1]["kind"], records[-1]["mode"]), ("sync", "pm"))
+        self.assertEqual(records[-1]["moved"]["stops"], 2)
+        self.assertEqual(len([c for c in self.fake.commands if c.startswith("BPDEL")]), 5)
+        self.assertEqual((t.bps.keys, t.traced), ([], set()))  # gone again
+
+    def test_a_time_sync_waits_too_and_a_first_stop_in_the_program_is_taken(self) -> None:
+        t, records, sync = self.run_to_sync(at="t=0.5")
+        self.clock[0] = 0.5
+        t.take_due(PROGRAM_STOP)
+        self.assertEqual((records[-1]["mode"], records[-1]["wanted"]), ("pm", "pm"))
+        self.assertNotIn("moved", records[-1])
+        self.assertTrue(sync.done)
+
+    def test_a_16_bit_selector_is_the_extenders_and_the_programs_own_selector_wins(self) -> None:
+        t, records, _ = self.run_to_sync()
+        self.fake.selectors["CS"] = [*SELINFO_FLAT[:2], "    l:0000FFFF dpl : 0 11100"]
+        t.take_due(regs(cs=0x8F, eip=0x1234, cr0=1))  # DOS/4GW's 16-bit protected-mode code
+        self.assertEqual(records[-1]["kind"], "input")
+        t.app_cs = 0xA7  # once the program's own call has named its selector, only that one
+        self.fake.selectors["CS"] = SELINFO_FLAT
+        self.assertFalse(t.own_pm(regs(cs=0x177, eip=0x10, cr0=1)))
+        self.assertTrue(t.own_pm(PROGRAM_STOP))
+
+    def test_after_its_patience_a_sync_takes_the_stop_it_has_and_says_so(self) -> None:
+        t, records, sync = self.run_to_sync()
+        t.take_due(REAL_MODE_STOP)
+        sync.moved.since -= dosbox.PM_PATIENCE  # type: ignore[union-attr]
+        t.take_due(REAL_MODE_STOP)
+        record = records[-1]
+        self.assertEqual((record["kind"], record["mode"], record["gave_up"]), ("sync", "rm", True))
+        self.assertEqual(record["moved"]["stops"], 1)
+        self.assertEqual(record["errors"], 1)  # the error is still there, and said
+        (line,) = self.lines(t)
+        self.assertIn("real mode", line["error"])
+        self.assertTrue(line["gave_up"])
+
+    def test_a_real_mode_program_and_mode_any_take_the_stop_as_it_lands(self) -> None:
+        for mode, dpmi in (("auto", False), ("any", True)):
+            t, records, _ = self.run_to_sync(mode=mode, dpmi=dpmi)
+            t.take_due(regs(eip=0x200))
+            self.assertEqual((records[-1]["kind"], records[-1]["mode"]), ("sync", "rm"), mode)
+            self.assertNotIn("wanted", records[-1])
+
+    def test_mode_pm_waits_before_the_program_has_entered_protected_mode(self) -> None:
+        t, records, _ = self.run_to_sync(mode="pm", dpmi=False)
+        t.take_due(regs(eip=0x200))
+        self.assertEqual(records[-1]["kind"], "input")
+        t.take_due(PROGRAM_STOP)
+        self.assertEqual((records[-1]["kind"], records[-1]["mode"]), ("sync", "pm"))
+
+    def test_mode_pm_on_a_call_passes_over_the_extenders_reflection(self) -> None:
+        region = acts.Region("r", acts.parse_address("9000:0"), 2)
+        sync = acts.Sync("open", acts.parse_trigger("int21:3D"), [region], mode="pm")
+        t, records = tracer(self.fake, self.dir, actions=acts.Actions(syncs=[sync]), ints="")
+        t.started, t.psp = True, 0x814
+        reflected = regs(eax=0x3D00, cs=0xC5D, eip=0x200)  # DOS/4GW's int 21h in real mode
+        self.assertTrue(self.fake.stop(t, reflected, b"\xcd\x21"))
+        self.assertEqual(records, [])
+        self.assertTrue(self.fake.stop(t, {**PROGRAM_STOP, "EAX": 0x3D00}, b"\xcd\x21"))
+        self.assertEqual((records[-1]["kind"], records[-1]["mode"]), ("sync", "pm"))
+
+    def test_running_in_protected_mode_marks_a_dpmi_program(self) -> None:
+        t, _ = tracer(self.fake, self.dir, ints="")
+        t.started, t.psp = True, 0x814
+        self.fake.current = (REAL_MODE_STOP, b"")
+        t.wait_stop(lambda: True, lambda: None)
+        self.assertFalse(t.seen_pm)
+        self.fake.current = (PROGRAM_STOP, b"")
+        t.wait_stop(lambda: True, lambda: None)
+        self.assertTrue(t.seen_pm)
 
 
 if __name__ == "__main__":

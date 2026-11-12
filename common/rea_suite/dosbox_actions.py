@@ -26,6 +26,13 @@ from pathlib import Path
 # INT 21h functions that end the program, and those that open a file by name.
 EXIT_FUNCTIONS = (0x4C, 0x00, 0x31)
 OPEN_FUNCTIONS = (0x3D, 0x6C)
+# Where an action may read and write memory (a sync point's `mode`): `pm` only at a stop in the
+# program's own protected-mode code (a time or input stop moves on to the next such stop, a call
+# elsewhere is passed over), `any` wherever the trigger stops, `auto` (the default) `pm` for time
+# and input triggers once the program has entered protected mode, `any` for the rest.
+MODES = ("auto", "pm", "any")
+MOVABLE = ("time", "input")  # triggers that stop wherever a BREAK lands, so may move to a later one
+CALLS = ("int", "open")  # triggers that stop at a call of the program's
 
 
 @dataclass(frozen=True)
@@ -167,6 +174,18 @@ def parse_length(text: str) -> int:
 
 
 @dataclass
+class Moved:
+    """A time or input action held for a stop in the program's own protected-mode code: where the
+    first stop for it landed instead, when (host clock), and how many stops were passed over."""
+
+    mode: str
+    at: str
+    since: float
+    stops: int = 1
+    gave_up: bool = False
+
+
+@dataclass
 class Dump:
     """--dump ADDR:LEN@TRIGGER: LEN bytes from ADDR into a file of the run's folder, once."""
 
@@ -175,6 +194,8 @@ class Dump:
     trigger: Trigger
     text: str
     done: bool = False
+    mode: str = "auto"
+    moved: Moved | None = None
 
 
 @dataclass
@@ -186,6 +207,8 @@ class Poke:
     trigger: Trigger
     text: str
     done: bool = False
+    mode: str = "auto"
+    moved: Moved | None = None
 
 
 def _split_trigger(text: str, option: str) -> tuple[str, Trigger]:
@@ -314,7 +337,8 @@ class Region:
 @dataclass
 class Sync:
     """A sync point: when its trigger comes, its regions are read in order into the run's
-    sequence file. `repeat` makes every call or open of the trigger one, not only the first."""
+    sequence file. `repeat` makes every call or open of the trigger one, not only the first;
+    `mode` is where the regions may be read (MODES)."""
 
     name: str
     trigger: Trigger
@@ -322,6 +346,8 @@ class Sync:
     repeat: bool = False
     done: bool = False
     hits: int = 0
+    mode: str = "auto"
+    moved: Moved | None = None
 
     @property
     def text(self) -> str:
