@@ -412,9 +412,9 @@ and 0x431230, and checked on both archives):
   failed. On a game's archive (2.6 GB) it reads the whole file: run it under `heavy run`.
 - **LZO1X.** Through liblzo2 (`lzo1x_decompress_safe` with ctypes) when the system has the library, else
   a pure-Python decoder (`common/rea_suite/lzo1x.py`, written from the instruction set of
-  `lzo1x_d.ch`), which is far slower: fine for `blob`, slow for `check` on a whole archive. liblzo2
-  is not installed by the suite (Debian `liblzo2-2`, Homebrew `lzo`); Windows has the pure-Python
-  decoder only unless `lzo2.dll` is on the path.
+  `lzo1x_d.ch`), which is far slower: fine for `blob`, slow for `check` on a whole archive. `rea-suite
+  setup` installs liblzo2 on Linux (`liblzo2-2`) and macOS (Homebrew `lzo`); winget has no package for
+  it, so Windows has the pure-Python decoder only unless `lzo2.dll` is on the path.
 - **Refusals.** A version below 0x57, the long table form, a table or a resource past the end of the
   file, a duplicate slot outside the list, and a `blob` output inside the archive's folder.
 

@@ -13,6 +13,8 @@ wireshark
 
 # Firmware / installers / blobs
 binwalk
+# LZO1X for Yeti.big (rea-suite yetibig): loaded through ctypes; pure Python without it
+liblzo2-2
 innoextract
 unshield
 cabextract

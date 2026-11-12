@@ -31,3 +31,4 @@ brew "rizin"
 
 # Android (rea: REA_ADB_PATH; frida-server push)
 cask "android-platform-tools"
+brew "lzo" # LZO1X for Yeti.big (rea-suite yetibig), loaded through ctypes
