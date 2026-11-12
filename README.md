@@ -167,7 +167,8 @@ REA_SUITE_COMPONENTS="build steam"
 | `steam` | no | SteamCMD and Steamless (Windows) |
 | `porting` | no | porting old Windows games: Wine + winedbg, rr, perf + hotspot (Linux), Tracy, WinDbg and the ViGEmBus driver (Windows) ([Porting old games](#porting-old-games); Wine is over 1 GB) |
 | `dos` | no | DOS games: DOSBox-X with its debugger for `rea-suite dosbox`; built from source on Linux (with component `build`), the release on macOS and Windows ([port tools](docs/PORT-TOOLS.md#dos-programs-rea-suite-dosbox)) |
-| `playstation` | no | PS1/PS2 disc preparation, Ghidra console loaders and jPSXdec ([workflow](docs/PLAYSTATION.md)) |
+| `playstation` | no | PS1/PS2 disc preparation, chdman, Ghidra console loaders, jPSXdec, the PCSX-Redux and PCSX2 emulators ([tools](docs/PLAYSTATION.md), routes for [PS1](docs/PS1.md) and [PS2](docs/PS2.md)) |
+| `decomp` | no | decompilation projects: splat (split MIPS executables) and objdiff (match objects against the original) |
 | `game-archives` | no | extract-xiso, ZArchive; Windows also XGDTool and QuickBMS ([platform limits](docs/GAME-ARCHIVES.md)) |
 | `vm` | no | QEMU + OVMF (Linux) or VirtualBox (Windows); UTM on macOS |
 
@@ -499,6 +500,11 @@ been run on macOS arm64 and Linux x86_64 (WSL2, 2026-11-03); Windows execution r
 | pycdc, pycdas | Decompile and disassemble Python bytecode (.pyc) | tools.yml, built from source (component `build`) |
 | dumpsxiso, mkpsxiso | Extract/rebuild PS1 and PS2 CD images with layout XML (component `playstation`) | tools.yml, release binaries |
 | jPSXdec | PS1 media indexing/conversion, CLI and GUI (component `playstation`) | tools.yml, Java JAR |
+| chdman | CHD disc images to CUE/BIN or ISO (component `playstation`; not on Windows, [why](docs/PLAYSTATION.md#install)) | apt `mame-tools` / brew `rom-tools` |
+| PCSX-Redux (`pcsx-redux`) | PS1 emulator with a debugger, GDB server, Lua and a web API; starts without a Sony BIOS (component `playstation`) | tools.yml, distrib.app builds |
+| PCSX2 (`pcsx2`) | PS2 emulator with its EE/IOP debugger and PINE (component `playstation`) | tools.yml, release binaries |
+| splat (`splat`) | Split a PS1/PS2 (and N64, PSP) executable into assembly, data and a linker script for a decompilation (component `decomp`) | PyPI `splat64[mips]`, own uv environment |
+| objdiff (`objdiff`, `objdiff-cli`) | Match a decompilation's compiled objects against the original, function by function (component `decomp`) | tools.yml, release binaries |
 | extract-xiso | List/extract/create Xbox XISO images (component `game-archives`) | tools.yml, release binaries |
 | ZArchive | Read/create ZAR/WUA (component `game-archives`) | tools.yml; source build with zstd on Linux/macOS, EXE on Windows |
 | XGDTool | Xbox/360 disc format conversion (component `game-archives`) | tools.yml, Windows CLI only |

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import shutil
 import subprocess
 import tempfile
@@ -11,7 +12,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from rea_suite import appdistrib, archive
+from rea_suite import appdistrib, archive, cli, components
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -77,8 +78,28 @@ class AppDistrib(unittest.TestCase):
             ],
         )
 
+    def test_pcsx_redux_assets_match_every_platform(self) -> None:
+        tool = cli.load_tools()["pcsx-redux"]
+        names = {
+            "linux": "PCSX-Redux-61388c8e-linux-x86_64.zip",
+            "macos": "PCSX-Redux-7637751d-Arm.dmg",
+            "windows": "pcsx-redux-nightly-30928.20261111.31-x64.zip",
+        }
+        for platform, name in names.items():
+            release = {"tag_name": "x", "assets": [{"name": name}]}
+            with patch.object(cli, "PLATFORM", platform):
+                self.assertEqual(cli.pick_assets(tool, release), [{"name": name}])
+                self.assertIn(platform, tool.appdistrib["channels"])
+
 
 class ComponentUvTools(unittest.TestCase):
+    def test_decomp_brings_splat_in_an_environment_of_its_own(self) -> None:
+        with patch.dict(os.environ, {components.KEY: "decomp"}):
+            out = io.StringIO()
+            with patch("sys.stdout", out):
+                components.main(["values", "uv-tools"])
+        self.assertEqual(out.getvalue().split(), ["splat64[mips]"])
+
     def test_both_scripts_install_and_check_components_uv_tools(self) -> None:
         shell = (ROOT / "bin" / "rea-suite").read_text()
         self.assertIn("components values uv-tools", shell)

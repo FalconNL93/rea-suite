@@ -168,6 +168,64 @@ tools:
       macos: *jpsxdec-bin
       windows: *jpsxdec-bin
 
+  # PS1 emulator for reverse engineering: debugger, memory editor, GDB server, Lua, web API,
+  # and OpenBIOS, so it starts without a Sony BIOS. No GitHub releases: every main-branch commit
+  # is a build on distrib.app, the channels its own updater reads (component playstation).
+  pcsx-redux:
+    appdistrib:
+      org: pcsx-redux
+      channels: {linux: dev-linux-x64, macos: dev-macos-arm, windows: dev-win-x64}
+    assets:
+      linux: '^PCSX-Redux-\w+-linux-x86_64\.zip$'
+      macos: '^PCSX-Redux-\w+-Arm\.dmg$'
+      windows: '^pcsx-redux-nightly-[\d.]+-x64\.zip$'
+    bin:
+      linux:
+        pcsx-redux: {path: 'PCSX-Redux-*.AppImage', env: {APPIMAGE_EXTRACT_AND_RUN: '1'}}
+      macos:
+        pcsx-redux: PCSX-Redux.app/Contents/MacOS/PCSX-Redux
+      windows:
+        pcsx-redux: pcsx-redux.exe
+        psyq-obj-parser: psyq-obj-parser.exe
+
+  # PS2 emulator with its debugger (EE/IOP disassembly, breakpoints, memory, symbols from the
+  # ELF) and PINE for scripted memory access; needs a BIOS dumped from your own console.
+  # The Windows build is only a .7z (extracted with the base suite's 7-Zip).
+  pcsx2:
+    github: PCSX2/pcsx2
+    version: latest
+    assets:
+      linux: '^pcsx2-v[\d.]+-linux-appimage-x64-Qt\.AppImage$'
+      macos: '^pcsx2-v[\d.]+-macos-Qt\.tar\.xz$'
+      windows: '^pcsx2-v[\d.]+-windows-x64-Qt\.7z$'
+    bin:
+      linux:
+        pcsx2: {path: 'pcsx2-*.AppImage', env: {APPIMAGE_EXTRACT_AND_RUN: '1'}}
+      macos:
+        pcsx2: '*.app/Contents/MacOS/PCSX2'
+      windows:
+        pcsx2: pcsx2-qt.exe
+
+  # Per-function match of a decompilation's objects against the original (MIPS, PPC, x86,
+  # ARM); the CLI for scripts and CI, the GUI to work in (component decomp).
+  objdiff:
+    github: encounter/objdiff
+    version: latest
+    assets:
+      linux: ['^objdiff-cli-linux-x86_64$', '^objdiff-linux-x86_64$']
+      macos: ['^objdiff-cli-macos-arm64$', '^objdiff-macos-arm64$']
+      windows: ['^objdiff-cli-windows-x86_64\.exe$', '^objdiff-windows-x86_64\.exe$']
+    bin:
+      linux:
+        objdiff-cli: objdiff-cli-linux-x86_64
+        objdiff: objdiff-linux-x86_64
+      macos:
+        objdiff-cli: objdiff-cli-macos-arm64
+        objdiff: objdiff-macos-arm64
+      windows:
+        objdiff-cli: objdiff-cli-windows-x86_64.exe
+        objdiff: objdiff-windows-x86_64.exe
+
   # Original upstream publishes Windows CLI binaries; Linux/macOS builds are not configured.
   xgdtool:
     github: wiredopposite/XGDTool

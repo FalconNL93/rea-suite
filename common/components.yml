@@ -79,8 +79,18 @@ components:
     tools: [dosbox-x]
 
   playstation:
-    description: PS1/PS2 disc preparation (dumpsxiso/mkpsxiso) and PS1 media (jPSXdec); also enables exact-version PSX and Emotion Engine Ghidra loaders
-    tools: [mkpsxiso, jpsxdec]
+    description: PS1/PS2 - disc preparation (dumpsxiso/mkpsxiso, chdman), PS1 media (jPSXdec), the PCSX-Redux and PCSX2 emulators with their debuggers, and the exact-version PSX and Emotion Engine Ghidra loaders
+    # chdman: CHD images (Redump sets are often CHD). Windows has no package with chdman
+    # on PATH (MAME's winget installer needs a location); see docs/PLAYSTATION.md.
+    apt: [mame-tools]
+    brew: [rom-tools]
+    tools: [mkpsxiso, jpsxdec, pcsx-redux, pcsx2]
+
+  decomp:
+    description: Decompilation projects - splat (split a MIPS executable into assembly and data; PS1, PS2, N64, PSP) and objdiff (match compiled objects against the original, function by function)
+    # splat pins PyYAML, tqdm and colorama exactly, so it gets an environment of its own.
+    uv-tools: ['splat64[mips]']
+    tools: [objdiff]
 
   game-archives:
     description: Game archives and Xbox discs (extract-xiso, ZArchive; Windows also XGDTool and QuickBMS); ZArchive builds from source on Linux/macOS
