@@ -273,6 +273,12 @@ The LE is recompiled onto winrt's core (its static recompiler and CPU, no PC emu
   - When the game's timer changes source (its own INT 8 without sound, the sound library's events with it), the
     host's own periodic work (presenting, scripted input) needs a clock of its own at a fixed rate. Otherwise the
     window stops presenting and scripts stall the moment sound comes on.
+  - A synth driver built into the game (HMI's FM driver in Theme Park's MAIN.EXE) is played by calling the
+    driver's own bodies from the host's sequencer, with only the chip emulated (ymfm's YMF262, BSD-3, behind the
+    port's own interface): the original's voice allocation and timbres come for free. Check first that the bodies
+    make no far calls and need nothing but port I/O.
+  - Pick the sound path the port supports through the game's own override variables (Theme Park's
+    `BF_MUSIC="ADLIB 388"`) in the guest environment, never by editing the setup file, which is the player's.
 - **The fastest way to the first frame** is a headless runner (snapshots to files, a trace switch for the DOS
   calls) and a layer that refuses each unknown service with its number and its caller, then fixing the stops
   one at a time against the run of step 5: Theme Park's title screen took 13 stops (STI, INT 21h 48h, port
