@@ -32,15 +32,17 @@ OPEN_FUNCTIONS = (0x3D, 0x6C)
 class Trigger:
     """When an action runs: at an interrupt call (`int21`, `int21:3D`, `int21:3D:00`), at the
     program's open of a file (`open:DATA/LEVEL.DAT`), at a time in seconds (`t=30`, the clock of
-    the records' `t`), at the program's first instruction (`start`) or at its end (`exit`)."""
+    the records' `t`), once an item of the --input script has been delivered (`input:3`, the third
+    item), at the program's first instruction (`start`) or at its end (`exit`)."""
 
-    kind: str  # int, open, time, start, exit
+    kind: str  # int, open, time, input, start, exit
     text: str
     n: int | None = None
     ah: int | None = None
     al: int | None = None
     name: str | None = None
     seconds: float | None = None
+    item: int | None = None
 
     def breakpoints(self) -> list[tuple[int, int | None, int | None]]:
         """The interrupt breakpoints (INT, AH, AL) this trigger needs."""
@@ -83,11 +85,17 @@ def parse_trigger(text: str) -> Trigger:
         if not name:
             raise ValueError(f"trigger {text!r}: open: takes a file name")
         return Trigger("open", t, name=name)
+    if low.startswith("input:"):
+        if not low[6:].isdigit() or int(low[6:]) < 1:
+            raise ValueError(f"trigger {text!r}: input: takes an item's number, from 1")
+        return Trigger("input", t, item=int(low[6:]))
     m = re.fullmatch(r"int([0-9a-f]{1,2})(?::([0-9a-f]{1,2}))?(?::([0-9a-f]{1,2}))?", low)
     if m:
         n, ah, al = (int(g, 16) if g else None for g in m.groups())
         return Trigger("int", t, n=n, ah=ah, al=al)
-    raise ValueError(f"trigger {text!r}: one of intNN[:AH[:AL]], open:NAME, t=SECONDS, start, exit")
+    raise ValueError(
+        f"trigger {text!r}: one of intNN[:AH[:AL]], open:NAME, t=SECONDS, input:N, start, exit"
+    )
 
 
 def covers(spec: tuple[int, int | None, int | None], n: int, ax: int) -> bool:
@@ -289,6 +297,37 @@ def dump_filename(index: int, dump: Dump) -> str:
     return f"dump-{index:02d}-{trigger or 'x'}.bin"
 
 
+# --- named regions at sync points (--regions; the file and the sequence: dosbox_regions) ----------
+
+
+@dataclass(frozen=True)
+class Region:
+    """A named range of memory: ADDR as --dump takes it, a length, and for display a type."""
+
+    name: str
+    address: Address
+    length: int
+    type: str = "bytes"
+    ignore: tuple[tuple[int, int], ...] = ()  # (offset, length) a comparison skips
+
+
+@dataclass
+class Sync:
+    """A sync point: when its trigger comes, its regions are read in order into the run's
+    sequence file. `repeat` makes every call or open of the trigger one, not only the first."""
+
+    name: str
+    trigger: Trigger
+    regions: list[Region]
+    repeat: bool = False
+    done: bool = False
+    hits: int = 0
+
+    @property
+    def text(self) -> str:
+        return f"sync {self.name}@{self.trigger.text}"
+
+
 # --- input -----------------------------------------------------------------------------------------
 
 INTEGRATION_INJECT = 0x00804200  # DOSBOX_ID_REG_8042_KB_INJECT, include/iglib.h
@@ -335,6 +374,7 @@ class Step:
     kind: str = field(compare=False)  # keys, button, mouse, move
     value: tuple = field(compare=False)
     source: str = field(compare=False, default="")
+    item: int = field(compare=False, default=0)  # the script item it comes from, from 1
 
 
 INPUT_ITEM = re.compile(r't=(?P<t>[0-9.]+):(?P<action>"[^"]*"|[^\s;]+)')
@@ -348,7 +388,7 @@ def parse_input(script: str) -> list[Step]:
     text = "\n".join(line.split("#", 1)[0] for line in script.splitlines())
     steps: list[Step] = []
     pos = 0
-    for m in INPUT_ITEM.finditer(text):
+    for item, m in enumerate(INPUT_ITEM.finditer(text), 1):
         if not GAP.fullmatch(text[pos : m.start()]):
             raise ValueError(
                 f"--input: {text[pos : m.start()].strip(' ;')!r} is not t=SECONDS:ACTION"
@@ -358,7 +398,9 @@ def parse_input(script: str) -> list[Step]:
             t = float(m["t"])
         except ValueError:
             raise ValueError(f"--input {m[0]!r}: t= takes seconds") from None
-        steps.extend(_action_steps(t, m["action"], m[0]))
+        for s in _action_steps(t, m["action"], m[0]):
+            s.item = item
+            steps.append(s)
     if not GAP.fullmatch(text[pos:]):
         raise ValueError(f"--input: {text[pos:].strip(' ;')!r} is not t=SECONDS:ACTION")
     for i, s in enumerate(sorted(steps)):
@@ -436,26 +478,42 @@ def integration_commands(values: list[int]) -> list[str]:
 
 @dataclass
 class Actions:
-    """Everything a run does besides tracing: --dump, --poke and --input."""
+    """Everything a run does besides tracing: --dump, --poke, --input and --regions' sync points."""
 
     dumps: list[Dump] = field(default_factory=list)
     pokes: list[Poke] = field(default_factory=list)
     steps: list[Step] = field(default_factory=list)
+    syncs: list[Sync] = field(default_factory=list)
 
     @classmethod
-    def from_args(cls, dumps: list[str], pokes: list[str], script: str | None) -> Actions:
-        return cls(
+    def from_args(
+        cls,
+        dumps: list[str],
+        pokes: list[str],
+        script: str | None,
+        syncs: list[Sync] | None = None,
+    ) -> Actions:
+        actions = cls(
             [parse_dump(d) for d in dumps],
             [parse_poke(p) for p in pokes],
             parse_input(script) if script else [],
+            list(syncs or []),
         )
+        items = max((s.item for s in actions.steps), default=0)
+        for action in actions.memory():
+            if action.trigger.kind == "input" and action.trigger.item > items:  # type: ignore[operator]
+                raise ValueError(
+                    f"{action.text}: the --input script has {items} item(s), "
+                    f"not {action.trigger.item}"
+                )
+        return actions
 
     def __bool__(self) -> bool:
-        return bool(self.dumps or self.pokes or self.steps)
+        return bool(self.dumps or self.pokes or self.steps or self.syncs)
 
-    def memory(self) -> list[Dump | Poke]:
-        """Pokes before dumps at one trigger, so a dump shows what was written."""
-        return [*self.pokes, *self.dumps]
+    def memory(self) -> list[Dump | Poke | Sync]:
+        """Pokes before dumps at one trigger, so a dump shows what was written; sync points last."""
+        return [*self.pokes, *self.dumps, *self.syncs]
 
     def breakpoints(self) -> list[tuple[int, int | None, int | None]]:
         out: list[tuple[int, int | None, int | None]] = []
@@ -465,8 +523,10 @@ class Actions:
                     out.append(spec)
         return out
 
-    def pending(self, kind: str) -> list[Dump | Poke]:
+    def pending(self, kind: str) -> list[Dump | Poke | Sync]:
         return [a for a in self.memory() if not a.done and a.trigger.kind == kind]
 
-    def due(self, now: float) -> list[Dump | Poke]:
-        return [a for a in self.pending("time") if a.trigger.seconds <= now]  # type: ignore[operator]
+    def due(self, now: float, delivered: set[int] | frozenset[int] = frozenset()) -> list:
+        """The actions whose time has come, or whose --input item has been delivered."""
+        timed = [a for a in self.pending("time") if a.trigger.seconds <= now]  # type: ignore[operator]
+        return timed + [a for a in self.pending("input") if a.trigger.item in delivered]

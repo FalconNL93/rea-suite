@@ -554,6 +554,8 @@ rea-suite dosbox run --ints '' game/GAME.EXE                 # DOSBox-X's log on
 rea-suite dosbox run --ints 21:3d --dump 0:400@exit --dump 1A2B30:0x8000@open:DATA/MAP.DAT \
   --input 't=8:ENTER t=12:mouse:160,100 t=12.5:click' game/GAME.EXE   # memory and input, below
 rea-suite dosbox parse work/dosbox/<run>/dosbox-x.log --program MAIN.EXE  # a log taken elsewhere
+rea-suite dosbox run --ints '' --regions tp.toml --input-file tp.keys game/GAME.EXE  # the oracle
+rea-suite dosbox compare work/dosbox/<run>/regions.jsonl port.jsonl --regions tp.toml   # below
 ```
 
 Records have `t` (seconds since the start) and `kind`:
@@ -581,6 +583,8 @@ Records have `t` (seconds since the start) and `kind`:
   They carry `cycle`, DOSBox-X's instruction counter, and only the program's part of the log is kept
   (from the DOS open of its file to the shell going back to AUTOEXEC.BAT; `--all` keeps everything).
 - **`dump`**, **`poke`**, **`input`**: what `--dump`, `--poke` and `--input` did (below).
+- **`sync`**: a sync point of `--regions` (`sync`, `index`, `hit`, `trigger`, `mode`, `at`, the
+  `regions` read, `errors` when some could not be; below).
 - **`start`**, **`exit`** (`code`, `timed_out`), **`error`**.
 
 Exit 0 when it ran, 1 when DOSBox-X failed or `--seconds` ended it, 2 when there is no DOSBox-X or
@@ -621,7 +625,9 @@ the driver's space. Inline `--input` items are separated by white space or `;`.
   it runs; `open:NAME` at its INT 21h 3Dh or 6Ch open of a file (no case, either slash; the name
   whole or as the path's tail, so `open:data/map.dat` matches `C:\GAME\DATA\MAP.DAT`), before DOS
   opens it, and the record carries the `path`; `t=SECONDS` at that time on the records' clock (the
-  same `t`); `start` at the program's first instruction; `exit` at its INT 21h 00h, 31h or 4Ch, or,
+  same `t`); `input:N` once item N of the `--input` script (counted from 1, in the script's order)
+  has been delivered whole, a key's release included, at the next stop (a BREAK); `start` at the
+  program's first instruction; `exit` at its INT 21h 00h, 31h or 4Ch, or,
   when `--seconds` ends the run first, at that moment (the record then has `"ended": "seconds"`).
   An interrupt or open trigger adds the breakpoint it needs without logging those calls unless
   `--ints` asks for them. Times are the host's clock, not the emulated one: each traced call
@@ -696,6 +702,126 @@ stand-in debugger, and (opt-in) two programs it assembles, a real-mode .COM and 
 one under CWSDPMI, each writing a pattern at 9000:0000, waiting for a key, resetting the mouse and
 polling it until the left button is down: the dumps hold the pattern, the key, the placed position
 and the poked bytes, and the scripted click ends the program.
+
+### Named regions at sync points: the oracle (`--regions`, `compare`)
+
+An oracle for a port's game tests: the same scripted input runs in DOSBox-X and in the port, both
+read the same named memory regions at the same sync points, in order, and `compare` reports the
+first place they part. remc2 (Magic Carpet 2) does this with a DOSBox-X fork
+([RECOMPILATION.md](RECOMPILATION.md)); here the runner's debugger reads the memory, so any DOSBox-X
+build with the debugger will do.
+
+```sh
+rea-suite dosbox run --ints '' --regions tp.toml --input-file tp.keys --seconds 300 \
+  --mount work/tp work/tp/THEME/MAIN.EXE        # writes regions.jsonl in the run's folder
+rea-suite dosbox compare work/dosbox/<run>/regions.jsonl port.jsonl --regions tp.toml
+```
+
+**The regions file** (TOML; JSON with the same keys when its name ends in `.json`) names the regions
+and the sync points:
+
+```toml
+[regions.money]                 # a name: [A-Za-z0-9_-] reads best, any TOML key works
+addr = "0168:0001A2B0"          # as --dump takes it: linear hex, or SEL:OFF (SEG:OFF in real mode)
+len = 4                         # decimal, or "0x40"
+type = "i32"                    # optional, for display: bytes (default), ascii, u8, i8, u16, i16, u32, i32
+
+[regions.map]
+addr = "1A2B30"
+len = "0x4000"
+ignore = ["0x10:4"]             # optional: OFFSET:LEN ranges `compare --regions` skips (a frame counter)
+
+[[sync]]
+name = "level"                  # unique
+at = "open:DATA/LEVEL.DAT"      # a trigger, as --dump takes them (intNN[:AH[:AL]], open:, t=, input:N, start, exit)
+regions = ["money", "map"]      # optional: every region, in the file's order
+repeat = true                   # optional: every call or open is a sync point, not the first only (int and open triggers)
+
+[[sync]]
+name = "end"
+at = "exit"
+regions = ["money"]
+```
+
+A run with `--regions` reads each sync point's regions, in the listed order, when its trigger comes,
+and appends them to the **sequence file** (`--sequence FILE`, default `regions.jsonl` in the run's
+folder), with a `sync` record in the run's log. At one trigger, pokes come first, then dumps, then sync
+points.
+
+**The sequence file** is what a port writes from its own run, so it is specified here. JSON lines,
+UTF-8, one object a line:
+
+- **Line 1, the header**: `{"format": "rea-regions", "version": 1}`, plus optional `producer` (who
+  wrote it) and `sidecar` (the file name, relative to the sequence file, of the binary sidecar).
+  A reader refuses any other format or version.
+- **Then a line per region read**, in the order read:
+
+  | Key | | What |
+  | --- | --- | --- |
+  | `index` | required | the sync point's place in the run, from 0, one more for each sync point; every line of one sync point has the same index |
+  | `sync` | required | the sync point's name (the regions file's `name`) |
+  | `region` | required | the region's name; once per sync point |
+  | `len` | required | the region's length in bytes |
+  | `hex` | one of three | the bytes, as lowercase or uppercase hex |
+  | `offset` | one of three | where the bytes start in the sidecar (`len` bytes from there); the runner uses this above 4096 bytes |
+  | `error` | one of three | the region could not be read (text); `compare` counts it as a difference |
+  | `sha256` | optional | of the bytes, lowercase hex; checked when present |
+  | `hit` | optional | how many times this sync point has come, this one included (for `repeat`) |
+  | `type` | optional | the region's type, for display when `compare` has no regions file |
+  | anything else | optional | ignored by `compare`: the runner adds `addr`, `linear`, `mode`, `at` |
+
+  ```json
+  {"format": "rea-regions", "version": 1, "producer": "rea-suite dosbox", "sidecar": "regions.bin"}
+  {"index": 0, "sync": "level", "hit": 1, "region": "money", "len": 4, "type": "i32", "sha256": "b6c2...", "hex": "10270000", "addr": "0168:0001A2B0", "mode": "pm", "at": "0168:0002F3C1"}
+  {"index": 0, "sync": "level", "hit": 1, "region": "map", "len": 16384, "sha256": "4f1a...", "offset": 0, "addr": "1A2B30", "linear": "001A2B30", "mode": "pm", "at": "0168:0002F3C1"}
+  ```
+
+A port writes the minimum: the header, then for each sync point, in order, a line per region with
+`index`, `sync`, `region`, `len` and `hex`. It reads the same memory its own way (the guest's linear
+address in a recompilation, a structure's fields in a rewrite), at the same events: its own handling
+of the same INT 21h open, the same INT 16h poll, the same script item.
+
+**`compare A B [--regions FILE] [--context N]`** walks both sequences a sync point at a time and
+stops at the first difference: a sync point named differently, a region one side lacks, a region that
+could not be read, or differing bytes, outside the `ignore` ranges. It prints the sync point (index,
+name and hit), the region, the first differing offset, how many bytes differ, the element of a typed
+region that holds it, and N bytes (default 16) each side as hex rows with the first differing byte in
+brackets. A sequence that ends early is a difference too. With `--regions` only that file's regions
+are compared, with its types and `ignore` ranges. Exit 0 when equal, 1 on a difference, 2 on bad input
+(a file missing, not JSON, without the header, a line without its required keys, hex of the wrong
+length, a `sha256` that does not match).
+
+```text
+1 sync point(s) equal, then:
+sync point 1 (end #1), region 'state': offset 0x4 (4), 1 byte(s) differ
+ A: u16 [2] = 104
+  00000000  0d 1c ff ff[68]00 30 00
+ B: u16 [2] = 105
+  00000000  0d 1c ff ff[69]00 30 00
+```
+
+What makes a good sync point:
+
+- **The program's own calls** (`open:NAME`, `int21:3D`, `int16`, with `repeat`) stop at the same
+  instruction in every run, so the memory is comparable byte for byte; they are the oracle's
+  backbone. A protected-mode program's own call also stops in protected mode, where a linear `addr`
+  reads.
+- **`t=SECONDS` and `input:N`** stop wherever a BREAK lands, a few milliseconds of the host's clock
+  after the moment, and that need not be the same place in two runs; they fit a region that holds
+  still (a level's map between moves), not a counter. A time stop can also land in the DOS
+  extender's real-mode code, where a high linear address cannot be read ("no 32-bit selector covers
+  it": an `error` line); give such a region as `SEL:OFF`, or sync on a call.
+- **Keep tracing narrow** (`--ints ''`): each stop costs about 15 ms and DOS/4GW's loading under the
+  debugger is slow (DOS-GAMES.md, step 5). A sync point's own triggers set the breakpoints they need.
+- **Volatile fields** (a frame counter, a random seed the port seeds differently on purpose) go in
+  `ignore` instead of out of the region.
+
+Checked 2026-11-12 on Linux by `test_dosbox_regions.py` (the regions file, the sequence file written
+and read, the sidecar, `compare` on synthetic sequences: equal, a difference in the middle, a missing
+sync point and region, an unreadable region, types and `ignore`, bad input; the tracer's sync points
+against the stand-in debugger) and, opt-in, `test_dosbox.py`'s `RealRun`: the real-mode program above
+with sync points at its INT 16h call and its exit, compared with a sequence written for it (equal),
+then with one byte of the mouse position changed (exit 1, offset 4).
 
 ### How it works
 

@@ -166,8 +166,31 @@ Traps and what fixed them:
 - **Ports are not traced.** The debugger traces interrupts. Port use comes from the census and from
   the code.
 
+**The oracle.** The same scripted input (`--input-file`) runs in DOSBox-X and in the port, and both
+read the same named memory regions at the same sync points; `rea-suite dosbox compare` stops at the
+first difference ([PORT-TOOLS.md](PORT-TOOLS.md#named-regions-at-sync-points-the-oracle---regions-compare)
+has the regions file and the sequence format the port writes):
+
+```sh
+rea-suite dosbox run --ints '' --regions <port>/tests/regions.toml --input-file <port>/tests/title.keys \
+  --set "dosbox memsize=64" --seconds 300 --mount <copy> <copy>/GAME/MAIN.EXE
+rea-suite dosbox compare work/dosbox/<run>/regions.jsonl <port's sequence> --regions <port>/tests/regions.toml
+```
+
+- Sync on the game's own calls (`open:<file>` or `int21:3D` with `repeat = true`, its INT 16h poll):
+  they stop at the same instruction in both runs, and in protected mode. A time or `input:N` sync
+  point lands wherever a BREAK does, possibly in the extender's real mode (the dump trap above, as an
+  `error` line); keep those for regions that hold still.
+- Take the regions' addresses from the object bases measured above (`SEL:OFF` through the flat data
+  selector is safe in any mode), and put frame counters and the like in `ignore`.
+- Keep `--ints` empty: a sync point's triggers set their own breakpoints, and DOS/4GW's load stays
+  as fast as it can under the debugger.
+- The regions file and the input script belong to the port's tests (no game bytes); the sequence files
+  are run output, in the work folder.
+
 *Feeds:* the object bases the loader uses, the first-frame call list (which bounds the core's
-first work and the layer's first services), and the oracle for comparing the port's runs.
+first work and the layer's first services), and the oracle: region sequences the port's game tests
+are compared against.
 
 ## 6. What the recompilation needs
 

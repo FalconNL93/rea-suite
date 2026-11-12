@@ -41,11 +41,12 @@
 #                                            with its fixups applied; the DOS services it uses
 #   rea-suite frida <script.js> --pid|--name|--spawn ...  run a Frida script (common/frida/:
 #                                            observer, write guard) and log it as JSON lines
-#   rea-suite dosbox run|parse|info ...     a DOS program in DOSBox-X, headless: its INT 21h,
-#                                            31h, 33h, 10h calls (debugger), real-mode callbacks
-#                                            and DOSBox-X's log as JSON lines (component `dos`);
-#                                            memory dumps and pokes at a trigger, scripted keys,
-#                                            mouse positions and clicks
+#   rea-suite dosbox run|parse|compare|info ...  a DOS program in DOSBox-X, headless: its INT
+#                                            21h, 31h, 33h, 10h calls (debugger), real-mode
+#                                            callbacks and DOSBox-X's log as JSON lines (component
+#                                            `dos`); memory dumps and pokes at a trigger, scripted
+#                                            keys, mouse positions and clicks; named regions at
+#                                            sync points, compared with a port's (compare)
 #   rea-suite pad --presses 30:DOWN,33:A    a virtual Xbox 360 pad on a schedule (ViGEm;
 #                                            Windows only, --dry-run anywhere)
 #   rea-suite run [options] --start PROGRAM ...  one bounded, observed run of a Windows program:

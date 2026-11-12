@@ -792,6 +792,47 @@ class RealRun(unittest.TestCase):
         self.check_dumps_and_input(records, 200, 64)
         self.assertEqual({r["mode"] for r in records if r["kind"] in ("dump", "poke")}, {"pm"})
 
+    def test_regions_at_sync_points_compared_with_a_ports_sequence(self) -> None:
+        from rea_suite import dosbox_regions as rg
+
+        scratch = ROOT / "work" / "test-dosbox"
+        scratch.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=scratch) as tmp:
+            regions = Path(tmp) / "regions.toml"
+            regions.write_text(
+                '[regions.pattern]\naddr = "9000:0"\nlen = 16\ntype = "ascii"\n'
+                '[regions.state]\naddr = "90010"\nlen = 8\ntype = "u16"\n'
+                '[[sync]]\nname = "key"\nat = "int16"\nregions = ["pattern"]\n'
+                '[[sync]]\nname = "end"\nat = "exit"\n'
+            )
+            ours = Path(tmp) / "dosbox.jsonl"
+            records = self.run_program(
+                INPUT, "INPUT.COM", "--ints", "", "--regions", str(regions), "--sequence", str(ours),
+                "--input", "t=0:ENTER t=2:mouse:104,48 t=4:click",
+            )  # fmt: skip
+            syncs = [(r["sync"], r["index"], r["mode"]) for r in records if r["kind"] == "sync"]
+            self.assertEqual(syncs, [("key", 0, "rm"), ("end", 1, "rm")])
+            port = Path(tmp) / "port.jsonl"
+            spec = rg.load_regions(regions).regions
+
+            def port_run(x: int) -> None:  # a port's run, written by the format's own writer
+                w = rg.SequenceWriter(port, "port")
+                w.region("key", spec["pattern"], b"REA-DUMP-PATTERN")
+                w.next()
+                w.region("end", spec["pattern"], b"REA-DUMP-PATTERN")
+                w.region("end", spec["state"], struct.pack("<4H", 0x1C0D, 0xFFFF, x, 48))
+                w.next()
+                w.close()
+
+            argv = ["compare", str(ours), str(port), "--regions", str(regions)]
+            port_run(104)
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                self.assertEqual(dosbox.main(argv), 0, out.getvalue())
+            port_run(105)
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                self.assertEqual(dosbox.main(argv), 1)
+            self.assertIn("sync point 1 (end #1), region 'state': offset 0x4", out.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

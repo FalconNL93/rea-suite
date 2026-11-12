@@ -3,6 +3,7 @@ video BIOS, one JSON object a line.
 
   rea-suite dosbox run PROGRAM [ARG...] [options]   run it, log its interrupts and DOSBox-X's log
   rea-suite dosbox parse LOGFILE [options]          a DOSBox-X log file (taken elsewhere) as JSON lines
+  rea-suite dosbox compare A B [--regions FILE]     two region sequences: the first difference
   rea-suite dosbox info                             which DOSBox-X, and whether it has the debugger
 
 An analysis aid for DOS games, the way `rea-suite frida` is for Windows games: a comparison run of
@@ -29,6 +30,8 @@ With nobody at the keyboard: --dump ADDR:LEN@TRIGGER writes memory to a file of 
 (open:DATA/MAP.DAT), a time (t=30), the program's start or its exit; --input 't=10:ENTER
 t=12:"abc" t=13:mouse:160,100 t=13.5:click' types keys (DOSBox-X's integration device) and places
 the pointer and clicks (INT 33h 0004h run from the debugger at a stop in the program's own code).
+--regions FILE reads named memory regions at sync points into a sequence file, which `compare` holds
+against a port's own (dosbox_regions.py).
 
 Options come before PROGRAM; everything after it is the program's arguments. docs/PORT-TOOLS.md
 ("DOS programs") has the details, the limits and the sources.
@@ -40,7 +43,7 @@ DOSBox-X's records carry `cycle`, its instruction counter, which orders them; th
 log's records are interleaved by the time they were read.
 
 Exit 0: ran; 1: DOSBox-X failed or was stopped by --seconds; 2: no DOSBox-X, or --ints without a
-build that has the debugger and its control channel.
+build that has the debugger and its control channel. `compare`: 0 equal, 1 a difference, 2 bad input.
 """
 
 from __future__ import annotations
@@ -64,6 +67,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from rea_suite import dosbox_actions as acts
+from rea_suite import dosbox_regions as rg
 
 ROOT = Path(__file__).resolve().parents[2]
 WORK = ROOT / "work" / "dosbox"
@@ -550,13 +554,17 @@ class Tracer:
     answered at a later emulated millisecond), then told apart by the code at CS:EIP: `int n` for a
     traced n is a call, a known address a return or a callback, `hlt` a running CPU that waits."""
 
-    def __init__(self, channel: Channel, out: Output, run_dir: Path, args, actions=None):
+    def __init__(
+        self, channel: Channel, out: Output, run_dir: Path, args, actions=None, sequence=None
+    ):
         self.ch = channel
         self.out = out
         self.run_dir = run_dir
         self.mem = run_dir / MEMFILE
         self.actions = actions or acts.Actions()
         self.steps = list(self.actions.steps)  # input still to deliver, in time order
+        self.delivered: set[int] = set()  # the --input items delivered whole
+        self.sequence = sequence  # dosbox_regions.SequenceWriter, for the sync points' regions
         self.logged = parse_ints(args.ints)  # the calls --ints asks to log
         # and the breakpoints the triggers need besides, where --ints' own do not include them
         self.ints = list(self.logged)
@@ -612,7 +620,7 @@ class Tracer:
                 # runs takes effect only at the next stop), then the program's own INT 33h calls
                 # for a while, then BREAKs spaced out (back to back they starve the program)
                 mouse = self.mouse_due() and time.monotonic() >= self.mouse_break
-                if not self.breaking and (self.actions.due(self.now()) or mouse):
+                if not self.breaking and (self.due() or mouse):
                     self.ch.request("", "BREAK")  # a stop for the actions due now
                     self.breaking = True
             regs = self.regs()
@@ -782,7 +790,7 @@ class Tracer:
                     self.mouse_break = max(self.mouse_break, time.monotonic() + MOUSE_RETRY)
             if self.breaking:  # the stop the BREAK made, or a breakpoint's that came first
                 self.breaking = False
-                for action in self.actions.due(self.now()):
+                for action in self.due():
                     self.act(action, regs)
                 if not self.stop(regs):
                     self.resume()
@@ -800,6 +808,15 @@ class Tracer:
         """Seconds on the records' clock (their `t`)."""
         return time.monotonic() - self.out.start
 
+    def due(self) -> list:
+        """Actions due now: their time has come, or their --input item has been delivered."""
+        return self.actions.due(self.now(), self.delivered)
+
+    def took(self, step) -> None:
+        """A step delivered: its item is whole once no step of it is left."""
+        if not any(s.item == step.item for s in self.steps):
+            self.delivered.add(step.item)
+
     def end(self, running: Callable[[], bool], tick: Callable[[], None]) -> None:
         """The run's time is up with the program still running: a last stop for `exit` actions."""
         self.ending = True
@@ -811,7 +828,11 @@ class Tracer:
                 self.act(action, regs, {"ended": "seconds"})
 
     def act(self, action, regs: dict[str, int], detail: dict | None = None) -> None:
-        """A dump or a poke, once, at a stop (the mode and CS say how its address reads)."""
+        """A dump or a poke, once, or a sync point, at a stop (the mode and CS say how an address
+        reads)."""
+        if isinstance(action, acts.Sync):
+            self.sync(action, regs, detail)
+            return
         action.done = True
         try:
             record = (
@@ -825,31 +846,65 @@ class Tracer:
         self.out.write(record)
 
     def dump(self, dump: acts.Dump, regs: dict[str, int]) -> dict:
+        data, linear = self.read_range(dump.address, dump.length, regs, dump.text)
+        self.dumps += 1
+        path = self.run_dir / acts.dump_filename(self.dumps, dump)
+        path.write_bytes(data)
+        return acts.dump_record(dump, path, data, cpu_mode(regs), at(regs), linear)
+
+    def read_range(
+        self, address: acts.Address, length: int, regs: dict[str, int], what: str
+    ) -> tuple[bytes, int | None]:
+        """LENGTH bytes from ADDR at this stop, and the linear address they start at if known."""
         mode = cpu_mode(regs)
         cs_base = 0
-        linear = acts.linear_of(dump.address, mode)
-        if mode == "pm" and dump.address.linear is not None:
+        linear = acts.linear_of(address, mode)
+        if mode == "pm" and address.linear is not None:
             cs_base, _, big = acts.parse_selinfo(self.ch.request("SELINFO CS"))
             # stopped in 16-bit code (a DPMI host's, an extender's): a 32-bit selector covering it
             if not big:
-                dump = acts.Dump(
-                    self.flat_address(dump, regs), dump.length, dump.trigger, dump.text
-                )
+                address = self.flat_address(address, length, regs, what)
         elif mode == "pm":  # SEL:OFF: the linear address from the descriptor, for the record
             with contextlib.suppress(ValueError):
-                base = acts.parse_selinfo(self.ch.request(f"SELINFO {hexarg(dump.address.sel)}"))[0]
-                linear = (base + dump.address.off) & 0xFFFFFFFF
-        pieces = acts.memdump_pieces(dump.address, dump.length, mode, regs["CS"], cs_base)
-        self.dumps += 1
-        path = self.run_dir / acts.dump_filename(self.dumps, dump)
-        data = b"".join(self.read(seg, off, size) for seg, off, size in pieces)
-        path.write_bytes(data)
-        return acts.dump_record(dump, path, data, mode, at(regs), linear)
+                base = acts.parse_selinfo(self.ch.request(f"SELINFO {hexarg(address.sel)}"))[0]
+                linear = (base + address.off) & 0xFFFFFFFF  # type: ignore[operator]
+        pieces = acts.memdump_pieces(address, length, mode, regs["CS"], cs_base)
+        return b"".join(self.read(seg, off, size) for seg, off, size in pieces), linear
 
-    def flat_address(self, dump: acts.Dump, regs: dict[str, int]) -> acts.Address:
+    def sync(self, sync: acts.Sync, regs: dict[str, int], detail: dict | None = None) -> None:
+        """A sync point: its regions, in order, into the sequence file, and a record of it."""
+        sync.hits += 1
+        sync.done = not sync.repeat
+        mode, where = cpu_mode(regs), at(regs)
+        errors = 0
+        for region in sync.regions:
+            data, linear, error = None, None, None
+            try:
+                data, linear = self.read_range(region.address, region.length, regs, region.name)
+            except (ValueError, OSError) as exc:
+                error, errors = str(exc), errors + 1
+            line = {"addr": region.address.text, "mode": mode, "at": where}
+            if linear is not None:
+                line["linear"] = f"{linear:08X}"
+            if self.sequence:
+                self.sequence.region(sync.name, region, data, error, sync.hits, **line)
+        index = self.sequence.index if self.sequence else None
+        if self.sequence:
+            self.sequence.next()
+        record = {"kind": "sync", "sync": sync.name, "index": index, "hit": sync.hits,
+                  "trigger": sync.trigger.text, "mode": mode, "at": where,
+                  "regions": [r.name for r in sync.regions]}  # fmt: skip
+        if errors:
+            record["errors"] = errors
+        record.update(detail or {})
+        self.out.write(record)
+
+    def flat_address(
+        self, address: acts.Address, length: int, regs: dict[str, int], what: str
+    ) -> acts.Address:
         """A linear range as SEL:OFF through a 32-bit selector whose limit covers it: the
         program's own code selector, then the data and stack registers'."""
-        linear = dump.address.linear
+        linear = address.linear
         for sel in dict.fromkeys([self.app_cs, *(regs[r] for r in ("DS", "ES", "SS", "FS", "GS"))]):
             if not sel:
                 continue
@@ -858,9 +913,9 @@ class Tracer:
             except ValueError:
                 continue
             off = (linear - base) & 0xFFFFFFFF  # type: ignore[operator]
-            if big and off + dump.length - 1 <= limit:
-                return acts.Address(dump.address.text, linear=None, sel=sel, off=off)
-        raise ValueError(f"{dump.text}: no 32-bit selector covers it at this stop; give SEL:OFF")
+            if big and off + length - 1 <= limit:
+                return acts.Address(address.text, linear=None, sel=sel, off=off)
+        raise ValueError(f"{what}: no 32-bit selector covers it at this stop; give SEL:OFF")
 
     def poke(self, poke: acts.Poke, regs: dict[str, int]) -> dict:
         mode = cpu_mode(regs)
@@ -884,6 +939,7 @@ class Tracer:
         now = self.now()
         while self.steps and self.steps[0].t <= now and self.steps[0].kind in ("keys", "button"):
             step = self.steps.pop(0)
+            self.took(step)
             values = acts.integration_values(step)
             answers = self.ch.request_all(acts.integration_commands(values))
             record = {"kind": "input", "input": step.kind, "source": step.source}
@@ -935,6 +991,7 @@ class Tracer:
         now = self.now()
         while self.mouse_due():
             step = self.steps.pop(0)
+            self.took(step)
             x, y = step.value
             record = {"kind": "input", "input": step.kind, "source": step.source}
             if step.kind == "move":
@@ -1038,8 +1095,13 @@ def run(args) -> int:
     script = args.input
     if args.input_file:
         script = (args.caller_cwd / args.input_file).read_text(encoding="utf-8")
-    actions = acts.Actions.from_args(args.dump, args.poke, script)  # ValueError: exit 2
+    syncs = rg.load_regions(args.caller_cwd / args.regions).syncs if args.regions else []
+    actions = acts.Actions.from_args(args.dump, args.poke, script, syncs)  # ValueError: exit 2
     run_dir.mkdir(parents=True, exist_ok=True)
+    sequence = None
+    if syncs:
+        path = args.caller_cwd / args.sequence if args.sequence else run_dir / "regions.jsonl"
+        sequence = rg.SequenceWriter(path, "rea-suite dosbox")
     out = Output(args.caller_cwd / args.log if args.log else None, args.quiet)
     trace = bool(args.ints) or bool(actions)  # dumps, pokes and input go through the debugger
     server = None
@@ -1076,6 +1138,7 @@ def run(args) -> int:
             "trace": args.ints if trace else None,
             **({"actions": [a.text for a in actions.memory()]} if actions.memory() else {}),
             **({"input": len(actions.steps)} if actions.steps else {}),
+            **({"sequence": str(sequence.path)} if sequence else {}),
         }
     )
     tail = LogTail(run_dir / "dosbox-x.log")
@@ -1133,7 +1196,7 @@ def run(args) -> int:
                 stop_process(proc)
             elif conn is not None:
                 try:
-                    tracer = Tracer(Channel(conn), out, run_dir, args, actions)
+                    tracer = Tracer(Channel(conn), out, run_dir, args, actions, sequence)
                     tracer.run(alive, tick, running=lambda: proc.poll() is None)
                 except ChannelError as exc:
                     try:
@@ -1154,6 +1217,8 @@ def run(args) -> int:
                 closable.close()
         if terminal:
             terminal.close()
+        if sequence:
+            sequence.close()
     emit(tail.flush())
     out.write(
         {
@@ -1297,6 +1362,17 @@ def parser() -> argparse.ArgumentParser:
         "t=13.5:click' (docs/PORT-TOOLS.md)",
     )
     r.add_argument("--input-file", type=Path, help="the --input script from a file, an item a line")
+    r.add_argument(
+        "--regions",
+        type=Path,
+        help="named memory regions read at sync points (a TOML or JSON file) into a sequence file "
+        "for `compare` (docs/PORT-TOOLS.md)",
+    )
+    r.add_argument(
+        "--sequence",
+        type=Path,
+        help="the sequence file (default regions.jsonl in the run's folder)",
+    )
     r.add_argument("--returns", action="store_true", help="log the registers each call returns")
     r.add_argument("--nested", action="store_true", help="also calls made by BIOS code")
     r.add_argument(
@@ -1325,6 +1401,25 @@ def parser() -> argparse.ArgumentParser:
     a.add_argument("--log", type=Path, help="append the JSON lines to this file too")
     a.add_argument("--quiet", action="store_true")
     a.set_defaults(run=parse)
+
+    c = sub.add_parser(
+        "compare",
+        help="two region sequences (a run's and a port's): the first difference",
+        description="Compares two sequence files sync point by sync point and reports the first "
+        "difference: the sync point, the region, the offset and the bytes around it. Exit 0 when "
+        "equal, 1 on a difference, 2 on bad input.",
+    )
+    c.add_argument("a", type=Path, help="a sequence file (the original's run, usually)")
+    c.add_argument("b", type=Path, help="the other (the port's)")
+    c.add_argument(
+        "--regions",
+        type=Path,
+        help="the regions file: compare only its regions, with their types and ignore ranges",
+    )
+    c.add_argument(
+        "--context", type=int, default=16, help="bytes shown each side of the difference"
+    )
+    c.set_defaults(run=rg.compare)
 
     i = sub.add_parser("info", help="which DOSBox-X runs")
     i.add_argument("--dosbox")
