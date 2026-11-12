@@ -18,12 +18,15 @@ with the reason when it is dropped.
   apitrace, or a trace taken after Wine's translation to OpenGL/Vulkan.
 - **Kaitai Struct (compiler and visualizer)**: describe a game's file formats once and get
   parsers and a structure viewer from the description.
-- **Upstream wishes for REA (rea-agents, not changed from here)**, both found by the Theme Park port
-  (2026-11-11):
+- **Upstream wishes for REA (rea-agents, not changed from here)**, the LE and evidence ones found by
+  the Theme Park port (2026-11-11):
   - open_binary for LE/LX: REA's own format check refuses an MZ image with an LE header before any
     provider sees it ("unsupported LE executable in MZ image", provider_id=ghidra too), though Ghidra
     loads it through ghidra-lx-loader. Wanted: hand LE/LX to the Ghidra provider when the loader is
     installed. Workaround: `rea-ghidra analyze`, or `rea-suite le dump-image` loaded raw.
+  - open_binary for XBE (original Xbox): REA 6.8.0 refuses it ("unsupported binary format") though
+    Ghidra loads it through ghidra-xbe (checked 2026-11-12). Workaround: `rea-ghidra analyze`, or
+    `rea-suite xbox image` loaded raw.
   - export_evidence_bundle overwrites an existing file of the same name without asking, and an agent
     lost evidence that way. Wanted: refuse an existing path unless `overwrite` is set, as close_binary
     does. Workaround: a new bundle file name per session.
@@ -61,6 +64,19 @@ with the reason when it is dropped.
 - **ghidra-allegrex (PSP)**: REA 6.8.0 has a PSP Allegrex profile that expects this Ghidra
   extension; kotcrab/ghidra-allegrex publishes exact-version builds (12.1.4 in v21.4). Needs a
   check of its license and REA's expectations before it joins a component.
+
+- **Original Xbox, from the route's first draft** (2026-11-12; the route is docs/XBOX-CLASSIC.md):
+  - A kernel-call log from xemu, the counterpart of `rea-suite dosbox`: gdb on xemu's stub with a
+    breakpoint per kernel thunk, each call with its ordinal, name, arguments and caller as JSON lines, up
+    to a trigger. xemu and its stub ran headless here (xvfb-run); no retail game has run.
+  - An XDK FunctionID set built from the owner's own XDK libraries, as the README's Visual C++ 6.0
+    recipe does, for what XbSymbolDatabase leaves unnamed (the XDK's C runtime and helpers).
+  - Cxbx-Reloaded (GPL-2.0; Windows, or Wine): the high-level emulator whose library patches model a
+    port's layer. Its builds are GitHub pre-releases only (`CI-<commit>`), which `version: latest`
+    skips; it needs a pinned tag or pre-release support in rea-tools before it joins component `xbox`.
+  - XbSymbolDatabase's CLI (v3.1.160, bundled in ghidra-xbe) segfaults on an XBE without XDK libraries,
+    and ghidra-xbe's analyzer ignores the exit: upstream issues for both
+    (Cxbx-Reloaded/XbSymbolDatabase, XboxDev/ghidra-xbe).
 
 ## Upstream in REA (rea-agents)
 

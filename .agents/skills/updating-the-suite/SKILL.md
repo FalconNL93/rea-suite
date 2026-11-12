@@ -137,6 +137,11 @@ Use synthetic images/executables; verify real loaders/mappings and exported code
 status or project existence. Keep untested hosts, analyzer warnings, game-specific formats, and
 emulator integration limits explicit. Done when every documented tool/platform lane has a decision.
 
+For the original Xbox, review `docs/XBOX-CLASSIC.md` the same way: a ghidra-xbe release for the
+target Ghidra (prebuilt only), the XbSymbolDatabase version it bundles, xemu's release assets and its
+command line, REA's support for XBE, and the projects under "What is still missing". When behavior
+changes, run `uv run --no-sync python -m unittest rea_suite.test_xbox` and `rea-suite xbox check`.
+
 ## 3. Plan
 
 Write `work/update/plan.md` and show it as a table: part, current, target, decision, reason
