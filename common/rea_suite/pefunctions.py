@@ -8,7 +8,9 @@ One source answers, the first that applies:
   hexadecimal, a VA at or above the image base; `name` and `size` (decimal bytes) are read when
   present. A
   `game` column picks rows with `--game`. Several tables merge: one may give the starts and
-  another the names.
+  another the names. A Ghidra control-flow export (`F <entry> <name> ...` with `R <first>
+  <last>` body ranges under it, the `<binary>.cfg.txt` some ports write) is read too: its
+  ranges give each function's body, chunks elsewhere included.
 - unwind: the x64 unwind table (`Image.function_at`), chained entries followed.
 - heuristic: in an image with no unwind table (x86) and no table given: the entry point,
   exports and TLS callbacks, rel32 call targets (called from two sites, or right after padding
@@ -53,11 +55,44 @@ def parse_address(text: str) -> int:
     return int(text[2:] if text.lower().startswith("0x") else text, 16)
 
 
+CFG_FUNCTION = re.compile(r"F [0-9A-Fa-f]+(?: |$)")
+
+
+def is_cfg(text: str) -> bool:
+    """A Ghidra control-flow export: its first line names a function (`F <entry> <name>`)."""
+    first = next((line for line in text.splitlines() if line.strip()), "")
+    return CFG_FUNCTION.match(first) is not None
+
+
+def read_cfg(text: str) -> list[tuple[int, str | None, list[tuple[int, int]]]]:
+    """(entry, name or None, body ranges as (first, end exclusive)) for each `F` line of a
+    control-flow export; `R first last` lines (inclusive) under it are its body. Other lines
+    (`J` jump tables, `D` code pointers in data) are not functions and are left out."""
+    rows: list[tuple[int, str | None, list[tuple[int, int]]]] = []
+    for line in text.splitlines():
+        parts = line.split()
+        try:
+            if parts and parts[0] == "F" and len(parts) >= 2:
+                rows.append((int(parts[1], 16), parts[2] if len(parts) > 2 else None, []))
+            elif parts and parts[0] == "R" and len(parts) >= 3 and rows:
+                rows[-1][2].append((int(parts[1], 16), int(parts[2], 16) + 1))
+        except ValueError:
+            continue
+    return rows
+
+
 def read_table(path: Path, game: str | None = None) -> list[tuple[int, str | None, int | None]]:
-    """(address as written, name or None, size or None) for each row of a function TSV."""
+    """(address as written, name or None, size or None) for each row of a function TSV; for a
+    control-flow export the size is that of the body range starting at the entry."""
+    text = Path(path).read_text(encoding="utf-8")
+    if is_cfg(text):
+        return [
+            (entry, name, next((end - lo for lo, end in ranges if lo == entry), None))
+            for entry, name, ranges in read_cfg(text)
+        ]
     rows = []
     columns: dict[str, int] | None = None
-    for line in Path(path).read_text(encoding="utf-8").splitlines():
+    for line in text.splitlines():
         if not line.strip() or line.startswith("#"):
             continue
         cells = line.split("\t")
@@ -100,9 +135,11 @@ class Functions:
         image: Image,
         starts: dict[int, str | None] | None = None,
         sizes: dict[int, int] | None = None,
+        ranges: dict[int, list[tuple[int, int]]] | None = None,
     ):
         self.image = image
         self.sizes = sizes or {}
+        self.ranges = ranges or {}  # start -> body ranges (RVAs, end exclusive), from a cfg
         if starts is not None:
             self.source = "table"
         elif image.runtime_functions:
@@ -121,7 +158,15 @@ class Functions:
     def from_tables(cls, image: Image, paths: list[Path], game: str | None = None) -> Functions:
         starts: dict[int, str | None] = {}
         sizes: dict[int, int] = {}
+        ranges: dict[int, list[tuple[int, int]]] = {}
         for path in paths:
+            text = Path(path).read_text(encoding="utf-8")
+            if is_cfg(text):
+                for entry, _name, body in read_cfg(text):
+                    if body:
+                        ranges[image.address(entry)] = [
+                            (image.address(lo), image.address(end)) for lo, end in sorted(body)
+                        ]
             for address, name, size in read_table(path, game):
                 rva = image.address(address)
                 if image.section_at(rva) is None:
@@ -130,7 +175,7 @@ class Functions:
                     starts[rva] = name or starts.get(rva)
                 if size:
                     sizes[rva] = size
-        return cls(image, starts, sizes)
+        return cls(image, starts, sizes, ranges)
 
     def at(self, rva: int) -> Function | None:
         """The function rva lies in: the nearest start at or below it in the same section."""
@@ -171,6 +216,23 @@ class Functions:
             return min(limit, found[1]) if found and found[0] == start else limit
         index = bisect.bisect_right(self.starts, start)
         return min(limit, self.starts[index]) if index < len(self.starts) else limit
+
+    def entries(self) -> list[int]:
+        """Every function start this map knows: the table's or the heuristic's, or the unwind
+        table's primary functions (chained parts folded into theirs) and the exports."""
+        if self.source != "unwind":
+            return list(self.starts)
+        found = set(self.starts)
+        for begin, _end, _unwind in self.image.runtime_functions:
+            primary = self.image.function_at(begin)
+            if primary is not None:
+                found.add(primary[0])
+        return sorted(found)
+
+    def body(self, start: int) -> list[tuple[int, int]]:
+        """The function's bytes as RVA ranges (end exclusive): a control-flow export's body
+        ranges, else from the start to end_of(start)."""
+        return self.ranges.get(start) or [(start, self.end_of(start))]
 
 
 def of(image: Image) -> Functions:

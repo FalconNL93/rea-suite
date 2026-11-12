@@ -17,6 +17,9 @@
   rea-suite pe resources <exe> [--type T] [--name N] [--extract DIR]
                                                       dialogs, menus, strings, version,
                                                       accelerators; icons and cursors exported
+  rea-suite pe match <old> <new> --functions T --functions-new T [--header H --header-out F]
+                                                      a known build's functions and data found
+                                                      in a later build of the same code
 
 Addresses are hexadecimal; one at or above the image base is a VA, a smaller one an RVA. Every
 command takes --json. Results name the function they lie in: from --functions TSV (a
@@ -37,7 +40,7 @@ import re
 import sys
 from pathlib import Path
 
-from rea_suite import pefunctions, peresources, rtti, scan, sites
+from rea_suite import pefunctions, pematch, peresources, rtti, scan, sites
 from rea_suite.pemodel import Image
 
 
@@ -457,6 +460,68 @@ def cmd_resources(args, image: Image) -> int:
     return 0 if rows else 1
 
 
+GENERATED_NAME = re.compile(r"(?:thunk_)?(?:FUN|sub)_[0-9A-Fa-f]+$")
+
+
+def cmd_match(args, image: Image) -> int:
+    if args.header and not args.header_out:
+        print("match: --header needs --header-out", file=sys.stderr)
+        return 2
+    try:
+        other = Image.open(args.caller_cwd / args.new)
+        if args.functions_new:
+            tables = [args.caller_cwd / t for t in args.functions_new]
+            other.functions = pefunctions.Functions.from_tables(other, tables, args.game_new)
+        header = (
+            (args.caller_cwd / args.header).read_text(encoding="utf-8") if args.header else None
+        )
+    except (OSError, UnicodeDecodeError, ValueError) as exc:
+        print(f"match: {exc}", file=sys.stderr)
+        return 2
+    if image.x64 != other.x64:
+        print("match: one image is x86 and the other x64", file=sys.stderr)
+        return 2
+    old, new = pematch.Side(image), pematch.Side(other)
+    result = pematch.match(old, new)
+    rows = pematch.rows(old, new, result)
+    summary = {
+        "functions": len(result.functions),
+        "old_functions": len(old.shapes),
+        "new_functions": len(new.shapes),
+        "data": len(result.data),
+        "function_source": [old.functions.source, new.functions.source],
+    }
+    print(
+        f"functions: {summary['functions']} of {summary['old_functions']} matched "
+        f"({summary['new_functions']} in the new one); data: {summary['data']}",
+        file=sys.stderr,
+    )
+    entries = []
+    if header is not None:
+        entries = pematch.translate_header(header, old, new, result)
+        lines = pematch.header_lines(entries, image.x64)
+        (args.caller_cwd / args.header_out).write_text("\n".join(lines) + "\n", encoding="utf-8")
+        found = sum(1 for e in entries if e["kind"] in ("function", "data"))
+        missing = sum(1 for e in entries if e["new"] is None)
+        summary["header"] = {
+            "found": found,
+            "missing": missing,
+            "constants": len(entries) - found - missing,
+        }
+        print(f"header: {found} addresses found, {missing} not", file=sys.stderr)
+    if args.names:
+        named = [r for r in rows if r["kind"] == "func" and r["name"]
+                 and not GENERATED_NAME.match(r["name"])]  # fmt: skip
+        lines = ["address\tname\told"] + [f"{r['new']}\t{r['name']}\t{r['old']}" for r in named]
+        (args.caller_cwd / args.names).write_text("\n".join(lines) + "\n", encoding="utf-8")
+    if args.json:
+        print(json.dumps({"summary": summary, "map": rows}, indent=1))
+    else:
+        for r in rows:
+            print("\t".join([r["kind"], r["old"], r["new"], r["how"], r["name"] or ""]))
+    return 0 if result.functions else 1
+
+
 def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="rea-suite pe",
@@ -550,6 +615,22 @@ def parser() -> argparse.ArgumentParser:
         type=Path,
         metavar="DIR",
         help="write icons (.ico/.cur and .png), bitmaps, manifests, the rest raw, resources.json",
+    )
+    c = command("match", "a known build's functions and data in a later build", cmd_match)
+    c.add_argument("new", type=Path, help="the later build")
+    c.add_argument(
+        "--functions-new",
+        action="append",
+        default=[],
+        type=Path,
+        metavar="TSV",
+        help="the later build's function table (the same formats as --functions); repeatable",
+    )
+    c.add_argument("--game-new", help="only --functions-new rows whose `game` column is this")
+    c.add_argument("--header", type=Path, help="a C header of #define NAME 0x... for the old build")
+    c.add_argument("--header-out", type=Path, help="where the header with candidates goes")
+    c.add_argument(
+        "--names", type=Path, metavar="TSV", help="write the old names at their new addresses"
     )
     return p
 

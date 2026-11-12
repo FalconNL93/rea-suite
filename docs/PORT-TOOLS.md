@@ -33,7 +33,7 @@ Every `pe` command takes `--functions TSV` (repeatable) and `--game NAME`. One s
 
 | Source | When | What |
 |---|---|---|
-| `table` | `--functions` given | the TSVs' starts and names: `rea-ghidra functions` output, a port's `function_entries.tsv` (starts only) or `functions.tsv` (with a `game` column, picked by `--game`); the address column is the first of `entry`, `address`, `va`, `rva`, `start`, else the first column; `name` and `size` are read when present. Tables merge, so one can give the starts and another the names |
+| `table` | `--functions` given | the TSVs' starts and names: `rea-ghidra functions` output, a port's `function_entries.tsv` (starts only) or `functions.tsv` (with a `game` column, picked by `--game`); the address column is the first of `entry`, `address`, `va`, `rva`, `start`, else the first column; `name` and `size` are read when present; a Ghidra control-flow export ([`match`](#a-later-build-match)) too, with each body's ranges. Tables merge, so one can give the starts and another the names |
 | `unwind` | an x64 image with an unwind table | the RUNTIME_FUNCTION entries, chained entries followed to their primary function |
 | `heuristic` | neither (x86, or x64 without `.pdata`) | the entry point, exports, TLS callbacks, rel32 call targets (two callers, or one after padding or a `ret`), `push ebp; mov ebp, esp` after padding or a `ret`, and the first byte after a `ret` followed by int3/nop padding |
 
@@ -256,6 +256,64 @@ string tables, accelerators) in 0.1 s with no errors; an icon group of 13 images
 bits, one PNG) converted and viewed; and a game's icon group exported byte for byte the same as
 that port's own `extract_icon.py` produced.
 
+### A later build: `match`
+
+```sh
+rea-suite pe match old/Game.exe new/Game.exe \
+  --functions re/cfg/Game.exe.cfg.txt --functions-new re/cfg/GameNew.exe.cfg.txt > work/map.tsv
+rea-suite pe match old/Game.exe new/Game.exe --functions old.tsv --functions-new new.tsv \
+  --header src/addrs.h --header-out work/addrs_new.h --names work/new-names.tsv
+rea-suite pe match old/Game.exe new/Game.exe --functions old.tsv --functions-new new.tsv --json
+```
+
+Finds the functions and data of a build a port knows in a later build of the same code (a
+patch, an expansion, the other of a single and multiplayer pair), x86 or x64. Every function of
+both becomes its normalized instructions: mnemonic and operands, with an operand that is an
+address inside the image (x64: RIP-relative too) replaced by `A`, so moved code and moved
+globals read the same; padding after the last instruction is left out. Then:
+
+1. `same code`: a sequence of four instructions or more that occurs exactly once in each build;
+2. `same strings`: a function whose set of referenced strings (four printable characters or
+   more) occurs exactly once in each build, which survives code changed around the same messages;
+3. `called from`: until nothing new, a matched pair of the same length, or matched by its
+   strings, pairs its direct call targets in order when both have as many; a pair of the same
+   length pairs its data addresses in order, and each old data address takes the new one most
+   of those pairs voted for (`2 of 3 references, UNCERTAIN` when they disagree).
+
+Each side's functions come from `--functions` and `--functions-new` (repeatable, `--game` and
+`--game-new` for a `game` column), in the formats of the section above, or from a Ghidra
+control-flow export (`F <entry> <name> ...` with `R <first> <last>` body ranges under it, the
+`re/cfg/<binary>.cfg.txt` a port's Ghidra script writes), which every `pe` command reads too and whose ranges
+give the bodies exactly, chunks elsewhere included. Without a table the unwind table (x64) or
+the heuristic gives the starts, and a body runs to the next start: more functions, more of them
+guessed. The output is a TSV on stdout: `kind` (`func` or `data`), the old VA, the new VA, how
+it was found, and the old table's name; `--json` gives `{"summary", "map"}`, the counts on
+stderr. `--header H --header-out F` rewrites each `#define NAME 0x...` of a header for the old
+build with its candidate (a comment says function or data and why), a value outside the old
+image copied and marked `same: a constant`, and `// NAME: ? (...)` where nothing matched.
+`--names F` writes the old table's names (not Ghidra's `FUN_...`) at their new addresses (`address`, `name`, `old`), a
+table `--functions` reads for the new build. Exit 0 when a function matched, 1 when none did, 2
+on bad input.
+
+A match is a candidate, as the header's are: two functions with the same strings, or a caller
+whose callees changed order, can hand a sibling the wrong address. Check what you use in the new
+build's code before relying on it. REA's `match_native_functions` pairs two `list_procedures`
+inventories by unique exact symbol names and then identical bytes, which suits builds with
+symbols or unchanged code; for a stripped later build where code and data moved and functions
+changed, use `match`. ghidriff answers the opposite question (what changed between two builds)
+and needs both analyzed in Ghidra.
+
+Checked 2026-11-12 against `funcmatch.py`, the port script this came from, on that port's
+Ghidra control-flow exports of two pairs of 32-bit MSVC builds (a game and its expansion,
+multiplayer and single player): 2,075 of 3,264 functions matched in 13 s (`funcmatch.py`:
+2,049) and 2,067 of 3,290 (2,028). No pair differed; of the script's pairs, one was not found,
+and both header translations came out the same. The difference is in the strings:
+`funcmatch.py` read the bytes at branch targets as strings (a `push imm32` reads as `hPbV`),
+which set a few functions apart by chance (the one not found has a twin with the same strings)
+and kept others from matching; `match` takes strings from data references only, CR and UTF-16
+allowed. Its data map is smaller for the same reason (5,429 pairs against 13,077, nearly all of
+the rest branch targets).
+
 ### Port scripts these replace
 
 | Port script | Now |
@@ -263,12 +321,14 @@ that port's own `extract_icon.py` produced.
 | CoD1 `tools/x86dis.py` (disassemble `ADDR:COUNT`) | `pe disasm <exe> ADDR --count N` |
 | CoD1 `tools/mnem_hist.py` (mnemonic histogram of `.text`) | `pe disasm <exe> --histogram` |
 | CoD1 `tools/peinfo.py` | `pe info --imports --exports` |
+| CoD1 `tools/funcmatch.py` (a known build's addresses in a later one) | `pe match` with the same `re/cfg/*.cfg.txt` exports and header |
 | CoD1 `tools/extract_icon.py` (icon group to `.ico`) | `pe resources <exe> --type GROUP_ICON --extract DIR` (same bytes); the port keeps its copy while its build embeds the icon |
 | Rogue Spear's pefile script for menus, dialogs and string tables, and `inspect_pe_resources` ([known issue 7](REA-KNOWN-ISSUES.md)) | `pe resources` |
 | Rogue Spear's objdump and `resolve_containing_procedure` per `xrefs` hit | `pe refs`/`callers`/`imports` with `--functions re/function_entries.tsv`, `pe disasm` |
 
 Tests: `uv run --no-sync python -m unittest rea_suite.test_pe` in `common/` (synthetic x64 and
-x86 programs and a resource section of every decoded kind, built in `samples.py`; no game bytes).
+x86 programs, two builds of one program for `match`, and a resource section of every decoded
+kind, built in `samples.py`; no game bytes).
 
 ## Remedy packages: `rea-suite rmdp`
 

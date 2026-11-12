@@ -551,3 +551,82 @@ def program_x86_functions() -> tuple[bytes, dict[str, int]]:
         directories={1: (0x20C0, 40), 12: (0x2040, 8)},
     )
     return image, at
+
+
+MATCH_CODE = {
+    "x86": {
+        "main": ["push ebp", "mov ebp, esp", "call {init}", "call {leaf_a}", "call {leaf_b}",
+                 "mov eax, dword ptr [{counter}]", "inc eax", "mov dword ptr [{counter}], eax",
+                 "pop ebp", "ret"],
+        "init": ["push ebp", "mov ebp, esp", "push {hello}", "call {report}", "add esp, 4",
+                 "pop ebp", "ret"],
+        "report": ["push ebp", "mov ebp, esp", "push {fail}", "push {fmt}", "add esp, 8",
+                   "pop ebp", "ret"],
+        "leaf_a": ["mov eax, 1", "ret"],
+        "leaf_b": ["mov eax, 2", "ret"],
+        "twin1": ["push ebp", "mov ebp, esp", "xor eax, eax", "pop ebp", "ret"],
+        "twin2": ["push ebp", "mov ebp, esp", "xor eax, eax", "pop ebp", "ret"],
+        "added": ["push ebp", "mov ebp, esp", "push {extra}", "add esp, 4", "pop ebp", "ret"],
+    },
+    "x64": {
+        "main": ["sub rsp, 0x28", "call {init}", "call {leaf_a}", "call {leaf_b}",
+                 "mov eax, dword ptr [{counter}]", "inc eax", "mov dword ptr [{counter}], eax",
+                 "add rsp, 0x28", "ret"],
+        "init": ["sub rsp, 0x28", "lea rcx, [{hello}]", "call {report}", "add rsp, 0x28", "ret"],
+        "report": ["sub rsp, 0x28", "lea rcx, [{fmt}]", "lea rdx, [{fail}]", "add rsp, 0x28",
+                   "ret"],
+        "leaf_a": ["mov eax, 1", "ret"],
+        "leaf_b": ["mov eax, 2", "ret"],
+        "twin1": ["sub rsp, 0x28", "xor eax, eax", "nop", "add rsp, 0x28", "ret"],
+        "twin2": ["sub rsp, 0x28", "xor eax, eax", "nop", "add rsp, 0x28", "ret"],
+        "added": ["sub rsp, 0x28", "lea rcx, [{extra}]", "add rsp, 0x28", "ret"],
+    },
+}  # fmt: skip
+MATCH_DATA = {"hello": b"hello there\0", "fmt": b"report %d\0", "fail": b"cannot open %s\0",
+              "counter": bytes(4), "extra": b"only in the new build\0"}  # fmt: skip
+
+
+def program_match(new: bool, x64: bool = False) -> tuple[bytes, dict[str, int]]:
+    """One of two builds of the same small program for `pe match`, old or new: `main` calls
+    `init`, `leaf_a` and `leaf_b` and counts in a global; `init` passes a string to `report`,
+    which loads two more; `leaf_a` and `leaf_b` are too short to match by their code;
+    `twin1` and `twin2` have the same code. The new build moves every function and string,
+    adds a function and a string, and gives `report` one more instruction. Each function sits
+    in a 0x40-byte slot; `at` gives RVAs. x64 code names its data RIP-relative. Assembled with
+    Keystone."""
+    from keystone import KS_ARCH_X86, KS_MODE_32, KS_MODE_64, Ks
+
+    base = 0x140000000 if x64 else 0x400000
+    code = MATCH_CODE["x64" if x64 else "x86"]
+    if new:
+        order = ["added", "twin2", "main", "leaf_b", "init", "report", "leaf_a", "twin1"]
+        strings = ["extra", "counter", "fail", "hello", "fmt"]
+    else:
+        order = ["main", "init", "report", "leaf_a", "leaf_b", "twin1", "twin2"]
+        strings = ["hello", "fmt", "fail", "counter"]
+    at = {name: 0x1000 + 0x40 * i for i, name in enumerate(order)}
+    data = bytearray()
+    for name in strings:
+        at[name] = 0x2000 + len(data)
+        data += MATCH_DATA[name].ljust(16, b"\0")
+    lines = {name: list(code[name]) for name in order}
+    if new:
+        lines["report"].insert(2, "xor eax, eax")
+    ks = Ks(KS_ARCH_X86, KS_MODE_64 if x64 else KS_MODE_32)
+    text = bytearray(b"\xcc" * (0x40 * len(order)))
+    for name in order:
+        address = base + at[name]
+        for line in lines[name]:
+            encoded = b""
+            for _ in range(2):  # a RIP-relative operand's displacement needs the length first
+                values = {k: v + base for k, v in at.items()}
+                if x64 and "[{" in line:
+                    values = {
+                        k: f"rip + {v - address - len(encoded):#x}" for k, v in values.items()
+                    }
+                encoded = bytes(ks.asm(line.format(**values), address)[0])
+            _put(text, address - base - 0x1000, encoded)
+            address += len(encoded)
+    image = pe([(".text", bytes(text)), (".rdata", bytes(data))], base=base, x64=x64,
+               entry=at["main"])  # fmt: skip
+    return image, at

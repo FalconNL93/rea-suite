@@ -1,6 +1,6 @@
 """The PE model and scans on synthetic programs (samples.program_*): RTTI, references,
 callers, strings, containing functions from the unwind table, a function table or the
-heuristic, disassembly and resources."""
+heuristic, disassembly, resources and matching two builds."""
 
 from __future__ import annotations
 
@@ -603,6 +603,133 @@ class Resources(unittest.TestCase):
         self.assertEqual(code, 0)
         listed = json.loads((self.root / "x" / "resources.json").read_text())
         self.assertEqual(len(listed), 17)
+
+
+class Match(unittest.TestCase):
+    """`pe match` on two builds of one program (samples.program_match): moved code, moved data,
+    a changed function, a new one, and two functions with the same code."""
+
+    def setUp(self) -> None:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.root = Path(tmp.name)
+
+    def files(self, x64: bool = False) -> tuple[dict[str, Path], dict, dict]:
+        paths = {}
+        sides = {}
+        for build in ("old", "new"):
+            data, at = samples.program_match(build == "new", x64)
+            base = 0x140000000 if x64 else 0x400000
+            exe = self.root / f"{build}.exe"
+            exe.write_bytes(data)
+            functions = sorted((at[n], n) for n in samples.MATCH_CODE["x86"] if n in at)
+            if build == "old":  # a control-flow export, with each body's range
+                table = self.root / "old.cfg.txt"
+                table.write_text("".join(
+                    f"F {base + rva:08x} {name} 0\nR {base + rva:08x} {base + rva + 0x3f:08x}\n"
+                    for rva, name in functions
+                ))  # fmt: skip
+            else:  # rea-ghidra functions: entry, size, name
+                table = self.root / "new.tsv"
+                table.write_text("entry\tsize\tname\n" + "".join(
+                    f"{base + rva:#x}\t64\tFUN_{rva:x}\n" for rva, _ in functions
+                ))  # fmt: skip
+            paths[build], paths[build + "_table"] = exe, table
+            sides[build] = at
+        return paths, sides["old"], sides["new"]
+
+    def match(self, x64: bool = False, *extra: str) -> tuple[int, str, dict, dict]:
+        paths, old, new = self.files(x64)
+        code, out = run("match", str(paths["old"]), str(paths["new"]),
+                        "--functions", str(paths["old_table"]),
+                        "--functions-new", str(paths["new_table"]), *extra)  # fmt: skip
+        return code, out, old, new
+
+    def check_map(self, rows: list[dict], old: dict, new: dict, base: int, width: int) -> None:
+        def va(at: dict, name: str) -> str:
+            return f"{base + at[name]:0{width}x}"
+
+        found = {(r["kind"], r["old"]): (r["new"], r["how"]) for r in rows}
+        self.assertEqual(found["func", va(old, "main")], (va(new, "main"), "same code"))
+        self.assertEqual(found["func", va(old, "init")][0], va(new, "init"))
+        self.assertEqual(found["func", va(old, "report")][0], va(new, "report"))
+        self.assertTrue(found["func", va(old, "report")][1].startswith("same strings"))
+        for leaf in ("leaf_a", "leaf_b"):
+            self.assertEqual(found["func", va(old, leaf)][0], va(new, leaf))
+            self.assertTrue(found["func", va(old, leaf)][1].startswith("called from"))
+        self.assertNotIn(("func", va(old, "twin1")), found)  # the same code twice is no match
+        self.assertNotIn(("func", va(old, "twin2")), found)
+        self.assertEqual(
+            found["data", va(old, "counter")], (va(new, "counter"), "2 of 2 references")
+        )
+        self.assertEqual(found["data", va(old, "hello")][0], va(new, "hello"))
+        self.assertNotIn(("data", va(old, "fmt")), found)  # report changed length: no pairs
+
+    def test_moved_functions_and_data_match_by_code_strings_and_calls(self) -> None:
+        code, out, old, new = self.match(False, "--json")
+        self.assertEqual(code, 0)
+        found = json.loads(out)
+        self.assertEqual(found["summary"]["functions"], 5)
+        self.assertEqual(found["summary"]["old_functions"], 7)
+        self.assertEqual(found["summary"]["function_source"], ["table", "table"])
+        self.check_map(found["map"], old, new, 0x400000, 8)
+        self.assertEqual(
+            next(r["name"] for r in found["map"] if r["old"] == f"{0x400000 + old['main']:08x}"),
+            "main",
+        )
+
+    def test_x64_matches_rip_relative_code(self) -> None:
+        code, out, old, new = self.match(True, "--json")
+        self.assertEqual(code, 0)
+        self.check_map(json.loads(out)["map"], old, new, 0x140000000, 16)
+
+    def test_tsv_names_and_header(self) -> None:
+        paths, old, new = self.files()
+        header = self.root / "addrs.h"
+        header.write_text(
+            f"#define GA_MAIN 0x{0x400000 + old['main']:08x}u\n"
+            f"#define GA_COUNTER 0x{0x400000 + old['counter']:08x}u\n"
+            "#define GA_SLOT_SIZE 0x40\n"
+            f"#define GA_TWIN 0x{0x400000 + old['twin1']:08x}u\n"
+        )
+        code, out = run("match", str(paths["old"]), str(paths["new"]),
+                        "--functions", str(paths["old_table"]),
+                        "--functions-new", str(paths["new_table"]),
+                        "--header", str(header), "--header-out", str(self.root / "new.h"),
+                        "--names", str(self.root / "names.tsv"))  # fmt: skip
+        self.assertEqual(code, 0)
+        first = out.splitlines()[0].split("\t")
+        self.assertEqual(first[:4], ["func", f"{0x400000 + old['main']:08x}",
+                                     f"{0x400000 + new['main']:08x}", "same code"])  # fmt: skip
+        lines = (self.root / "new.h").read_text().splitlines()
+        self.assertTrue(lines[0].startswith("#define GA_MAIN"))
+        self.assertIn(f"0x{0x400000 + new['main']:08x}u   // function", lines[0])
+        self.assertIn(f"0x{0x400000 + new['counter']:08x}u   // data", lines[1])
+        self.assertIn("0x00000040u   // same: a constant", lines[2])
+        self.assertEqual(lines[3], f"// GA_TWIN: ? (0x{0x400000 + old['twin1']:08x} not matched)")
+        names = pefunctions.read_table(self.root / "names.tsv")
+        self.assertIn((0x400000 + new["leaf_a"], "leaf_a", None), names)
+
+    def test_exit_codes(self) -> None:
+        paths, _, _ = self.files()
+        tiny = self.root / "tiny.tsv"
+        tiny.write_text("entry\tsize\n0x401000\t2\n")  # too short to match, calls nothing
+        base = ["match", str(paths["old"]), str(paths["new"])]
+        self.assertEqual(run(*base, "--functions", str(tiny), "--functions-new", str(tiny))[0], 1)
+        self.assertEqual(run(*base[:2], str(self.root / "missing.exe"))[0], 2)
+        self.assertEqual(run(*base, "--header", str(self.root / "addrs.h"))[0], 2)
+
+    def test_a_control_flow_export_gives_bodies_and_names(self) -> None:
+        cfg = self.root / "game.cfg.txt"
+        cfg.write_text("F 00401000 main 0\nR 00401000 0040101f\nR 00401060 0040106f\n"
+                       "J 00401010 jmp 00401060\nF 00401040 FUN_00401040 0\n")  # fmt: skip
+        image = Image(samples.program_x86_functions()[0])
+        functions = pefunctions.Functions.from_tables(image, [cfg])
+        self.assertEqual(functions.entries(), [0x1000, 0x1040])
+        self.assertEqual(functions.name_of(0x1000), "main")
+        self.assertEqual(functions.body(0x1000), [(0x1000, 0x1020), (0x1060, 0x1070)])
+        self.assertEqual(functions.sizes[0x1000], 0x20)
+        self.assertEqual(functions.body(0x1040), [(0x1040, 0x1070)])
 
 
 if __name__ == "__main__":
