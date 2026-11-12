@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import lzma
+import os
 import shutil
 import subprocess
 import tarfile
@@ -10,7 +11,17 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-ARCHIVE_SUFFIXES = (".zip", ".tar", ".tar.gz", ".tgz", ".tar.xz", ".txz", ".tar.bz2", ".dmg")
+ARCHIVE_SUFFIXES = (
+    ".zip",
+    ".tar",
+    ".tar.gz",
+    ".tgz",
+    ".tar.xz",
+    ".txz",
+    ".tar.bz2",
+    ".dmg",
+    ".7z",
+)
 
 
 def _stripped(name: str, strip: int) -> str | None:
@@ -33,6 +44,8 @@ def extract(archive: Path, dest: Path, strip: int) -> None:
         shutil.copy2(archive, dest / archive.name)
     elif archive.name.endswith(".dmg"):
         _extract_dmg(archive, dest)
+    elif archive.name.endswith(".7z"):
+        _extract_7z(archive, dest, strip)
     elif archive.name.endswith(".zip"):
         with zipfile.ZipFile(archive) as zf:
             for info in zf.infolist():
@@ -60,6 +73,34 @@ def extract(archive: Path, dest: Path, strip: int) -> None:
                 member.name = rel
                 members.append(member)
             tf.extractall(dest, members=members, filter="tar")
+
+
+def seven_zip() -> str | None:
+    """7-Zip of the base suite (apt `7zip`, winget `7zip.7zip`; not on PATH on Windows)."""
+    found = next((p for n in ("7zz", "7z", "7za") if (p := shutil.which(n))), None)
+    if not found and os.name == "nt":
+        candidate = Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "7-Zip/7z.exe"
+        found = str(candidate) if candidate.is_file() else None
+    return found
+
+
+def _extract_7z(archive: Path, dest: Path, strip: int) -> None:
+    """7-Zip archives (PCSX2's Windows release); Python has no reader of its own."""
+    tool = seven_zip()
+    if not tool:
+        raise LookupError(f"{archive.name}: 7-Zip is needed; run rea-suite setup")
+    with tempfile.TemporaryDirectory(dir=dest.parent) as tmp:
+        subprocess.run([tool, "x", "-y", "-bso0", "-bsp0", f"-o{tmp}", str(archive)], check=True)
+        root = Path(tmp).resolve()
+        for path in sorted(root.rglob("*")):
+            if path.is_symlink() and not path.resolve().is_relative_to(root):
+                raise LookupError(f"{archive.name}: link outside the archive: {path.name}")
+            rel = _stripped(path.relative_to(root).as_posix(), strip)
+            if rel is None or path.is_dir():
+                continue
+            target = dest / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(path, target)
 
 
 def _extract_dmg(archive: Path, dest: Path) -> None:

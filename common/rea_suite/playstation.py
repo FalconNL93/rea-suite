@@ -13,6 +13,8 @@ import struct
 import subprocess
 from pathlib import Path, PurePosixPath
 
+from rea_suite.archive import seven_zip
+
 
 def digest(path: Path) -> str:
     with path.open("rb") as stream:
@@ -159,10 +161,7 @@ def extraction(source: Path, project: Path, kind: str) -> list[str]:
             "-l",
         ]
     else:
-        tool = next((p for n in ("7zz", "7z", "7za") if (p := shutil.which(n))), None)
-        if not tool and os.name == "nt":
-            candidate = Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "7-Zip/7z.exe"
-            tool = str(candidate) if candidate.is_file() else None
+        tool = seven_zip()
         command = [tool or "7z", "x", str(source), f"-o{project / 'disc'}", "-y"]
     return command
 
