@@ -108,6 +108,15 @@ tools:
         asset: '^ghidra_{ghidra}_PUBLIC_\d+_XEXLoaderWV\.zip$'
         build: true
         subdir: XEXLoaderWV
+      # Original Xbox XBE loader (rea-ghidra, rea-suite xbox): sections at their addresses, kernel
+      # imports by ordinal, and XDK library functions named during analysis by the XbSymbolDatabase
+      # CLI it bundles (v3.1.160, MIT; Linux x86_64, Windows x64, macOS x86_64, which Ghidra runs
+      # under Rosetta 2 on Apple Silicon). Upstream releases a build for each Ghidra version; no
+      # source build here (its build.sh fetches its own Ghidra and JDK, and the repository has no
+      # license file).
+      xbe:
+        github: XboxDev/ghidra-xbe
+        asset: '^ghidra_{ghidra}_PUBLIC_\d+_ghidra-xbe\.zip$'
       # LE/LX loader (DOS/4GW and DOS/16 LE, DOS32A, OS/2 LX, VxD): objects at their bases, every
       # fixup applied, typed headers; per-object base and selector overrides. Pinned to a commit:
       # Ghidra 12.1's compiler-spec fix and the Watcom ABI came after its newest release (v12.0.1).
@@ -724,6 +733,28 @@ tools:
         dosbox-x: dosbox-x-sdl2/dosbox-x.app/Contents/MacOS/dosbox-x
       windows:
         dosbox-x: 'bin/x64/Release SDL2/dosbox-x.exe'
+
+  # --- component: xbox ---
+
+  # Original Xbox emulator (QEMU-based, low-level: real kernel, NV2A, MCPX) with QEMU's GDB stub
+  # (`-s`, `-S`) and monitor. Needs the owner's MCPX boot ROM, flash BIOS and an HDD image
+  # (docs/XBOX-CLASSIC.md). The macOS build is universal (arm64 and x86_64).
+  xemu:
+    github: xemu-project/xemu
+    version: latest
+    assets:
+      linux: '^xemu-[\d.]+-x86_64\.AppImage$'
+      macos: '^xemu-[\d.]+-macos-universal\.zip$'
+      windows: '^xemu-[\d.]+-windows-x86_64\.zip$'
+    # xemu restarts itself from the extracted AppImage with its QEMU arguments, so the AppImage
+    # runtime never removes its extraction: TMPDIR keeps that (47 MB) in the install, not in /tmp.
+    bin:
+      linux:
+        xemu: {path: 'xemu-*.AppImage', env: {APPIMAGE_EXTRACT_AND_RUN: '1', TMPDIR: '{dir}'}}
+      macos:
+        xemu: xemu.app/Contents/MacOS/xemu
+      windows:
+        xemu: xemu.exe
 
   # --- component: steam ---
 

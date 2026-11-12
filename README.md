@@ -170,6 +170,7 @@ REA_SUITE_COMPONENTS="build steam"
 | `playstation` | no | PS1/PS2 disc preparation, chdman, Ghidra console loaders, jPSXdec, the PCSX-Redux and PCSX2 emulators ([tools](docs/PLAYSTATION.md), routes for [PS1](docs/PS1.md) and [PS2](docs/PS2.md)) |
 | `decomp` | no | decompilation projects: splat (split MIPS executables) and objdiff (match objects against the original) |
 | `game-archives` | no | extract-xiso, ZArchive; Windows also XGDTool and QuickBMS ([platform limits](docs/GAME-ARCHIVES.md)) |
+| `xbox` | no | original Xbox games: xemu with QEMU's GDB stub, extract-xiso ([route](docs/XBOX-CLASSIC.md)) |
 | `vm` | no | QEMU + OVMF (Linux) or VirtualBox (Windows); UTM on macOS |
 
 Change it with `rea-suite select` (menu, then setup), by editing `.env`, or per run
@@ -508,7 +509,7 @@ been run on macOS arm64 and Linux x86_64 (WSL2, 2026-11-03); Windows execution r
 | PCSX2 (`pcsx2`) | PS2 emulator with its EE/IOP debugger and PINE (component `playstation`) | tools.yml, release binaries |
 | splat (`splat`) | Split a PS1/PS2 (and N64, PSP) executable into assembly, data and a linker script for a decompilation (component `decomp`) | PyPI `splat64[mips]`, own uv environment |
 | objdiff (`objdiff`, `objdiff-cli`) | Match a decompilation's compiled objects against the original, function by function (component `decomp`) | tools.yml, release binaries |
-| extract-xiso | List/extract/create Xbox XISO images (component `game-archives`) | tools.yml, release binaries |
+| extract-xiso | List/extract/create Xbox XISO images, also a whole Redump image (components `game-archives`, `xbox`) | tools.yml, release binaries |
 | ZArchive | Read/create ZAR/WUA (component `game-archives`) | tools.yml; source build with zstd on Linux/macOS, EXE on Windows |
 | XGDTool | Xbox/360 disc format conversion (component `game-archives`) | tools.yml, Windows CLI only |
 | QuickBMS | Script-driven game archive extraction/reimport (component `game-archives`) | tools.yml, author's Windows ZIP; scripts selected separately |
@@ -526,6 +527,7 @@ been run on macOS arm64 and Linux x86_64 (WSL2, 2026-11-03); Windows execution r
 | x64dbg (`x64dbg`, `x32dbg`) + ScyllaHide | Windows user-mode debugger; ScyllaHide hides it from anti-debug checks | tools.yml (Windows) |
 | pwntools | Script interactions with binaries and exploits; REA uses its Python | pip (Linux, macOS) |
 | qemu-user, gdb-multiarch, binutils-multiarch | Run, debug and disassemble ARM/MIPS/... userland binaries on x86 (component `build`) | apt |
+| xemu | Original Xbox emulator (QEMU with the console's hardware); QEMU's GDB stub and monitor debug the original game (component `xbox`; [route](docs/XBOX-CLASSIC.md)) | tools.yml (AppImage, universal macOS app, Windows zip) |
 | QEMU + OVMF / VirtualBox | Virtual machines to run untrusted samples away from your system (component `vm`; UTM on macOS) | apt / brew / winget |
 | Sysinternals, System Informer | Watch processes, handles, registry and file activity of a running program (Windows) | winget |
 
@@ -839,6 +841,7 @@ absolute paths to extension JARs must follow the preserved module directory.
 | ghidra_psx_ldr | PS-X EXE and PSX GTE support (component `playstation`) | exact-version prebuilt |
 | Emotion Engine: Reloaded | PS2 R5900/MMI/VU0 macro support (component `playstation`) | exact-version prebuilt |
 | XEXLoaderWV | Load Xbox 360 XEX executables (`rea-suite xbox360`; pinned, checked by doctor) | prebuilt or built |
+| ghidra-xbe | Load original Xbox XBE executables: kernel imports by ordinal, XDK library functions named by its XbSymbolDatabase CLI (`rea-ghidra`, `rea-suite xbox`; checked by doctor) | prebuilt only (no license file upstream; its build fetches its own Ghidra) |
 | ghidra-firmware-utils | Load UEFI images, PCI option ROMs and other firmware formats | prebuilt or built |
 | ghidra-lx-loader | Load LE/LX executables (DOS/4GW and DOS/16 LE, DOS32A, OS/2 LX, VxD) with their objects at their bases and every fixup applied (`rea-ghidra analyze`; REA's open_binary still refuses LE before Ghidra sees it) | built from a pinned commit |
 | ghidra-nativeaot | Recover .NET Native AOT binaries in Ghidra; REA's optional adapter is configured separately | prebuilt or built |

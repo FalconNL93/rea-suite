@@ -98,3 +98,7 @@ components:
     apt: [libzstd-dev]
     brew: [zstd]
     tools: [extract-xiso, zarchive, xgdtool, quickbms]
+
+  xbox:
+    description: Original Xbox (2001) games - xemu with QEMU's GDB stub (rea-suite xbox, docs/XBOX-CLASSIC.md) and extract-xiso; the XBE loader for Ghidra is always installed
+    tools: [xemu, extract-xiso]

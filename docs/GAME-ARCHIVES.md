@@ -39,7 +39,7 @@ Options precede filenames for extract-xiso. Commands below use illustrative inpu
 
 Confirm the installed tool's help before changing formats. Extraction alone does not decompile
 XBE/XEX code. The existing **XEXLoaderWV** Ghidra extension covers XEX loading (`rea-suite xbox360`
-in the README); it is not a full
+in the README) and **ghidra-xbe** XBE loading ([original Xbox route](XBOX-CLASSIC.md)); XEXLoaderWV is not a full
 replacement for XEXTool's conversion/patching operations. No verified, current upstream XEXTool
 download was established, so mirror binaries are not fetched automatically.
 
