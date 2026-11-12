@@ -35,6 +35,9 @@
 #   rea-suite rmdp list|extract|find|inner <index.bin> ...  Remedy packages (Alan Wake,
 #                                            Remastered, American Nightmare, Quantum Break,
 #                                            Control): list, extract, search, level containers
+#   rea-suite yetibig info|list|blob|diff|refs|check <Yeti.big> ...  YETI engine archives
+#                                            (Lost: Via Domus, GRAW): table, resources by key
+#                                            (LZO1X), PC/360 diff, key references, coverage proof
 #   rea-suite le info|dump-object|dump-image|services <exe> ...  LE/LX executables
 #                                            (DOS/4GW and other DOS extenders, VxDs, OS/2):
 #                                            header, objects, fixups; an object or the image
@@ -580,6 +583,7 @@ case "$cmd" in
   run) uv run --offline --no-sync common/rea_suite/run_harness.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   pe) uv run --offline --no-sync common/rea_suite/pe.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   rmdp) uv run --offline --no-sync common/rea_suite/rmdp.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
+  yetibig) uv run --offline --no-sync common/rea_suite/yetibig.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   le) uv run --offline --no-sync common/rea_suite/le.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   tools) rea-tools "${args[@]}" ;;
   clean) cmd_clean "${args[@]}" ;;

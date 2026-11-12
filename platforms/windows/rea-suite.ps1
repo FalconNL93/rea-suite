@@ -15,6 +15,7 @@
     .\platforms\windows\rea-suite.ps1 steamstub <exe>...  # SteamStub DRM signs
     .\platforms\windows\rea-suite.ps1 pe <command> <exe> ...  # PE scans: RTTI, references, callers, strings, disasm, resources
     .\platforms\windows\rea-suite.ps1 rmdp list|extract|find|inner <index.bin> ...  # Remedy packages
+    .\platforms\windows\rea-suite.ps1 yetibig info|list|blob|diff|refs|check <Yeti.big> ...  # YETI engine archives (Lost: Via Domus, GRAW)
     .\platforms\windows\rea-suite.ps1 le info|dump-object|dump-image|services <exe> ...  # LE/LX executables (DOS extenders)
     .\platforms\windows\rea-suite.ps1 frida <script.js> --pid|--name|--spawn ...  # Frida script, JSON lines
     .\platforms\windows\rea-suite.ps1 dosbox run|parse|compare|info ...  # a DOS program in DOSBox-X, its INT calls as JSON lines; dumps, input, region sequences
@@ -32,7 +33,7 @@
 #>
 #Requires -Version 7
 param(
-    [Parameter(Position = 0)][ValidateSet('setup', 'select', 'winget', 'update', 'reinstall', 'agents', 'analyze', 'playstation', 'xbox', 'xbox360', 'functions', 'steamstub', 'pe', 'rmdp', 'le', 'frida', 'dosbox', 'pad', 'run', 'doctor', 'status', 'tools', 'clean', 'lint')][string]$Command = 'setup',
+    [Parameter(Position = 0)][ValidateSet('setup', 'select', 'winget', 'update', 'reinstall', 'agents', 'analyze', 'playstation', 'xbox', 'xbox360', 'functions', 'steamstub', 'pe', 'rmdp', 'yetibig', 'le', 'frida', 'dosbox', 'pad', 'run', 'doctor', 'status', 'tools', 'clean', 'lint')][string]$Command = 'setup',
     [Parameter(Position = 1, ValueFromRemainingArguments)][string[]]$Rest = @()
 )
 $ErrorActionPreference = 'Stop'
@@ -215,6 +216,7 @@ switch ($Command) {
     'run' { & uv run --offline --no-sync common\rea_suite\run_harness.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'pe' { & uv run --offline --no-sync common\rea_suite\pe.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'rmdp' { & uv run --offline --no-sync common\rea_suite\rmdp.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
+    'yetibig' { & uv run --offline --no-sync common\rea_suite\yetibig.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'le' { & uv run --offline --no-sync common\rea_suite\le.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'analyze' { & uv run --offline --no-sync common\rea_suite\analyze.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'reinstall' {

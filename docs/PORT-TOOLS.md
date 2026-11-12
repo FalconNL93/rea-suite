@@ -361,6 +361,80 @@ in this tool. Checked 2026-11-11 against Alan Wake Remastered's packages (`ep999
 checksum matching; `ep999-001`; the English pack), and by `common/rea_suite/test_rmdp.py` on packages built in three
 layouts.
 
+## YETI engine archives: `rea-suite yetibig`
+
+Ubisoft's YETI engine (Lost: Via Domus on PC and Xbox 360; also Ghost Recon Advanced Warfighter on the
+Xbox 360, whose archive has not been tried) keeps a game's data in one `Yeti.big`: a header, a table of resources found by a 32-bit key, and the
+resources. There are no file names in the archive, nor name hashes: keys are allocated ids (the PC
+executable takes `/key 0x%lx` on its command line). `yetibig` reads it without writing anything:
+
+```sh
+rea-suite yetibig info game/Yeti.big                     # header fields, counts, class histogram
+rea-suite yetibig list game/Yeti.big --class 50e1        # key, class, size, flags, offset of each copy
+rea-suite yetibig blob game/Yeti.big 9210179d 1000 --out work/yeti   # <key>.bin, unpacked
+rea-suite yetibig diff pc/Yeti.big x360/Yeti.big         # only in A, only in B, size differs; by class
+rea-suite yetibig refs game/Yeti.big                     # unreferenced keys, referenced but absent keys
+heavy run --name "yetibig check" -- rea-suite yetibig check game/Yeti.big   # the coverage proof
+```
+
+The layout, little-endian on PC and Xbox 360 alike (from the PC loader, `Yeti_Final_Win32.exe` 0x426580
+and 0x431230, and checked on both archives):
+
+| Offset | Field |
+|---|---|
+| 0x000 | u16 version, 0x57 (the loader refuses older) |
+| 0x002 | u8 table flag: 1 = 12-byte entries (the only form seen; 0 is a long form with 96-byte entries, refused) |
+| 0x004 | u32 entry count |
+| 0x008 | u32 0x10000; 0x014 u32 unknown |
+| 0x036 | the root folder's name, `/Data/` |
+| 0x068 | u16[256] class ids; an entry's type byte indexes this list |
+| 0x268 | the table: per entry `u32 offset, u32 key, u32 type << 24 \| size` |
+
+- **Data.** It starts after the table, at 0x268 + 12 × count; table offsets count from there. `list`,
+  `blob` and `check` print file offsets.
+- **Duplicated resources.** An offset 0xFExxxxxx marks a resource stored several times (for seek
+  locality on the disc): bits 0–17 index the duplicate-offset list, bits 18–23 give the number of
+  copies. The list is resource 0x1000 (class 0x12b0): u32 count, then that many offsets. The engine
+  reads the nearest copy past its current position.
+- **Resources.** Each starts `01 flags`. Flag 0x08: a u32 unpacked size follows and the body is
+  LZO1X. Flag 0x02: a u16 count and that many u32 keys of other resources (0xffffffff for none),
+  after the size when both are set. Flags 0x00: the body as stored. `blob` writes the body (unpacked,
+  header stripped, the keys printed); `--raw` writes the stored bytes. Flags 0x03 was seen once
+  (PC, key 63104185) and is not understood: `blob` writes such a resource's stored bytes as
+  `<key>.stored`, and `check` and `refs` report it rather than guess.
+- **References.** `refs` counts only the key lists in resource headers, not keys inside bodies, so an
+  unreferenced key is a root or an orphan candidate, and an absent one is stripped content or a key
+  of another file. A resource with unknown flags is skipped, not read for keys.
+- **check** reads every byte of the data in file order: no two regions (placed resources and every
+  copy) overlap, gaps are listed and tested for zeros, every copy of a duplicated resource is
+  byte-identical to the first, the duplicate slots tile the list, keys are unique, and every resource
+  decodes to its stated size. It exits 1 when any of these fails; unknown flags are listed, not
+  failed. On a game's archive (2.6 GB) it reads the whole file: run it under `heavy run`.
+- **LZO1X.** Through liblzo2 (`lzo1x_decompress_safe` with ctypes) when the system has the library, else
+  a pure-Python decoder (`common/rea_suite/lzo1x.py`, written from the instruction set of
+  `lzo1x_d.ch`), which is far slower: fine for `blob`, slow for `check` on a whole archive. liblzo2
+  is not installed by the suite (Debian `liblzo2-2`, Homebrew `lzo`); Windows has the pure-Python
+  decoder only unless `lzo2.dll` is on the path.
+- **Refusals.** A version below 0x57, the long table form, a table or a resource past the end of the
+  file, a duplicate slot outside the list, and a `blob` output inside the archive's folder.
+
+Checked 2026-11-12 against Lost: Via Domus's archives, read only, under `heavy run` (with liblzo2):
+
+| | PC (2.63 GB) | Xbox 360 (2.68 GB) |
+|---|---|---|
+| entries (placed + duplicated) | 73 527 (57 825 + 15 702) | 74 271 (58 634 + 15 637) |
+| duplicate list, slots tiling it | 116 982 | 116 995 |
+| `check`: regions, overlaps, gaps | 174 807, 0, one of 15 134 zero bytes | 175 629, 0, one of 14 787 zero bytes |
+| decoded (flags 00 / 02 / 08 / 0a) | 3 069 / 14 648 / 16 484 / 39 325; one with flags 03 (key 63104185) | 3 240 / 14 571 / 16 841 / 39 619 |
+| copies differing, failures | 0, 0 (about 40 s) | 0, 0 (about 47 s) |
+| `refs`: unreferenced; absent keys (uses) | 117; 9 371 (33 935) | 202; 9 072 (34 692) |
+
+`diff` PC against Xbox 360: 870 keys only on PC, 1 614 only on the 360, 1 182 in both with another size,
+71 475 the same. `common/rea_suite/test_yetibig.py` covers the decoder on hand-built LZO1X streams (and
+on liblzo2's or python-lzo's output when either is present) and every command and refusal on archives
+built in the test; with `REA_YETIBIG_PC` and `REA_YETIBIG_X360` set it repeats the counts, the diff and
+the proof on the real archives.
+
 ## Linear executables: `rea-suite le`
 
 The route for a whole DOS game, from its installer to what a recompilation needs, is
