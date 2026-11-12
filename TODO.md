@@ -42,6 +42,22 @@ with the reason when it is dropped.
 
 ## Console games
 
+- **PlayStation, from the PS1/PS2 routes** (2026-11-12; docs/PS1.md, docs/PS2.md):
+  - PS2 SDK library signatures for Ghidra: ghidra-ps2sdk (abelbriggs1), the analyzer and type databases
+    on top of Emotion Engine: Reloaded, answers 404 on GitHub. Look for a fork or another source; a
+    FunctionID set built from the open-source ps2sdk would not match Sony's libraries.
+  - `rea-suite playstation --overlay FILE@ADDRESS`: import a PS1 overlay or a PS2 IRX/ERX into the same
+    Ghidra project at its load address; today only the boot program is imported.
+  - armips, maspsx, m2c, asm-differ: none has a release (armips's last is a 2019 32-bit Windows build);
+    decompilation projects carry them as submodules. Add one if a port wants it outside a project.
+  - psxrecomp, RecompOne (PS1) and PS2Recomp: source-only static recompilers, taken by a port as its own
+    dependency. If the suite should build one, it becomes an optional component whose build runs only
+    with the user's consent (PS2Recomp needs its submodules, which the suite's source builds do not fetch).
+  - A VU microcode disassembler (or Ghidra language) and a PS2 DVD rebuild that keeps the file layout:
+    none found.
+  - chdman on Windows: MAME's winget package needs an install location the suite's winget list cannot
+    give; its release (`mame*b_x64.exe`, a 7-Zip self-extractor) holds `chdman.exe`.
+
 - **ghidra-allegrex (PSP)**: REA 6.8.0 has a PSP Allegrex profile that expects this Ghidra
   extension; kotcrab/ghidra-allegrex publishes exact-version builds (12.1.4 in v21.4). Needs a
   check of its license and REA's expectations before it joins a component.

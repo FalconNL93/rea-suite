@@ -253,10 +253,13 @@ benchmarked. `update --ai` reviews them on every run.
 
 ## Console games and disc images
 
-[PS1/PS2 workflow](docs/PLAYSTATION.md): `rea-suite playstation game.cue --project work/game --ghidra`
-extracts the image, resolves its boot program and creates an editable Ghidra project with initial exports.
-Enable the optional `playstation` component first. This uses Ghidra directly; REA's console profiles
-remain limited. [Game archive tools](docs/GAME-ARCHIVES.md) cover Xbox images, ZAR/WUA and QuickBMS.
+PlayStation: `rea-suite playstation game.cue --project work/game --ghidra` extracts the image, resolves
+its boot program and creates an editable Ghidra project with initial exports. Enable the optional
+`playstation` component first. This uses Ghidra directly; REA's console profiles remain limited.
+The routes from a disc to a port, a decompilation or a recompilation are [PS1](docs/PS1.md) and
+[PS2](docs/PS2.md); the tools and what the communities use that the suite lacks are in
+[PLAYSTATION.md](docs/PLAYSTATION.md). [Game archive tools](docs/GAME-ARCHIVES.md) cover Xbox images,
+ZAR/WUA and QuickBMS.
 
 Xbox 360: `rea-suite xbox360` runs the suite's Ghidra headless on an XEX (by its `XEX2` magic,
 through the XEXLoaderWV extension) or on the PE image extracted from one (COFF machine 0x01f2),
