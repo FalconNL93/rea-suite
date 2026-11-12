@@ -966,9 +966,25 @@ A press is `TIME:BUTTON[+BUTTON][:HOLD]`: `A B X Y`, `UP DOWN LEFT RIGHT`, `STAR
 `--idle-pad` plugs in a pad that never moves first, so the scripted one gets the second XInput
 slot: what a remote-play or streaming host leaves behind, and a common cause of "the game ignores
 my pad". Every event is a JSON line with `t` from the plug-in (`plugged` with the XInput user
-index, `press`, `unplugged`). With `--stdin` it takes its presses live, one a line
-(`A+B:0.5`), and unplugs `--tail` seconds after stdin closes: that is how `rea-suite run` below
-presses, only while the game's window is in front.
+index, `press`, `confirmed` or `lost`, `update-failed`, `unplugged` with the count lost). With
+`--stdin` it takes its presses live, one a line (`A+B:0.5`), and unplugs `--tail` seconds after
+stdin closes: that is how `rea-suite run` below presses, only while the game's window is in front.
+
+Each press is confirmed by default. While it is held, the pad polls `XInputGetState`
+(`xinput1_4`) for its own user index every 5 ms until the pressed buttons show: `confirmed` with
+the delay in seconds, or `lost` when the hold ends first. Triggers and sticks count past half
+their way; `GUIDE` is left out, since `XInputGetState` hides it. A failed
+`vigem_target_x360_update` is an `update-failed` event and a line on stderr, with the
+`VIGEM_ERROR` name. `--no-confirm` turns the check off; `--fail-lost` makes a lost or failed
+press exit 3, for a run that must not go on without its input.
+
+The lost-press trap (Alan Wake Remastered port, 2026-11-12): on a host where the pad had worked
+before, most presses held 400 ms never showed in `XInputGetState`. The driver took every update and
+XInput's packet number moved, but each lost press reached XInput together with its release, so a
+5 ms poller (and the game) saw no button down. Something on the host had changed (Steam Input,
+Remote Play, the ViGEmBus version or Game Bar are the suspects; not settled). Before this check the
+pad reported those presses as sent, and the run looked fine. Trust a pad run only with its
+`confirmed` events; on `lost`, look at the host before the game.
 
 What it needs:
 
@@ -979,8 +995,9 @@ What it needs:
   ships. The suite does not download it.
 
 Linux and macOS have no ViGEm; there `--dry-run` checks a schedule, and Linux's `uinput` would be
-the counterpart (not part of the suite). Checked 2026-11-10: the schedule and reports
-(`uv run --no-sync python -m unittest rea_suite.test_vigem_pad` in `common/`), and the exports it
+the counterpart (not part of the suite). Checked 2026-11-10: the schedule and reports; checked
+2026-11-12: the update results and the confirmation, against stand-ins for the DLL calls (both
+`uv run --no-sync python -m unittest rea_suite.test_vigem_pad` in `common/`); and the exports it
 binds against a ViGEmClient.dll (x64) with `rea-suite pe`. The pad itself was not run from the
 suite yet; the Alan Wake II port's original of this script drove that game with the same DLL and
 calls on 2026-11-10.

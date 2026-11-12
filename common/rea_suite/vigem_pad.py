@@ -20,8 +20,17 @@ plugged in, so a harness can line its captures up with the presses.
 
 ViGEmClient.dll comes from your own copy (--dll, or REA_VIGEMCLIENT_DLL): the ViGEmClient
 library built from nefarius/ViGEmClient, or the one a Python or game tool you trust ships. The
-ViGEmBus driver must be installed (docs/PORT-TOOLS.md). Exit 0: done; 1: a bad schedule; 2: no
-DLL, no driver, or not Windows.
+ViGEmBus driver must be installed (docs/PORT-TOOLS.md).
+
+Each press is confirmed: while it is held, XInputGetState (xinput1_4) is polled every 5 ms for the
+pad's user index until the pressed buttons show (`confirmed`, with the delay), or the hold ends
+(`lost`). A press can reach the driver and still never show in XInput (seen 2026-11-12), so a run
+without `confirmed` events proves nothing. --no-confirm turns this off; --fail-lost exits 3 when a
+press was lost or its update failed. A failed vigem_target_x360_update is an `update-failed` event
+and a line on stderr.
+
+Exit 0: done; 1: a bad schedule; 2: no DLL, no driver, or not Windows; 3: a press was lost
+(--fail-lost).
 """
 
 from __future__ import annotations
@@ -36,6 +45,28 @@ from dataclasses import dataclass
 from pathlib import Path
 
 OK = 0x20000000  # VIGEM_ERROR_NONE
+ERRORS = {
+    0xE0000001: "VIGEM_ERROR_BUS_NOT_FOUND",
+    0xE0000002: "VIGEM_ERROR_NO_FREE_SLOT",
+    0xE0000003: "VIGEM_ERROR_INVALID_TARGET",
+    0xE0000004: "VIGEM_ERROR_REMOVAL_FAILED",
+    0xE0000005: "VIGEM_ERROR_ALREADY_CONNECTED",
+    0xE0000006: "VIGEM_ERROR_TARGET_UNINITIALIZED",
+    0xE0000007: "VIGEM_ERROR_TARGET_NOT_PLUGGED_IN",
+    0xE0000008: "VIGEM_ERROR_BUS_VERSION_MISMATCH",
+    0xE0000009: "VIGEM_ERROR_BUS_ACCESS_FAILED",
+    0xE0000010: "VIGEM_ERROR_CALLBACK_ALREADY_REGISTERED",
+    0xE0000011: "VIGEM_ERROR_CALLBACK_NOT_FOUND",
+    0xE0000012: "VIGEM_ERROR_BUS_ALREADY_CONNECTED",
+    0xE0000013: "VIGEM_ERROR_BUS_INVALID_HANDLE",
+    0xE0000014: "VIGEM_ERROR_XUSB_USERINDEX_OUT_OF_RANGE",
+    0xE0000015: "VIGEM_ERROR_INVALID_PARAMETER",
+    0xE0000016: "VIGEM_ERROR_NOT_SUPPORTED",
+    0xE0000017: "VIGEM_ERROR_WINAPI",
+    0xE0000018: "VIGEM_ERROR_TIMED_OUT",
+    0xE0000019: "VIGEM_ERROR_IS_DISPOSING",
+}  # ViGEmClient.h's VIGEM_ERROR
+POLL = 0.005  # seconds between XInputGetState polls while a press is confirmed
 BUTTONS = {
     "UP": 0x0001, "DOWN": 0x0002, "LEFT": 0x0004, "RIGHT": 0x0008, "START": 0x0010,
     "BACK": 0x0020, "LS": 0x0040, "RS": 0x0080, "LB": 0x0100, "RB": 0x0200, "GUIDE": 0x0400,
@@ -58,6 +89,17 @@ class Report(ctypes.Structure):
         ("rx", ctypes.c_short),
         ("ry", ctypes.c_short),
     ]
+
+
+def error_name(code: int) -> str:
+    """A ViGEm result as its VIGEM_ERROR name where known, else in hex."""
+    return ERRORS.get(code, f"{code:#x}")
+
+
+class XInputState(ctypes.Structure):
+    """XINPUT_STATE: the packet number, then XINPUT_GAMEPAD, laid out as XUSB_REPORT."""
+
+    _fields_ = [("packet", ctypes.c_ulong), ("pad", Report)]
 
 
 @dataclass
@@ -142,7 +184,9 @@ class Client:
         result = lib.vigem_connect(self.client)
         if result != OK:
             lib.vigem_free(self.client)
-            raise OSError(f"vigem_connect: {result:#x} (is the ViGEmBus driver installed?)")
+            raise OSError(
+                f"vigem_connect: {error_name(result)} (is the ViGEmBus driver installed?)"
+            )
         self.targets: list[int] = []
 
     def plug(self) -> int:
@@ -150,7 +194,7 @@ class Client:
         result = self.lib.vigem_target_add(self.client, target)
         if result != OK:
             self.lib.vigem_target_free(target)
-            raise OSError(f"vigem_target_add: {result:#x}")
+            raise OSError(f"vigem_target_add: {error_name(result)}")
         self.targets.append(target)
         return target
 
@@ -159,8 +203,9 @@ class Client:
         ok = self.lib.vigem_target_x360_get_user_index(self.client, target, ctypes.byref(index))
         return index.value if ok == OK else None
 
-    def update(self, target: int, report: Report) -> None:
-        self.lib.vigem_target_x360_update(self.client, target, report)
+    def update(self, target: int, report: Report) -> int:
+        """The driver's result: OK, or a VIGEM_ERROR code."""
+        return self.lib.vigem_target_x360_update(self.client, target, report)
 
     def close(self) -> None:
         for target in reversed(self.targets):
@@ -176,14 +221,93 @@ def wait_until(start: float, at: float) -> None:
         time.sleep(min(left, 0.02))
 
 
-def play(client: Client, target: int, start: float, item: Press) -> None:
-    emit(start, event="press", press="+".join(item.names), hold=item.hold)
-    client.update(target, item.report())
-    time.sleep(item.hold)
-    client.update(target, Report())
+class XInput:
+    """xinput1_4's XInputGetState: what a game reading XInput sees of a pad."""
+
+    def __init__(self) -> None:
+        self.get = ctypes.WinDLL("xinput1_4").XInputGetState  # type: ignore[attr-defined]
+        self.get.argtypes = [ctypes.c_ulong, ctypes.POINTER(XInputState)]
+        self.get.restype = ctypes.c_ulong
+
+    def state(self, index: int) -> XInputState | None:
+        state = XInputState()
+        return state if self.get(index, ctypes.byref(state)) == 0 else None
 
 
-def main(argv: list[str] | None = None) -> int:
+def wanted(report: Report) -> Report:
+    """What must show in XInput for a press; XInputGetState hides GUIDE, so it is left out."""
+    want = Report.from_buffer_copy(report)
+    want.buttons &= ~BUTTONS["GUIDE"]
+    return want
+
+
+def shows(state: Report, want: Report) -> bool:
+    """The state holds the press: its buttons, triggers past half, sticks past half its way."""
+    if state.buttons & want.buttons != want.buttons:
+        return False
+    for trigger in ("lt", "rt"):
+        if getattr(want, trigger) and getattr(state, trigger) < getattr(want, trigger) // 2:
+            return False
+    for axis in ("lx", "ly", "rx", "ry"):
+        goal, now = getattr(want, axis), getattr(state, axis)
+        if goal and (now * goal <= 0 or abs(now) < abs(goal) // 2):
+            return False
+    return True
+
+
+def confirm(xinput: XInput, index: int, want: Report, limit: float) -> float | None:
+    """Seconds until XInput shows the press at this user index, or None within the limit."""
+    began = time.monotonic()
+    while True:
+        state = xinput.state(index)
+        seen = time.monotonic() - began
+        if state is not None and shows(state.pad, want):
+            return seen
+        if seen >= limit:
+            return None
+        time.sleep(POLL)
+
+
+def update(client: Client, target: int, start: float, report: Report, item: Press, op: str) -> bool:
+    """Send a report; a failure is an event and a line on stderr, never silent."""
+    result = client.update(target, report)
+    if result == OK:
+        return True
+    name = "+".join(item.names)
+    emit(start, event="update-failed", op=op, press=name, error=error_name(result), code=result)
+    print(f"pad: vigem_target_x360_update ({op} {name}): {error_name(result)}", file=sys.stderr)
+    return False
+
+
+def play(
+    client: Client, target: int, start: float, item: Press, xinput: XInput | None = None
+) -> bool:
+    """Press, hold, release; False when the press failed to send or XInput never showed it."""
+    name = "+".join(item.names)
+    emit(start, event="press", press=name, hold=item.hold)
+    began = time.monotonic()
+    report = item.report()
+    sent = update(client, target, start, report, item, "press")
+    seen = True
+    if sent and xinput is not None:
+        want = wanted(report)
+        index = client.user_index(target)
+        if not any(getattr(want, field) for field, _ in Report._fields_):
+            emit(start, event="unchecked", press=name, reason="XInputGetState hides GUIDE")
+        elif index is None:
+            seen = False
+            emit(start, event="lost", press=name, reason="the pad has no XInput user index")
+        elif (delay := confirm(xinput, index, want, item.hold)) is None:
+            seen = False
+            emit(start, event="lost", press=name, user_index=index, hold=item.hold)
+        else:
+            emit(start, event="confirmed", press=name, user_index=index, delay=round(delay, 3))
+    time.sleep(max(0.0, item.hold - (time.monotonic() - began)))
+    released = update(client, target, start, Report(), item, "release")
+    return sent and seen and released
+
+
+def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="rea-suite pad",
         description=__doc__,
@@ -200,7 +324,52 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--check", action="store_true", help="connect to the driver and stop")
     p.add_argument("--stdin", action="store_true", help="live presses, one a line of stdin")
     p.add_argument("--dry-run", action="store_true", help="print the schedule; no DLL")
-    args = p.parse_args(argv)
+    p.add_argument(
+        "--no-confirm", action="store_true", help="do not check presses show in XInputGetState"
+    )
+    p.add_argument("--fail-lost", action="store_true", help="exit 3 when a press was lost")
+    return p
+
+
+def drive(
+    client: Client, xinput: XInput | None, args: argparse.Namespace, presses: list[Press]
+) -> int:
+    """Plug in, press, unplug; 3 when a press was lost and --fail-lost asks to fail."""
+    idle = client.plug() if args.idle_pad else None
+    if idle is not None:
+        time.sleep(1.0)  # let XInput give the idle pad its slot first
+    target = client.plug()
+    start = time.monotonic()
+    emit(
+        start,
+        event="plugged",
+        user_index=client.user_index(target),
+        idle_pad=None if idle is None else client.user_index(idle),
+        confirm=xinput is not None,
+    )
+    lost = 0
+    for item in presses:
+        wait_until(start, item.at)
+        lost += not play(client, target, start, item, xinput)
+    if args.stdin:
+        for line in sys.stdin:
+            if not line.strip():
+                continue
+            try:
+                item = live_press(line, args.hold)
+            except ValueError as exc:
+                emit(start, event="refused", line=line.strip(), reason=str(exc))
+                continue
+            lost += not play(client, target, start, item, xinput)
+    time.sleep(args.tail)
+    emit(start, event="unplugged", lost=lost)
+    if lost:
+        print(f"pad: {lost} press(es) lost or not sent", file=sys.stderr)
+    return 3 if lost and args.fail_lost else 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parser().parse_args(argv)
     try:
         presses = schedule(args.presses, args.hold)
     except ValueError as exc:
@@ -234,32 +403,13 @@ def main(argv: list[str] | None = None) -> int:
         if args.check:
             print(json.dumps({"driver": "connected", "dll": str(args.caller_cwd / dll)}))
             return 0
-        idle = client.plug() if args.idle_pad else None
-        if idle is not None:
-            time.sleep(1.0)  # let XInput give the idle pad its slot first
-        target = client.plug()
-        start = time.monotonic()
-        emit(
-            start,
-            event="plugged",
-            user_index=client.user_index(target),
-            idle_pad=None if idle is None else client.user_index(idle),
-        )
-        for item in presses:
-            wait_until(start, item.at)
-            play(client, target, start, item)
-        if args.stdin:
-            for line in sys.stdin:
-                if not line.strip():
-                    continue
-                try:
-                    item = live_press(line, args.hold)
-                except ValueError as exc:
-                    emit(start, event="refused", line=line.strip(), reason=str(exc))
-                    continue
-                play(client, target, start, item)
-        time.sleep(args.tail)
-        emit(start, event="unplugged")
+        xinput = None
+        if not args.no_confirm:
+            try:
+                xinput = XInput()
+            except (OSError, AttributeError) as exc:
+                print(f"pad: no xinput1_4, presses are not confirmed: {exc}", file=sys.stderr)
+        return drive(client, xinput, args, presses)
     except KeyboardInterrupt:
         pass
     except OSError as exc:
