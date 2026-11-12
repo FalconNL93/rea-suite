@@ -199,6 +199,21 @@ rea-suite dosbox compare work/dosbox/<run>/regions.jsonl <port's sequence> --reg
   as fast as it can under the debugger.
 - The regions file and the input script belong to the port's tests (no game bytes); the sequence files
   are run output, in the work folder.
+- **One regions file serves both sides** when the port loads the objects at the bases measured above:
+  the port's guest addresses are then the original's linear ones, and nothing is translated.
+- **Pick regions that settle**: the bank balance, the video mode, names, land bought. Not the date or the
+  money flow, which depend on how far the simulation ran before the stop.
+- **Give each side an end.** A game never exits on its own: the input script ends with a quit, and each
+  side of a game test has a time budget in seconds. Theme Park's first game test held a shared test slot
+  for 42 minutes without them.
+- **Fix the original's speed.** `--set "cpu cycles=fixed 60000"` (about a 486) brought Theme Park's title
+  up in under 60 s with `--ints ''`, and its menu's idle timeout behaved as on the hardware; at max
+  cycles the timeout ran out before the scripted input arrived.
+- **Compare across modes on state that ignores timing.** On a virtual clock that advances per interrupt
+  point, the interpreter (which checks before every instruction) and generated code (which checks at
+  loop back-edges) see time differently, so their frames at the same tick differ even when both are
+  right. A verdict between them, such as a bisection's, compares a static screen or the regions at input
+  sync points (Theme Park, 2026-11-12: 4 of 4 sync points equal between DOSBox-X and the port).
 
 *Feeds:* the object bases the loader uses, the first-frame call list (which bounds the core's
 first work and the layer's first services), and the oracle: region sequences the port's game tests
