@@ -23,6 +23,8 @@
 #   rea-suite xbox360 <command> [options]   Xbox 360 XEX or PE image in a Ghidra project of yours:
 #                                            analyze, decomp, xrefs, functions, check, and
 #                                            Ghidra-free info, extract, imports, refs, ... (--help)
+#   rea-suite xbox <command> <xbe>          original Xbox XBE without Ghidra: info, imports,
+#                                            image, symbols (XbSymbolDatabase), check (--help)
 #   rea-suite functions <config> check|add|find|convert  a port's index of identified
 #                                            functions (no game bytes) and its gate; x86/x64 PE,
 #                                            Xbox 360 images (--help)
@@ -459,6 +461,12 @@ cmd_doctor() {
   else
     bad "xexloaderwv" "$xex"
   fi
+  local xbe
+  if xbe="$(uv run --offline --no-sync common/rea_suite/xbox.py check 2>&1)"; then
+    ok "ghidra-xbe" "$xbe"
+  else
+    bad "ghidra-xbe" "$xbe"
+  fi
 
   step "git"
   if [[ "$(git config core.hooksPath 2>/dev/null)" == .githooks ]]; then
@@ -561,6 +569,7 @@ case "$cmd" in
   agents) agents register "${args[@]}" ;;
   analyze) uv run --offline --no-sync common/rea_suite/analyze.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   playstation) uv run --offline --no-sync common/rea_suite/playstation.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
+  xbox) uv run --offline --no-sync common/rea_suite/xbox.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   xbox360) uv run --offline --no-sync common/rea_suite/xbox360.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   functions) uv run --offline --no-sync common/rea_suite/functions.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   steamstub) uv run --offline --no-sync common/rea_suite/steamstub.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;

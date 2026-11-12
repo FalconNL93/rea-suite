@@ -29,6 +29,8 @@ dependencies = [
     "ghidriff>=1",
     # AES for decrypting Xbox 360 XEX images (rea-suite xbox360; also a mitmproxy dependency)
     "cryptography>=44",
+    # Original Xbox XBE headers, sections, libraries and kernel imports (rea-suite xbox)
+    "pyxbe>=1.0.4",
     # Disassembler / CPU emulator / assembler engines
     "capstone>=5",
     "unicorn>=2.1",

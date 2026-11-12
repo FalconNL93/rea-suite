@@ -10,6 +10,7 @@
     .\platforms\windows\rea-suite.ps1 agents [agent...]  # rea MCP + REA skill for every detected agent
     .\platforms\windows\rea-suite.ps1 playstation [options]  # prepare PS1/PS2 projects
     .\platforms\windows\rea-suite.ps1 xbox360 <command> [options]  # Xbox 360 XEX/PE in your Ghidra project
+    .\platforms\windows\rea-suite.ps1 xbox info|imports|image|symbols|check <xbe>  # original Xbox XBE without Ghidra
     .\platforms\windows\rea-suite.ps1 functions <config> check|add|find|convert  # a port's function index and gate
     .\platforms\windows\rea-suite.ps1 steamstub <exe>...  # SteamStub DRM signs
     .\platforms\windows\rea-suite.ps1 pe <command> <exe> ...  # PE scans: RTTI, references, callers, strings, disasm, resources
@@ -31,7 +32,7 @@
 #>
 #Requires -Version 7
 param(
-    [Parameter(Position = 0)][ValidateSet('setup', 'select', 'winget', 'update', 'reinstall', 'agents', 'analyze', 'playstation', 'xbox360', 'functions', 'steamstub', 'pe', 'rmdp', 'le', 'frida', 'dosbox', 'pad', 'run', 'doctor', 'status', 'tools', 'clean', 'lint')][string]$Command = 'setup',
+    [Parameter(Position = 0)][ValidateSet('setup', 'select', 'winget', 'update', 'reinstall', 'agents', 'analyze', 'playstation', 'xbox', 'xbox360', 'functions', 'steamstub', 'pe', 'rmdp', 'le', 'frida', 'dosbox', 'pad', 'run', 'doctor', 'status', 'tools', 'clean', 'lint')][string]$Command = 'setup',
     [Parameter(Position = 1, ValueFromRemainingArguments)][string[]]$Rest = @()
 )
 $ErrorActionPreference = 'Stop'
@@ -149,6 +150,8 @@ function Doctor {
     uv run rea-tools rea-pins; if ($LASTEXITCODE) { $script:problems++ }
     $xex = uv run --offline --no-sync common\rea_suite\xbox360.py check
     if ($LASTEXITCODE) { Bad 'xexloaderwv' "$xex" } else { Ok 'xexloaderwv' "$xex" }
+    $xbe = uv run --offline --no-sync common\rea_suite\xbox.py check
+    if ($LASTEXITCODE) { Bad 'ghidra-xbe' "$xbe" } else { Ok 'ghidra-xbe' "$xbe" }
     Step 'system (winget)'
     foreach ($p in Winget-Ids) {
         winget list --id $p --exact --accept-source-agreements *> $null
@@ -202,6 +205,7 @@ switch ($Command) {
     }
     'agents' { Agents register @Rest }
     'playstation' { & uv run --offline --no-sync common\rea_suite\playstation.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
+    'xbox' { & uv run --offline --no-sync common\rea_suite\xbox.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'xbox360' { & uv run --offline --no-sync common\rea_suite\xbox360.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'functions' { & uv run --offline --no-sync common\rea_suite\functions.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'steamstub' { & uv run --offline --no-sync common\rea_suite\steamstub.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
