@@ -107,8 +107,12 @@ The census decides what the host layer answers and what the CPU core needs
 Traps:
 
 - **Data decoded as code.** Gap decoding reads strings and tables as instructions. Theme Park's
-  seven `ins`/`outs` sites were all text and bytes after a jump. Look at each surprising site before
-  asking the core for it.
+  seven `ins`/`outs` sites in the census were all text and bytes after a jump. Look at each
+  surprising site before asking the core for it.
+- **"None found" is a lower bound, not a proof.** The census counts what flow decoding reached, so
+  code reached only through an unresolved call is missing. Theme Park still had a real `rep insb`
+  (reading the DAC palette back after `out 0x3C7`) that only a run found. Build the core for the
+  whole instruction class, and keep the refusal that names the instruction.
 - **Far calls through tables that are zero in the file**, filled when a sound driver (`HMI*.386`)
   is loaded at run time: that code is not in the executable, cannot be recompiled, and is replaced
   by answering the sound library at its API edge. The calls then never run.
