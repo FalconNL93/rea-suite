@@ -10,8 +10,8 @@ findings go to its own repository.
 What lies around this page:
 
 - The routes from an original to what a recompilation needs: [DOS-GAMES.md](DOS-GAMES.md),
-  [XBOX-CLASSIC.md](XBOX-CLASSIC.md), [PS1.md](PS1.md), [PS2.md](PS2.md); the Xbox 360 lane is the
-  README's "Console games and disc images".
+  [XBOX-CLASSIC.md](XBOX-CLASSIC.md), [PS1.md](PS1.md), [PS2.md](PS2.md), [PS3.md](PS3.md); the Xbox
+  360 lane is the README's "Console games and disc images".
 - The suite's port tools: [PORT-TOOLS.md](PORT-TOOLS.md).
 - The runtime our x86 ports are recompiled onto: winrt (games/winrt), and its research on x87 in other
   translators (`docs/2026-11-05-x87-translation-research.md`) and on what other runtimes have
@@ -29,6 +29,7 @@ What lies around this page:
 | N64 (MIPS) | [N64Recomp](https://github.com/N64Recomp/N64Recomp) and N64ModernRuntime | libultra (threads, messages, VI, audio), RSP microcode recompiled, a renderer (RT64) | a decompilation's ELF, an emulator |
 | PS1 (R3000A) | [psxrecomp](https://github.com/mstan/psxrecomp) (noncommercial license), [RecompOne](https://github.com/flafmg/RecompOne) (MIT, C#) | the BIOS (recompiled, with an HLE tier), GPU, SPU, CD-ROM; or the PsyQ libraries | PCSX-Redux, Beetle |
 | PS2 (R5900 EE, IOP, VUs) | [PS2Recomp](https://github.com/ran-j/PS2Recomp) | EE syscalls and SDK functions bound by name or address; IOP modules run; VU1 interpreted | PCSX2 |
+| PS3 (Cell: PPU, SPUs) | [ps3recomp](https://github.com/sp00nznet/ps3recomp) (MIT) | firmware imports by NID onto HLE modules; LV2 syscalls; SPU images lifted per image, or replaced on the PPU; the RSX command stream on D3D12, Metal or Vulkan | RPCS3 (GDB stub, PINE, logs) |
 | Any, with the source wanted | a matching decompilation (splat, objdiff, decomp.me), then a port of it | the SDK (libultra, PsyQ, the XDK) or the graphics library | the original, function by function |
 | An engine with a documented data format | a reimplementation (OpenTTD, OpenMW, CorsixTH) | the original's data files only | the original, by eye and by save files |
 
@@ -225,6 +226,28 @@ Small and readable; the wiki has the port guide.
   them to real implementations, move per-game hacks into overrides, retest from a cold boot.
 - `.recomp.json` at a project's root describes it to trackers.
 
+### ps3recomp (PS3)
+
+[ps3recomp](https://github.com/sp00nznet/ps3recomp) (MIT, v0.19.0, read 2026-11-13). See
+[PS3.md](PS3.md), step 7, and its list of game ports.
+
+- **The import edge by NID**: the lifter turns each firmware import stub into a call to the HLE
+  dispatcher (`--hle-stubs`), and a generated table maps NIDs to handlers. Without the stubs the first
+  import call crashes.
+- **SPU images lifted one by one**: local store as an array, MFC DMA as copies, channels as queues, and
+  dispatch per image (`image_id`), because a SPURS kernel, a policy module and a job overlap in local
+  store. A PPU-side replacement per job (the fallback registry) is the other way, for a decompressor or
+  mixer written by hand or before an image is lifted.
+- **Debug builds as ground truth**: fake-signed and unstripped, with DWARF; symbols, struct layouts and
+  named SPU jobs come from them, then carry over to the retail build.
+- **RPCS3 as the reference, not a source**: no GPL code in the tree; RPCS3's GDB stub is driven as an
+  oracle (`tools/rpcs3_probe/`).
+- **A regression gate over several ports**: goldens recorded per port, checked before a shared-runtime
+  change lands (`docs/REGRESSION_GATE.md`).
+- The PPU is the same PowerPC family as the Xbox 360's Xenon, without VMX128, so XenonRecomp's and
+  rexglue's lessons on jump tables, save/restore helpers and the TOC carry over; the SPUs have no 360
+  counterpart.
+
 ## Static recompilers for x86 PC and DOS
 
 The same problems as xboxrecomp, without a console's fixed hardware and with the whole of Win32 or DOS
@@ -292,7 +315,7 @@ the exception machinery (`_EH_prolog`, `__CxxFrameHandler`, `_except_handler3`).
 
 - [rexdex/recompiler](https://github.com/rexdex/recompiler) (MIT): the first public Xbox 360 recompiler
   (2017), credited by rexglue.
-- [ps3recomp](https://github.com/sp00nznet/ps3recomp) (MIT): PS3 runtime libraries; xboxrecomp's
+- [ps3recomp](https://github.com/sp00nznet/ps3recomp) (MIT): above; xboxrecomp's
   conformance method comes from it (check the decoder against the SDK's objdump, check the lifter by
   compiling a C corpus, running both sides and requiring bit-exact results).
 - Trackers: [recompiled-games-list](https://github.com/wangxiaoxiang5599/recompiled-games-list) (CC BY 4.0,

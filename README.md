@@ -171,6 +171,7 @@ REA_SUITE_COMPONENTS="build steam"
 | `decomp` | no | decompilation projects: splat (split MIPS executables) and objdiff (match objects against the original) |
 | `game-archives` | no | extract-xiso, ZArchive; Windows also XGDTool and QuickBMS ([platform limits](docs/GAME-ARCHIVES.md)) |
 | `xbox` | no | original Xbox games: xemu with QEMU's GDB stub, extract-xiso ([route](docs/XBOX-CLASSIC.md)) |
+| `ps3` | no | PS3 games: RPCS3 (debugger, GDB stub, decryption for `rea-suite ps3`), RPCS3's source for the NID names, ps3recomp's pipeline, Ps3GhidraScripts ([route](docs/PS3.md)) |
 | `vm` | no | QEMU + OVMF (Linux) or VirtualBox (Windows); UTM on macOS |
 
 Change it with `rea-suite select` (menu, then setup), by editing `.env`, or per run
@@ -261,6 +262,24 @@ The routes from a disc to a port, a decompilation or a recompilation are [PS1](d
 [PS2](docs/PS2.md); the tools and what the communities use that the suite lacks are in
 [PLAYSTATION.md](docs/PLAYSTATION.md). [Game archive tools](docs/GAME-ARCHIVES.md) cover Xbox images,
 ZAR/WUA and QuickBMS.
+
+PS3: [the route](docs/PS3.md) from the disc or PKG to a recompilation, with component `ps3` (RPCS3,
+ps3recomp, the NID names from RPCS3's source). Without Ghidra or a key:
+
+```sh
+rea-suite ps3 info EBOOT.BIN              # SELF headers: program type, segments, encryption, NPDRM license
+rea-suite ps3 decrypt EBOOT.BIN -o plain  # your RPCS3 decrypts (its keys, your firmware and licenses)
+rea-suite ps3 info plain/EBOOT.elf        # ELF/PRX: sections, module, imports and exports, NIDs named
+rea-suite ps3 imports plain/EBOOT.elf     # TSV: library, kind, NID, slot address, name
+rea-suite ps3 nids 0x8b72cda1 cellPadGetData   # NID to name and name to NID
+rea-suite ps3 info PS3_GAME/PARAM.SFO     # title id, title, versions
+rea-suite ps3 check                       # RPCS3 and the NID source (doctor runs it with the component)
+```
+
+`decrypt` runs `rpcs3 --decrypt` headless on a copy; `--data DIR` uses another RPCS3 profile (Linux,
+Windows), `--klic` gives an NPDRM title's key. Tests: `uv run --no-sync python -m unittest
+rea_suite.test_ps3` in `common/` (synthetic SELF, ELF, PRX and SFO; a fake RPCS3); opt-in
+`REA_PS3_SAMPLE=<file>` with `REA_PS3_NID_SOURCE=<RPCS3 source>` (a real file, read-only).
 
 Original Xbox (2001): [the route](docs/XBOX-CLASSIC.md) from the disc image to what a recompilation needs.
 What the static recompilers, decompilation projects and engine reimplementations already solved, per
@@ -592,6 +611,9 @@ been run on macOS arm64 and Linux x86_64 (WSL2, 2026-11-03); Windows execution r
 | `rea-suite steamstub` | Detect Steam's DRM wrapper before analysis; Steamless removes it ([below](#steamstub)) | this repo |
 | `rea-suite frida` | Run a Frida script on a process and log it as JSON lines; a passive observer for exports, addresses and IAT slots (pad state, raw input, call counts per caller); a write guard that keeps a Windows game's file changes inside allowed folders ([port tools](docs/PORT-TOOLS.md#frida-rea-suite-frida)) | this repo |
 | `rea-suite dosbox` | A DOS program in DOSBox-X, headless: the INT 21h, 31h (DPMI), 33h and 10h calls it makes with registers, mode and decoded arguments (file names, DPMI real-mode calls), entries into real-mode callbacks, and DOSBox-X's own log (INT 21h, file operations, port E9h text) as JSON lines; memory dumps and pokes at a trigger (an interrupt, a file open, a time, an input item, the exit) and scripted keys, mouse positions and clicks for unattended runs; named memory regions at sync points as a sequence file, and `compare`, which finds the first difference from a port's run of the same input ([port tools](docs/PORT-TOOLS.md#dos-programs-rea-suite-dosbox)) | this repo |
+| RPCS3 | PS3 emulator and debugger: GDB stub (PPU threads), PINE memory access, logs per module, LLE/HLE per library, RSX captures, `--decrypt` (component `ps3`) | tools.yml (pinned build per platform) |
+| ps3recomp | PS3 static recompilation: Python pipeline (ELF/fSELF, PPU and SPU disassemblers and lifters, SPU images, NIDs) and runtime library (component `ps3`) | tools.yml (release bundle) |
+| `rea-suite ps3` | PS3 files from the file alone: SELF headers without a key, ELF/PRX module tables with NIDs named from RPCS3's source, PARAM.SFO; decryption handed to your RPCS3 ([route](docs/PS3.md)) | this repo |
 | `rea-suite xbox` | Original Xbox XBEs from the file alone: headers, title, XDK library versions, kernel imports by name, the flat image as loaded, the XDK functions XbSymbolDatabase finds ([route](docs/XBOX-CLASSIC.md)) | this repo |
 | `rea-suite pad` | A virtual Xbox 360 pad pressing buttons on a schedule, for testing a game's pad input without a person (ViGEm; Windows only, component `porting` for the driver) ([port tools](docs/PORT-TOOLS.md#virtual-pad-rea-suite-pad-windows)) | this repo |
 | `rea-suite run` | One bounded, observed run of a Windows program or game: arguments, environment and working folder, a script of steps (waits, scan-code keys, clicks, text, pad presses, captures) sent only while its window is verified in front, captures (PrintWindow, the screen as fallback), message boxes recorded and answered, modules, child processes and endpoints sampled, the install folder proven unchanged, WM_CLOSE then a kill of the whole job, a JSON report (Windows, and WSL through pwsh.exe) ([port tools](docs/PORT-TOOLS.md#run-harness-rea-suite-run-windows)) | this repo |
@@ -865,6 +887,7 @@ absolute paths to extension JARs must follow the preserved module directory.
 | Emotion Engine: Reloaded | PS2 R5900/MMI/VU0 macro support (component `playstation`) | exact-version prebuilt |
 | XEXLoaderWV | Load Xbox 360 XEX executables (`rea-suite xbox360`; pinned, checked by doctor) | prebuilt or built |
 | ghidra-xbe | Load original Xbox XBE executables: kernel imports by ordinal, XDK library functions named by its XbSymbolDatabase CLI (`rea-ghidra`, `rea-suite xbox`; checked by doctor) | prebuilt only (no license file upstream; its build fetches its own Ghidra) |
+| Ps3GhidraScripts | PS3 ELF/PRX: import and export tables named by NID, the TOC from the OPDs, LV2 syscalls (component `ps3`; [route](docs/PS3.md)) | built (no 12.1.4 release; no license file upstream) |
 | ghidra-firmware-utils | Load UEFI images, PCI option ROMs and other firmware formats | prebuilt or built |
 | ghidra-lx-loader | Load LE/LX executables (DOS/4GW and DOS/16 LE, DOS32A, OS/2 LX, VxD) with their objects at their bases and every fixup applied (`rea-ghidra analyze`; REA's open_binary still refuses LE before Ghidra sees it) | built from a pinned commit |
 | ghidra-nativeaot | Recover .NET Native AOT binaries in Ghidra; REA's optional adapter is configured separately | prebuilt or built |

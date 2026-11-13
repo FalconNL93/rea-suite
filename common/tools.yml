@@ -139,6 +139,14 @@ tools:
         component: playstation
         github: chaoticgd/ghidra-emotionengine-reloaded
         asset: '^ghidra_{ghidra}_PUBLIC_\d+_ghidra-emotionengine-reloaded\.zip$'
+      # PS3 ELF/PRX: import and export tables named from its NID list, the TOC (r2) set from the
+      # OPDs, LV2 syscalls named (component ps3, docs/PS3.md). No release for Ghidra 12.1.4
+      # (its newest, 1.0111, stops at 12.1.2), so a source build; the repository has no license.
+      ps3ghidrascripts:
+        component: ps3
+        github: clienthax/Ps3GhidraScripts
+        asset: '^ghidra_{ghidra}_PUBLIC_\d+_Ps3GhidraScripts\.zip$'
+        build: true
       # .NET Native AOT analysis; rea uses its jar (REA_GHIDRA_NATIVEAOT_JAR)
       nativeaot:
         github: Washi1337/ghidra-nativeaot
@@ -755,6 +763,49 @@ tools:
         xemu: xemu.app/Contents/MacOS/xemu
       windows:
         xemu: xemu.exe
+
+  # --- component: ps3 ---
+
+  # PS3 emulator and debugger (GPL-2): `rea-suite ps3 decrypt` (--decrypt, headless), the GDB
+  # stub (PPU threads), PINE/IPC memory access, logs. A rolling release published per platform in
+  # its own repository, so a direct URL; pinned to the build docs/PS3.md was checked with
+  # (2026-11-13). Move it with rpcs3-source below, same commit. Firmware is the player's own
+  # (rpcs3 --installfw PS3UPDAT.PUP).
+  rpcs3:
+    version: 0.0.43-20583-9b8974d3
+    url:
+      linux: https://github.com/RPCS3/rpcs3-binaries-linux/releases/download/build-9b8974d32e73c897a5fcd6bdf69413ca7e436b01/rpcs3-v0.0.43-20583-9b8974d3_linux64.AppImage
+      macos: https://github.com/RPCS3/rpcs3-binaries-mac-arm64/releases/download/build-9b8974d32e73c897a5fcd6bdf69413ca7e436b01/rpcs3-v0.0.43-20583-9b8974d3_macos_aarch64.7z
+      windows: https://github.com/RPCS3/rpcs3-binaries-win/releases/download/build-9b8974d32e73c897a5fcd6bdf69413ca7e436b01/rpcs3-v0.0.43-20583-9b8974d3_win64_msvc.7z
+    bin:
+      linux:
+        rpcs3: {path: 'rpcs3-*.AppImage', env: {APPIMAGE_EXTRACT_AND_RUN: '1'}}
+      macos:
+        rpcs3: RPCS3.app/Contents/MacOS/rpcs3
+      windows:
+        rpcs3: rpcs3.exe
+
+  # RPCS3's source at the commit of the build above: the names `rea-suite ps3` hashes into NIDs
+  # (REG_FUNC registrations, PPUFunction.cpp's tables). Data only, never built.
+  rpcs3-source:
+    version: 9b8974d32e73c897a5fcd6bdf69413ca7e436b01
+    url:
+      linux: &rpcs3-source https://github.com/RPCS3/rpcs3/archive/9b8974d32e73c897a5fcd6bdf69413ca7e436b01.tar.gz
+      macos: *rpcs3-source
+      windows: *rpcs3-source
+    strip: 1
+
+  # PS3 static recompilation toolkit (MIT): the Python pipeline (ELF/PRX and fSELF readers, PPU
+  # and SPU disassemblers and lifters, SPU image extraction, NID tools) and the runtime library
+  # per platform. Run its scripts with `uv run python tools/ps3recomp/current/tools/<script>.py`.
+  ps3recomp:
+    github: sp00nznet/ps3recomp
+    version: latest
+    assets:
+      linux: '^ps3recomp-v[\d.]+-linux-x64\.zip$'
+      macos: '^ps3recomp-v[\d.]+-mac-arm64\.zip$'
+      windows: '^ps3recomp-v[\d.]+-win-x64\.zip$'
+    strip: 1
 
   # --- component: steam ---
 

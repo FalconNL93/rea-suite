@@ -25,6 +25,9 @@
 #                                            Ghidra-free info, extract, imports, refs, ... (--help)
 #   rea-suite xbox <command> <xbe>          original Xbox XBE without Ghidra: info, imports,
 #                                            image, symbols (XbSymbolDatabase), check (--help)
+#   rea-suite ps3 <command> ...             PS3 SELF/SPRX headers, ELF/PRX imports and exports
+#                                            with NIDs named, PARAM.SFO, NID lookup, decryption by
+#                                            your RPCS3, check (component ps3; --help)
 #   rea-suite functions <config> check|add|find|convert  a port's index of identified
 #                                            functions (no game bytes) and its gate; x86/x64 PE,
 #                                            Xbox 360 images (--help)
@@ -472,6 +475,15 @@ cmd_doctor() {
     bad "ghidra-xbe" "$xbe"
   fi
 
+  if components selected | grep -qx ps3; then
+    local ps3
+    if ps3="$(uv run --offline --no-sync common/rea_suite/ps3.py check 2>&1)"; then
+      ok "ps3" "${ps3//$'\n'/; }"
+    else
+      bad "ps3" "${ps3//$'\n'/; }"
+    fi
+  fi
+
   step "git"
   if [[ "$(git config core.hooksPath 2>/dev/null)" == .githooks ]]; then
     ok "hooks" "gitleaks runs on commit and push"
@@ -574,6 +586,7 @@ case "$cmd" in
   analyze) uv run --offline --no-sync common/rea_suite/analyze.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   playstation) uv run --offline --no-sync common/rea_suite/playstation.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   xbox) uv run --offline --no-sync common/rea_suite/xbox.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
+  ps3) uv run --offline --no-sync common/rea_suite/ps3.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   xbox360) uv run --offline --no-sync common/rea_suite/xbox360.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   functions) uv run --offline --no-sync common/rea_suite/functions.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   steamstub) uv run --offline --no-sync common/rea_suite/steamstub.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;

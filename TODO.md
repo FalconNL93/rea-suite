@@ -61,6 +61,20 @@ with the reason when it is dropped.
   - chdman on Windows: MAME's winget package needs an install location the suite's winget list cannot
     give; its release (`mame*b_x64.exe`, a 7-Zip self-extractor) holds `chdman.exe`.
 
+- **PS3, from the route's first draft** (2026-11-13; the route is docs/PS3.md):
+  - An RPCS3 oracle command, the counterpart of `rea-suite dosbox`: named memory regions read over
+    PINE (ipc.yml, port 28012) at sync points, module calls from the trace log, as JSON lines. Needs a
+    game that boots, which needs firmware.
+  - An SPU language for Ghidra that builds with the pinned Ghidra: GhidraSPU's SLEIGH compiles with
+    12.1.4, its Java relocation handler is for 9.2; ps3-cell-re-tools' `spu-sleigh` builds on it.
+  - The Cell-specific VMX loads and stores (`lvlx`, `lvrx`, `stvlx`, `stvrx`) and `r2` preserved in a
+    PS3 compiler spec, shipped as an extension rather than an edit of the Ghidra install.
+  - `rea-suite ps3 analyze` like `xbox360 analyze`: the import with `PowerPC:BE:64:A2ALT-32addr`,
+    Ps3GhidraScripts run before analysis, the queries after. Waits for a check of Ps3GhidraScripts'
+    source build.
+  - RPCS3's pin moves by hand (a direct URL per platform; its builds live in one repository per
+    platform, which `github:` cannot follow). Move `rpcs3` and `rpcs3-source` together.
+
 - **ghidra-allegrex (PSP)**: REA 6.8.0 has a PSP Allegrex profile that expects this Ghidra
   extension; kotcrab/ghidra-allegrex publishes exact-version builds (12.1.4 in v21.4). Needs a
   check of its license and REA's expectations before it joins a component.

@@ -92,6 +92,10 @@ components:
     uv-tools: ['splat64[mips]']
     tools: [objdiff]
 
+  ps3:
+    description: PS3 - RPCS3 with its debugger, GDB stub and decryption (rea-suite ps3, docs/PS3.md), the NID names from RPCS3's source, ps3recomp's pipeline, and the PS3 ELF scripts for Ghidra
+    tools: [rpcs3, rpcs3-source, ps3recomp]
+
   game-archives:
     description: Game archives and Xbox discs (extract-xiso, ZArchive; Windows also XGDTool and QuickBMS); ZArchive builds from source on Linux/macOS
     # System zstd headers/library are required for native ZArchive builds.

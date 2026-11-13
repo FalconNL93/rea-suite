@@ -3,7 +3,8 @@
 The tool reference for PlayStation work: what the suite installs, the `rea-suite playstation` command,
 and what the reverse-engineering and decompilation communities use that the suite has or lacks. The
 routes from a disc to a port, a decompilation or a recompilation are [PS1.md](PS1.md) and
-[PS2.md](PS2.md).
+[PS2.md](PS2.md). The PS3 has its own route, component and command: [PS3.md](PS3.md) (`rea-suite ps3`,
+component `ps3`).
 
 Checked: **2026-11-12** (tools, releases and the table of what the communities use).
 
