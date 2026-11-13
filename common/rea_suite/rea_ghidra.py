@@ -11,6 +11,11 @@
   -o FILE        write the output there instead of stdout
   --force        analyze: run the auto-analysis again on the program in the project; its
                  names, types and comments stay (it is never imported again over them)
+  --loader NAME  analyze: the Ghidra loader to import with (GameCubeLoader, ElfLoader, ...)
+  --loader-KEY VALUE
+                 analyze: an option of that loader, as analyzeHeadless takes it
+                 (--loader GameCubeLoader --loader-autoloadMaps false for a GameCube DOL);
+                 both are for the import only, never --force's analysis in place
 
 The queries open the project read-only; with --project, <binary> may be the program's name
 alone. Ghidra's logs go to <project>/logs/. Scripts: common/ghidra_scripts/.
@@ -47,7 +52,8 @@ def usage() -> str:
 
 def parse(argv: list[str]) -> dict:
     """Options anywhere; after -- everything is an argument (a text that starts with -)."""
-    opts = {"force": False, "project": None, "name": None, "output": None, "rest": []}
+    opts = {"force": False, "project": None, "name": None, "output": None, "loader": None,
+            "loader_options": [], "rest": []}  # fmt: skip
     args = list(argv)
     while args:
         arg = args.pop(0)
@@ -58,6 +64,15 @@ def parse(argv: list[str]) -> dict:
             if not args:
                 raise Refused(f"{arg} needs a value")
             opts[key] = args.pop(0)
+        elif arg.startswith("--loader"):
+            if not args:
+                raise Refused(f"{arg} needs a value")
+            if arg == "--loader":
+                opts["loader"] = args.pop(0)
+            elif arg.startswith("--loader-") and len(arg) > len("--loader-"):
+                opts["loader_options"].append((arg[len("--loader-") :], args.pop(0)))
+            else:
+                raise Refused(f"unknown option: {arg}")
         elif arg == "--":
             opts["rest"] += args
             break
@@ -73,6 +88,8 @@ class Session:
         self.cwd = cwd
         self.runner = runner
         self.force = opts["force"]
+        self.loader = opts["loader"]
+        self.loader_options = opts["loader_options"]
         self.output = opts["output"]
         self.binary = opts["rest"][0]
         self.items = opts["rest"][1:]
@@ -122,7 +139,10 @@ class Session:
                     f"no such file: {self.binary} (and no program {self.program} in {self.project})"
                 )
             print(f"rea-ghidra: analyzing {self.program} (once; log: {log})", file=sys.stderr)
-            command = self.command("-import", str(binary.resolve()), *repair)
+            arguments = ghidra_headless.import_arguments(
+                binary.resolve(), self.loader, self.loader_options
+            )
+            command = self.command(*arguments, *repair)
         try:
             self.runner.run(command, log)
         except ghidra_headless.GhidraError as exc:
@@ -177,6 +197,8 @@ def main(argv: list[str] | None = None, runner: ghidra_headless.Headless | None 
                 raise Refused("Ghidra missing; run rea-suite setup")
         if opts["force"] and command != "analyze":
             raise Refused("--force is for analyze")
+        if (opts["loader"] or opts["loader_options"]) and command != "analyze":
+            raise Refused("--loader and its options are for analyze")
         session = Session(opts, cwd, runner)
         if command == "analyze":
             session.analyze()

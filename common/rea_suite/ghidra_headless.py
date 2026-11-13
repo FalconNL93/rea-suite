@@ -13,8 +13,9 @@ Every run is bounded and named:
 The decompiler's limit per function stays `REA_GHIDRA_DECOMPILE_TIMEOUT_SECONDS`, read by the
 scripts themselves (common/ghidra_scripts/DecompileLimit.java); the environment passes through.
 
-Callers build their argument lists with `command()` and run them with `run()`; `Headless` is the
-interface, `AnalyzeHeadless` its one implementation (a stand-in in tests, another engine later).
+Callers build their argument lists with `command()` (an import's with `import_arguments()`: the
+file, a loader and its options) and run them with `run()`; `Headless` is the interface,
+`AnalyzeHeadless` its one implementation (a stand-in in tests, another engine later).
 """
 
 from __future__ import annotations
@@ -71,6 +72,24 @@ def check_project(project: Path) -> None:
             " (Ghidra: \"Path element starting with '.' is not permitted\"). Put the project"
             " elsewhere (--project, or REA_GHIDRA_PROJECTS), e.g. outside a worktree under .claude/"
         )
+
+
+def import_arguments(
+    binary: Path | str, loader: str | None = None, options: Sequence[tuple[str, str]] = ()
+) -> list[str]:
+    """`-import FILE`, then `-loader NAME` and its `-loader-KEY VALUE` options (Ghidra takes them
+    only after -loader): what a loader that would otherwise ask in a dialog needs headless
+    (GameCubeLoader's map prompt: `-loader-autoloadMaps false`)."""
+    if options and not loader:
+        raise GhidraError("loader options need a loader (-loader NAME)")
+    arguments = ["-import", str(binary)]
+    if loader:
+        arguments += ["-loader", loader]
+    for key, value in options:
+        if not key or key.startswith("-") or any(c.isspace() for c in key):
+            raise GhidraError(f"loader option {key!r}: a name such as autoloadMaps")
+        arguments += [f"-loader-{key}", value]
+    return arguments
 
 
 class Headless(Protocol):

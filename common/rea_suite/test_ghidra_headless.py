@@ -120,6 +120,28 @@ class AnalyzeHeadlessTests(unittest.TestCase):
 
 
 class SettingsTests(unittest.TestCase):
+    def test_an_import_takes_a_loader_and_its_options_in_ghidras_order(self) -> None:
+        self.assertEqual(
+            ghidra_headless.import_arguments("/g/main.dol"), ["-import", "/g/main.dol"]
+        )
+        self.assertEqual(
+            ghidra_headless.import_arguments(
+                Path("/g/main.dol"), "GameCubeLoader", [("autoloadMaps", "false")]
+            ),
+            [
+                "-import",
+                "/g/main.dol",
+                "-loader",
+                "GameCubeLoader",
+                "-loader-autoloadMaps",
+                "false",
+            ],
+        )
+        with self.assertRaisesRegex(GhidraError, "need a loader"):
+            ghidra_headless.import_arguments("x", None, [("autoloadMaps", "false")])
+        with self.assertRaisesRegex(GhidraError, "autoloadMaps"):
+            ghidra_headless.import_arguments("x", "L", [("-bad", "1")])
+
     def test_the_time_limit_is_a_setting_with_a_default(self) -> None:
         self.assertEqual(ghidra_headless.timeout_seconds({}), 3600)
         setting = ghidra_headless.TIMEOUT_SETTING

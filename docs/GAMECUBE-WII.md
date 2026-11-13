@@ -96,8 +96,8 @@ The code of a GameCube or Wii game lives in up to three kinds of file:
 
 ```sh
 # headless: the loader's map prompt needs a window, so name the loader and turn autoloading off
-analyzeHeadless <port>/re/ghidra <port> -import ~/Games/<game>/disc/sys/main.dol \
-  -loader GameCubeLoader -loader-autoloadMaps false
+rea-ghidra analyze --project <port>/re/ghidra --loader GameCubeLoader --loader-autoloadMaps false \
+  ~/Games/<game>/disc/sys/main.dol
 rea-ghidra functions --project <port>/re/ghidra main.dol > functions.tsv
 rea-ghidra decomp --project <port>/re/ghidra main.dol 0x80003100
 ```
@@ -116,8 +116,9 @@ rea-ghidra decomp --project <port>/re/ghidra main.dol 0x80003100
 - **Headless trap**: the loader asks in a dialog for a symbol map when none sits beside the DOL
   (`main.map` next to `main.dol` loads by itself), and for a REL's load address. Headless, that dialog
   fails the import with `HeadlessException`. Pass `-loader GameCubeLoader -loader-autoloadMaps false`
-  for a DOL. A REL may ask for its addresses and a map too (`RELProgramBuilder`); not run headless
-  here. `rea-ghidra analyze` does not pass loader options yet, so use `analyzeHeadless` as above.
+  for a DOL (`rea-ghidra analyze --loader GameCubeLoader --loader-autoloadMaps false`, as above:
+  `--loader NAME` and any `--loader-KEY VALUE` go to the import). A REL may ask for its addresses and a
+  map too (`RELProgramBuilder`); not run headless here.
 - **REA** opens a DOL itself since 6.8.0, when told the format: `open_binary` with `format:
   "gamecube-dol"` (a DOL is never detected on its own). It maps the text and data sections at their
   addresses with stock Ghidra `PowerPC:BE:32:default`, so paired singles are not decoded unless
@@ -241,7 +242,6 @@ What a recompilation of a GameCube or Wii game needs, whichever recompiler is us
 
 ## Still missing
 
-- Loader options in `rea-ghidra analyze`, so a DOL imports headless through the suite's runner.
 - A GDB back end for the suite's oracle format, for Dolphin and the other GDB stubs.
 - An RSO reader in `rea-suite gamecube`; dtk covers it today.
 - DSP ADPCM and GX texture converters.

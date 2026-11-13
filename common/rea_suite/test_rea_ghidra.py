@@ -135,6 +135,25 @@ class ReaGhidra(unittest.TestCase):
         self.assertEqual(self.call_lines(), [])
         self.assertFalse(project.exists())
 
+    def test_a_gamecube_dol_imports_with_its_loader_and_no_map_prompt(self) -> None:
+        dol = self.root / "game" / "main.dol"
+        dol.write_bytes(b"\0" * 0x100)
+        done = self.run_tool("analyze", "--project", str(self.project), "--loader",
+                             "GameCubeLoader", str(dol), "--loader-autoloadMaps", "false")  # fmt: skip
+        self.assertEqual(done.returncode, 0, done.stderr)
+        (call,) = self.call_lines()
+        self.assertIn(
+            f"-import {dol} -loader GameCubeLoader -loader-autoloadMaps false -scriptPath", call
+        )
+        done = self.run_tool("functions", "--project", str(self.project), "main.dol",
+                             "--loader", "GameCubeLoader")  # fmt: skip
+        self.assertEqual(done.returncode, 1)
+        self.assertIn("are for analyze", done.stderr)
+        done = self.run_tool("analyze", "--project", str(self.root / "other"),
+                             "--loader-autoloadMaps", "false", str(dol))  # fmt: skip
+        self.assertEqual(done.returncode, 1)
+        self.assertIn("need a loader", done.stderr)
+
     def test_force_is_refused_for_queries(self) -> None:
         done = self.run_tool("decomp", "--force", str(self.binary), "0x401000")
         self.assertEqual(done.returncode, 1)
