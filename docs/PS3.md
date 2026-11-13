@@ -16,9 +16,19 @@ What lies around this page:
 - The port's platform work (the master, the SDK, the port checklist): master-server's docs/PORTING.md.
 
 Install: component `ps3` (`rea-suite select`, then `rea-suite setup`). It brings RPCS3, RPCS3's source
-at the same commit (the NID names), ps3recomp's pipeline, and the Ps3GhidraScripts extension for
-Ghidra (a source build: see step 3). `rea-suite doctor` runs `rea-suite ps3 check` when the component
-is selected.
+at the same commit (the NID and syscall names), ps3recomp's pipeline, and the Ps3GhidraScripts
+extension for Ghidra. Ps3GhidraScripts has no release for the pinned Ghidra, so setup builds it from
+source with Gradle; `rea-suite setup --no-build` (or `REA_TOOLS_NO_BUILD=1`) skips that, and
+`rea-suite ps3 analyze` does not need it. Its repository has no license file. `rea-suite doctor` runs
+`rea-suite ps3 check` when the component is selected.
+
+**Which RPCS3 build.** The suite pins the RPCS3 build this page was checked with. To use another, set
+`REA_RPCS3_BUILD` (in `.env` or the run's environment) to `latest` or to a build's tag
+(`build-<commit>`, as in RPCS3/rpcs3-binaries-linux's releases), then run
+`rea-suite tools install rpcs3` (`rea-suite tools update rpcs3` moves `latest` on).
+`rea-suite ps3 check` shows the installed build and which setting chose it, and fails when the
+installed build is not the one the setting (or, without it, the pin) asks for. The NID names stay with
+the pinned source commit; `check` says when the two differ.
 
 ## The machine, in short
 
@@ -108,27 +118,45 @@ rea-suite ps3 nids 0x8b72cda1 cellPadGetData                               # eit
 
 *Feeds:* the import census for step 4, the decrypted ELF and PRXs for step 3.
 
-## 3. Ghidra
+## 3. Ghidra: `rea-suite ps3 analyze`
 
 ```sh
-analyzeHeadless work/game/ghidra game -import work/game/plain/EBOOT.elf \
-  -processor PowerPC:BE:64:A2ALT-32addr -cspec default
+rea-suite ps3 analyze work/game/plain/EBOOT.elf --project work/game/ghidra   # once
+rea-suite ps3 analyze USRDIR/EBOOT.BIN --project work/game/ghidra            # a SELF: your RPCS3 decrypts it first
 rea-ghidra functions --project work/game/ghidra EBOOT.elf -o work/game/functions.tsv
 rea-ghidra decomp    --project work/game/ghidra EBOOT.elf 0x10200
 ```
 
-- **Pick the language yourself.** Ghidra's ELF loader picks `PowerPC:BE:64:A2ALT` (64-bit addresses)
-  for a PS3 ELF; the game's pointers are 32-bit, so import with `PowerPC:BE:64:A2ALT-32addr` (Power ISA
-  with AltiVec, 32-bit addressing), the same language as the Xbox 360 lane. Checked on ps3autotests'
-  `basic.ppu.elf`: import, analysis, `rea-ghidra functions` (138 functions) and `decomp`.
-- **The TOC.** Every function reads globals through `r2`. Ghidra's `ppu_64_32.cspec` does not list
-  `r2` as preserved across calls, so the decompiler loses it after a call; Ps3GhidraScripts' README
-  adds `<register name="r2"/>` to `<unaffected>` in that file (a change to your Ghidra install, which
-  `rea-suite tools reinstall ghidra` undoes). Its `AssignPs3R2FromOpd` sets `r2` per function from
-  the OPDs.
-- **Imports**: Ps3GhidraScripts' `AnalyzePs3Binary` (run before auto-analysis) defines the import
-  and export tables and names them from its own NID list, then `DefinePS3Syscalls` names the `sc`
-  call sites. Without it, `rea-suite ps3 imports` gives the slot address of every import with its name.
+`analyze` takes an ELF, a PRX or a SELF (decrypted by your RPCS3 into `<project>/decrypted/`, with
+`decrypt`'s `--data`, `--klic` and `--rpcs3`), and in one run of Ghidra:
+
+- imports it with `PowerPC:BE:64:A2ALT-32addr`;
+- before analysis (`common/ghidra_scripts/Ps3Prepare.java`), sets `r2` to the module's TOC over the
+  code and starts a function at every seed: the code pointers of the OPDs, the import stubs and the
+  exports, so a stripped program has its functions before Ghidra guesses;
+- after analysis (`ApplyNames.java`), names each import stub by its NID (`cellPadGetData`, or
+  `<library>_<NID>` when no name is known) and its slot `__imp_<name>`, and each export's code and OPD.
+  A name the program already has (from its symbols) is kept and counted as kept;
+- writes the census (step 4) and a summary to `<project>/logs/<file>.summary.json`, and prints the
+  imports per library, the names applied, the syscalls, the SPU images and the `Limit:` lines (unnamed
+  NIDs, Cell-only VMX instructions, `sc` sites without a number, SPU images not imported).
+
+The project is yours: pass its folder; `--force` imports again over the same program, `--plan` prints
+the Ghidra command. Then query it with `rea-ghidra`. Checked on ps3autotests' `basic.ppu.elf`, as is
+(its own symbols kept) and with its section headers removed (a stripped stand-in: all 12 import stubs
+named, 138 functions started from 126 OPDs, globals read through `r2` resolved in `decomp`), and on
+its SELF through RPCS3.
+
+- **The language.** Ghidra's ELF loader would pick `PowerPC:BE:64:A2ALT` (64-bit addresses) for a PS3
+  ELF; the game's pointers are 32-bit, so `analyze` imports with `PowerPC:BE:64:A2ALT-32addr` (Power
+  ISA with AltiVec, 32-bit addressing), the same language as the Xbox 360 lane.
+- **The TOC.** Every function reads globals through `r2`, which `analyze` sets from the module's TOC.
+  Ghidra's `ppu_64_32.cspec` does not list `r2` as preserved across calls, so the decompiler may still
+  lose it after a call; Ps3GhidraScripts' README adds `<register name="r2"/>` to `<unaffected>` in
+  that file (a change to your Ghidra install, which `rea-suite tools reinstall ghidra` undoes).
+- **Ps3GhidraScripts** (if built): `AnalyzePs3Binary` defines the import and export tables from its own
+  NID list, `AssignPs3R2FromOpd` sets `r2` per function, `DefinePS3Syscalls` names the `sc` sites.
+  `analyze` does the first two its own way; the syscalls are in its census.
 - **Cell-specific VMX loads and stores** (`lvlx`, `lvrx`, `stvlx`, `stvrx`) are not decoded by
   Ghidra's PowerPC language; decompilation stops at them (Ps3GhidraScripts' README). The rest of the
   PPU's VMX is standard AltiVec, which Ghidra decodes: unlike the 360's VMX128, there is no hole there.
@@ -143,8 +171,16 @@ rea-ghidra decomp    --project work/game/ghidra EBOOT.elf 0x10200
 
 ## 4. The census
 
-`imports.tsv` decides where the port's layer answers the game. Count, per library, the functions the
-game imports, and mark the ones that decide the shape of the port:
+```sh
+rea-suite ps3 census work/game/plain/EBOOT.elf -o work/game/census.json   # analyze writes it too
+```
+
+The census lists the imports per library (functions, variables, unnamed NIDs), the exports, the LV2
+syscalls made directly (each `sc` with the `li r11` before it, named from RPCS3's syscall table), the
+SPU images embedded in the file (offset, size, entry, load address), the SPU and SPURS imports, the
+Cell-only VMX instructions, and the TOC. On ps3autotests it found the five SPU images of
+`spu_test.ppu.elf` and every Cell-only VMX instruction `ppu_vpu.ppu.elf` tests. It decides where the
+port's layer answers the game; mark the parts that decide the shape of the port:
 
 - **Graphics**: `cellGcmSys` (the command buffer, `cellGcmSetFlip*`, tiles, the IO mapping),
   `cellResc`, `cellVideoOut`. Either the port runs the RSX command stream (as ps3recomp and RPCS3 do)
@@ -158,8 +194,10 @@ game imports, and mark the ones that decide the shape of the port:
 - **The rest**: `cellFs` and `cellGame` (files, the game's folder), `cellSaveData`, `cellPad`,
   `cellAudio`, `cellSysutil` (the system menu's callbacks, which a game must keep answering),
   `sceNp*` and `sys_net` (online), `cellSysmodule` (which modules it loads later).
-- **LV2 syscalls** made directly (`sc` outside the system libraries) are rare; Ps3GhidraScripts names
-  them.
+- **LV2 syscalls** made directly are usually the C library's own (files, TTY, mutexes): the census
+  names them. A `sc` whose `li r11` lies in another basic block is listed without a number.
+- **The OPD count is a heuristic**: 8-byte pairs (code, TOC) in the data. A program whose functions
+  use more than one TOC gets fewer seeds; Ghidra's analysis finds the rest.
 
 *Feeds:* the layer's service list, the order of work, and whether the SPU work is a lift or a
 replacement.
@@ -326,10 +364,17 @@ II HD, Ben 10 Omniverse and DBZ Budokai HD. No matching decompilation of a PS3 g
   folder. ps3recomp's `unfself.py` gave the same ELF.
 - `info` on its 15 SELFs (fake-signed, not encrypted, application) and `imports` on its 33 ELFs: every
   import named.
-- Ghidra 12.1.4: import with `PowerPC:BE:64:A2ALT-32addr`, analysis, `rea-ghidra functions` and
-  `decomp`; GhidraSPU's SLEIGH compiled.
-- `rea-suite lint`, the common unit tests (`test_ps3`: synthetic SELF, executable, PRX and SFO, a fake
-  RPCS3) and the Node tests.
+- `rea-suite ps3 analyze` with Ghidra 12.1.4 on `basic.ppu.elf` (symbols kept), on a copy without
+  section headers (12 stubs named, 138 functions, `r2` resolving globals in `decomp`) and on its SELF
+  (decrypted by the installed RPCS3 into the project); `rea-ghidra functions` and `decomp` on the
+  projects. `census` on all 33 ELFs (the SPU images of `spu_test`, the Cell-only VMX of `ppu_vpu`).
+  GhidraSPU's SLEIGH compiled.
+- The `rpcs3` entry resolved for all three platforms (the pinned tag's asset in each platform's
+  repository) and with `REA_RPCS3_BUILD=latest`; `ps3 check` failing on a build the setting does not
+  match.
+- `rea-suite lint`, the common unit tests (`test_ps3`: synthetic SELF, executables, PRX and SFO, the
+  census, the Ghidra command, a fake RPCS3; `test_installer`: the per-platform repositories and the
+  build setting) and the Node tests.
 
 Not verified: the macOS and Windows assets (their archives were listed: `RPCS3.app/Contents/MacOS/rpcs3`,
 `rpcs3.exe`) and the Windows script; the Ps3GhidraScripts source build; an encrypted retail or NPDRM

@@ -8,7 +8,12 @@ PARAM.SFO, and decryption handed to the player's own RPCS3 (docs/PS3.md).
   rea-suite ps3 decrypt <self|sprx|edat>... -o DIR [--klic HEX] [--data DIR]
                                                 decrypt with your RPCS3 (its keys, your firmware,
                                                 your licenses); fake-signed (debug) SELFs need none
-  rea-suite ps3 check                           RPCS3 and the NID source installed (component ps3)
+  rea-suite ps3 census  <elf|prx> [-o JSON]     libraries, syscalls, SPU images, what Ghidra lacks
+  rea-suite ps3 analyze <elf|prx|self> --project DIR [--name N] [--force] [--plan]
+                                                a Ghidra project: 32-bit-address PPU language, r2
+                                                set, imports, exports and OPD functions named; a
+                                                SELF is decrypted by your RPCS3 first
+  rea-suite ps3 check                           RPCS3 (its build) and the NID source installed
 
 The NID names come from RPCS3's source at the commit of the installed RPCS3 build (tool
 `rpcs3-source` in common/tools.yml): every name its modules register, hashed the way the
@@ -219,6 +224,7 @@ def _phdr(data: bytes, at: int) -> dict:
     return {
         "type": PT_NAMES.get(ptype, f"0x{ptype:08x}"),
         "p_type": ptype,
+        "p_flags": flags,
         "flags": "".join(c if flags & b else "-" for c, b in (("r", 4), ("w", 2), ("x", 1))),
         "offset": offset,
         "vaddr": vaddr,
@@ -236,8 +242,10 @@ class Library:
     name: str
     version: int
     attributes: int
-    functions: list[tuple[int, int]]  # (NID, address: the import's slot or the export's code)
-    variables: list[tuple[int, int]]
+    # (NID, entry, value): an import's slot and the stub (function) or reference (variable) it
+    # holds; an export's table entry and the OPD (function) or variable it points to.
+    functions: list[tuple[int, int, int]]
+    variables: list[tuple[int, int, int]]
 
 
 class Elf:
@@ -328,6 +336,9 @@ class Elf:
             raise Ps3Error(f"sys_proc_prx_param has bad magic 0x{magic:08x}")
         return "executable", {}, (ent0, ent1), (stub0, stub1)
 
+    def _entry(self, nids: int, addrs: int, i: int) -> tuple[int, int, int]:
+        return self.u32(nids + 4 * i), addrs + 4 * i, self.u32(addrs + 4 * i)
+
     def libraries(self, start: int, end: int, imports: bool) -> list[Library]:
         out: list[Library] = []
         address = start
@@ -339,18 +350,13 @@ class Elf:
             if nfunc + nvar > LIMIT_ENTRIES:
                 raise Ps3Error(f"library at 0x{address:x} claims {nfunc + nvar} entries")
             name = self.string(name_ptr) if name_ptr else ""
-            functions = [
-                (self.u32(nids_ptr + 4 * i), self.u32(addrs_ptr + 4 * i)) for i in range(nfunc)
-            ]
+            functions = [self._entry(nids_ptr, addrs_ptr, i) for i in range(nfunc)]
             if imports:
                 vnids, vstubs = struct.unpack_from(">II", self.data, o + 0x1C)
-                variables = [
-                    (self.u32(vnids + 4 * i), self.u32(vstubs + 4 * i)) for i in range(nvar)
-                ]
+                variables = [self._entry(vnids, vstubs, i) for i in range(nvar)]
             else:  # exports list variables after functions in the same arrays
                 variables = [
-                    (self.u32(nids_ptr + 4 * i), self.u32(addrs_ptr + 4 * i))
-                    for i in range(nfunc, nfunc + nvar)
+                    self._entry(nids_ptr, addrs_ptr, i) for i in range(nfunc, nfunc + nvar)
                 ]
             if not imports and attributes & EXPORT_MANAGEMENT and not attributes & EXPORT_LIBRARY:
                 name = name or "(module management: start, stop, ...)"
@@ -392,16 +398,19 @@ class NidEntry:
 
 
 class NidSource(Protocol):
-    """Where NID names come from; one implementation today (RPCS3's source)."""
+    """Where NID and LV2 syscall names come from; one implementation today (RPCS3's source)."""
 
     def describe(self) -> str: ...
 
     def entries(self) -> Iterable[NidEntry]: ...
 
+    def syscalls(self) -> dict[int, str]: ...
+
 
 _REG = re.compile(r"\bREG_(FUNC|VAR|FNID|VNID)\(\s*(\w+)\s*,\s*(\"[^\"]+\"|\w+)")
 _MODULE_IF = re.compile(r"if \(_module\b[^)]*")
 _CASE = re.compile(r'case (0x[0-9a-fA-F]{8}): return "([^"]+)";')
+_SYSCALL = re.compile(r"^\s*(?:BIND_SYSC|NULL_FUNC)\((\w+)\),\s*//\s*(\d+)\b", re.MULTILINE)
 
 
 class Rpcs3Source:
@@ -427,6 +436,14 @@ class Rpcs3Source:
                 yield NidEntry(nid(name), module, name, what, True)
         yield from self._listed((self.cell / "PPUFunction.cpp").read_text(errors="replace"))
 
+    def syscalls(self) -> dict[int, str]:
+        """lv2.cpp's g_ppu_syscall_table: each named entry carries its number in a comment."""
+        path = self.cell / "lv2" / "lv2.cpp"
+        if not path.is_file():
+            return {}
+        text = path.read_text(errors="replace")
+        return {int(number): name for name, number in _SYSCALL.findall(text)}
+
     @staticmethod
     def _listed(text: str) -> Iterator[NidEntry]:
         modules: list[str] = []
@@ -445,6 +462,7 @@ class Rpcs3Source:
 class NidTable:
     def __init__(self, source: NidSource):
         self.source = source
+        self.syscalls = source.syscalls()
         self.by_nid: dict[int, list[NidEntry]] = {}
         for e in source.entries():
             rows = self.by_nid.setdefault(e.nid, [])
@@ -540,6 +558,382 @@ def find_rpcs3(explicit: str | None) -> str | None:
     return shutil.which("rpcs3")
 
 
+# --- census: what the program uses, from the file alone -----------------------------------------
+
+SC = 0x44000002  # sc
+LI_R11 = 0x39600000  # li r11,imm (addi r11,r0,imm): the syscall number
+SYSCALL_LOOKBACK = 8  # instructions before an sc searched for its li r11
+# Cell-only VMX loads and stores (primary opcode 31, by extended opcode; RPCS3's PPUOpcodes.h),
+# which Ghidra's PowerPC language does not decode.
+CELL_VMX = {0x207: "lvlx", 0x227: "lvrx", 0x287: "stvlx", 0x2A7: "stvrx",
+            0x307: "lvlxl", 0x327: "lvrxl", 0x387: "stvlxl", 0x3A7: "stvrxl"}  # fmt: skip
+SPU_ELF = b"\x7fELF\x01\x02\x01"  # ELF32, big-endian, version 1; e_machine 23 checked after
+SPU_NAMES = re.compile(r"^(sys_spu_|sys_raw_spu_|_?cellSpurs|cellSync)")
+LIMIT_SPU_IMAGES = 4096
+
+
+def code_words(elf: Elf) -> Iterator[tuple[int, int]]:
+    """(address, instruction word) over the executable LOAD segments' file data."""
+    for p in elf.segments:
+        if not p["p_flags"] & 1:
+            continue
+        start = p["offset"] - p["offset"] % 4
+        end = min(p["offset"] + p["filesz"], len(elf.data))
+        for offset in range(start, end - 3, 4):
+            yield p["vaddr"] + offset - p["offset"], struct.unpack_from(">I", elf.data, offset)[0]
+
+
+def toc_of(elf: Elf) -> int:
+    """The TOC (r2): a PRX's module info gives it, an executable's entry OPD holds it."""
+    kind, module, _, _ = elf.tables()
+    if kind == "prx":
+        return int(module["toc"], 16)
+    try:
+        return elf.u32(int(elf.header["entry"], 16) + 4)
+    except Ps3Error:
+        return 0
+
+
+def opd_functions(elf: Elf, toc: int) -> list[int]:
+    """Code pointers of the function descriptors: 8-byte pairs (code, toc) in the data segments
+    whose code lies in an executable segment and whose toc is the module's."""
+    if not toc:
+        return []
+    code = [(p["vaddr"], p["vaddr"] + p["filesz"]) for p in elf.segments if p["p_flags"] & 1]
+    found = set()
+    for p in elf.segments:
+        if p["p_flags"] & 1:
+            continue
+        base = p["offset"]
+        for offset in range(base, min(base + p["filesz"], len(elf.data)) - 7, 8):
+            target, value = struct.unpack_from(">II", elf.data, offset)
+            if value == toc and target % 4 == 0 and any(a <= target < b for a, b in code):
+                found.add(target)
+    return sorted(found)
+
+
+def syscall_sites(elf: Elf) -> list[tuple[int, int | None]]:
+    """(address of each sc, its number from the li r11 before it, None when not found)."""
+    recent: list[int] = []
+    sites = []
+    for address, word in code_words(elf):
+        if word == SC:
+            number = next((w & 0xFFFF for w in reversed(recent) if w & 0xFFFF0000 == LI_R11), None)
+            sites.append((address, number))
+        recent = [*recent[-(SYSCALL_LOOKBACK - 1) :], word]
+    return sites
+
+
+def cell_vmx(elf: Elf) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for _, word in code_words(elf):
+        if word >> 26 == 31 and (name := CELL_VMX.get((word >> 1) & 0x3FF)):
+            counts[name] = counts.get(name, 0) + 1
+    return counts
+
+
+def spu_images(data: bytes, elf: Elf | None = None) -> list[dict]:
+    """SPU ELFs embedded in a file (SPURS jobs, tasks, raw SPU programs): offset, size, entry, and
+    the address they are loaded from when they lie in a segment of the PPU program."""
+    out = []
+    at = data.find(SPU_ELF, 1)
+    while at >= 0 and len(out) < LIMIT_SPU_IMAGES:
+        if at + 52 <= len(data) and struct.unpack_from(">H", data, at + 18)[0] == EM_SPU:
+            entry, phoff, shoff = struct.unpack_from(">III", data, at + 24)
+            phentsize, phnum, shentsize, shnum = struct.unpack_from(">HHHH", data, at + 42)
+            end = phoff + phnum * phentsize
+            for i in range(phnum):
+                where = at + phoff + i * phentsize
+                if where + 32 <= len(data):
+                    _, offset, _, _, filesz = struct.unpack_from(">IIIII", data, where)
+                    end = max(end, offset + filesz)
+            if shoff:
+                end = max(end, shoff + shnum * shentsize)
+            image = {"offset": at, "size": min(end, len(data) - at), "entry": f"0x{entry:x}"}
+            if elf is not None:
+                for p in elf.segments:
+                    if p["offset"] <= at < p["offset"] + p["filesz"]:
+                        image["address"] = f"0x{p['vaddr'] + at - p['offset']:x}"
+            out.append(image)
+        at = data.find(SPU_ELF, at + 1)
+    return out
+
+
+def census(elf: Elf, table: NidTable | None) -> dict:
+    """The libraries, syscalls and SPU code a PPU program uses, and what Ghidra will lack."""
+    kind, module, exports_range, _ = elf.tables()
+    toc = toc_of(elf)
+    imports: dict[str, dict] = {}
+    unnamed, spu_imports = [], []
+    for lib, what, value, _, _, name in import_rows(elf, table):
+        row = imports.setdefault(lib, {"functions": 0, "variables": 0, "unnamed": 0})
+        row["functions" if what == "function" else "variables"] += 1
+        if not name:
+            row["unnamed"] += 1
+            unnamed.append(f"{lib}:0x{value:08x}")
+        if lib.startswith("cellSpurs") or SPU_NAMES.match(name):
+            spu_imports.append(f"{lib}:{name or f'0x{value:08x}'}")
+    sites = syscall_sites(elf)
+    numbers: dict[int, int] = {}
+    for _, number in sites:
+        if number is not None:
+            numbers[number] = numbers.get(number, 0) + 1
+    names = table.syscalls if table else {}
+    exports = elf.libraries(*exports_range, imports=False)
+    return {
+        "kind": kind,
+        **({"module": module} if module else {}),
+        "toc": f"0x{toc:x}",
+        "imports": imports,
+        "import_functions": sum(r["functions"] for r in imports.values()),
+        "import_variables": sum(r["variables"] for r in imports.values()),
+        "unnamed_nids": unnamed,
+        "exports": {lib.name: len(lib.functions) + len(lib.variables) for lib in exports},
+        "syscalls": [
+            {"number": n, "name": names.get(n, ""), "sites": c} for n, c in sorted(numbers.items())
+        ],
+        "syscall_sites": len(sites),
+        "syscall_sites_unresolved": [f"0x{a:x}" for a, n in sites if n is None],
+        "spu": {"images": spu_images(elf.data, elf), "imports": spu_imports},
+        "cell_vmx": cell_vmx(elf),
+        "opd_functions": len(opd_functions(elf, toc)),
+    }
+
+
+def ghidra_names(elf: Elf, table: NidTable | None) -> tuple[list[str], list[str], list[int]]:
+    """Rows for ApplyNames (functions: the import stubs and exported code; labels: the import
+    slots and the exported OPDs) and the seed addresses for Ps3Prepare."""
+    functions, labels, seeds = [], [], []
+    seen: set[str] = set()
+
+    def unique(name: str) -> str:
+        base, n = name, 1
+        while name in seen:
+            n += 1
+            name = f"{base}_{n}"
+        seen.add(name)
+        return name
+
+    for lib, what, value, slot, target, name in import_rows(elf, table):
+        label = name or f"{lib}_{value:08X}"
+        if what == "function":
+            functions.append(f"0x{target:x}\t{unique(label)}\timport {lib} 0x{value:08x}")
+            seeds.append(target)
+        labels.append(f"0x{slot:x}\t{unique('__imp_' + label)}\t")
+    _, _, exports_range, _ = elf.tables()
+    for lib in elf.libraries(*exports_range, imports=False):
+        for value, _, opd in lib.functions:
+            name = (
+                table.name(value, lib.name) if table else ""
+            ) or f"{lib.name or 'module'}_{value:08X}"
+            labels.append(f"0x{opd:x}\t{unique('__opd_' + name)}\t")
+            try:
+                code = elf.u32(opd)
+            except Ps3Error:
+                continue
+            functions.append(f"0x{code:x}\t{unique(name)}\texport {lib.name} 0x{value:08x}")
+            seeds.append(code)
+    return functions, labels, sorted(set(seeds + opd_functions(elf, toc_of(elf))))
+
+
+# --- Ghidra: the one place this module runs it ----------------------------------------------------
+# Through xbox360's runner today; when the suite's runners become one module (the gaps branch:
+# ghidra_headless), only these three functions change.
+
+LANGUAGE = "PowerPC:BE:64:A2ALT-32addr"
+SCRIPTS = ROOT / "common" / "ghidra_scripts"
+
+
+def ghidra_install() -> Path:
+    from rea_suite import xbox360
+
+    return xbox360.ghidra_install()
+
+
+def ghidra_command(install: Path, project: Path, name: str, *arguments: str) -> list[str]:
+    from rea_suite import xbox360
+
+    return [xbox360.runner(install), str(project), name, *arguments]
+
+
+def ghidra_run(command: list[str], project: Path, log: Path, timeout: int) -> None:
+    from rea_suite import xbox360
+
+    xbox360.ghidra(command, project, log, timeout)
+
+
+def import_command(install: Path, project: Path, name: str, target: Path, files: dict[str, Path],
+                   toc: int, timeout: int, force: bool) -> list[str]:  # fmt: skip
+    return ghidra_command(
+        install,
+        project,
+        name,
+        "-import",
+        str(target),
+        "-processor",
+        LANGUAGE,
+        "-cspec",
+        "default",
+        *(["-overwrite"] if force else []),
+        "-analysisTimeoutPerFile",
+        str(timeout),
+        "-scriptPath",
+        str(SCRIPTS),
+        "-preScript",
+        "Ps3Prepare.java",
+        f"0x{toc:x}",
+        str(files["seeds"]),
+        "-postScript",
+        "ApplyNames.java",
+        str(files["functions"]),
+        str(files["functions_report"]),
+        "functions",
+        "-postScript",
+        "ApplyNames.java",
+        str(files["labels"]),
+        str(files["labels_report"]),
+    )
+
+
+def _results(report: Path) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    try:
+        lines = report.read_text(errors="replace").splitlines()[1:]
+    except OSError:
+        return counts
+    for line in lines:
+        parts = line.split("\t")
+        if len(parts) >= 2:
+            counts[parts[1]] = counts.get(parts[1], 0) + 1
+    return counts
+
+
+def limits(facts: dict) -> list[str]:
+    """What the project leaves out, stated rather than silent."""
+    out = []
+    if facts["unnamed_nids"]:
+        sample = ", ".join(facts["unnamed_nids"][:5])
+        out.append(
+            f"{len(facts['unnamed_nids'])} imported NID(s) without a name, named <library>_<NID>"
+            f" (first: {sample})"
+        )
+    if facts["cell_vmx"]:
+        counts = ", ".join(f"{k}: {v}" for k, v in sorted(facts["cell_vmx"].items()))
+        out.append(
+            f"Cell-only VMX loads and stores Ghidra cannot decode ({counts});"
+            " disassembly and decompiles stop there"
+        )
+    if facts["syscall_sites_unresolved"]:
+        out.append(
+            f"{len(facts['syscall_sites_unresolved'])} sc site(s) without a li r11 before them"
+            f" (first: {', '.join(facts['syscall_sites_unresolved'][:5])})"
+        )
+    if facts["spu"]["images"]:
+        out.append(
+            f"{len(facts['spu']['images'])} embedded SPU image(s) listed, not imported: Ghidra has"
+            " no SPU language (docs/PS3.md, step 3)"
+        )
+    if facts["toc"] == "0x0":
+        out.append("no TOC found: r2 is not set, globals stay unresolved in decompiles")
+    return out
+
+
+def analyze(args: argparse.Namespace, install: Path) -> int:
+    from rea_suite import xbox360
+
+    target = (args.caller_cwd / args.file).resolve()
+    project = (args.caller_cwd / args.project).resolve()
+    if not target.is_file():
+        raise Ps3Error(f"no such file: {target}")
+    with target.open("rb") as stream:
+        head = stream.read(4)
+    if head == SCE_MAGIC:
+        if args.plan:
+            raise Ps3Error(f"{target.name} is a SELF: --plan needs the decrypted ELF or PRX")
+        binary = find_rpcs3(args.rpcs3)
+        if not binary:
+            raise Ps3Error(f"{target.name} is a SELF and RPCS3 is not found to decrypt it")
+        data_dir = args.data and (args.caller_cwd / args.data).resolve()
+        decrypter = Rpcs3Decrypter(binary, data_dir)
+        target = decrypter.decrypt(target, project / "decrypted", args.klic)
+        print(f"ps3: decrypted to {target}", file=sys.stderr)
+    elif head != ELF_MAGIC:
+        raise Ps3Error(f"{target.name}: not a PS3 ELF, PRX or SELF")
+    elf = Elf(target.read_bytes())
+    if elf.header["machine"] != "PPC64 (PPU)":
+        raise Ps3Error(f"{target.name} is a {elf.header['machine']} ELF; analyze takes PPU code")
+    table = _table(args, required=False)
+    facts = census(elf, table)
+    functions, labels, seeds = ghidra_names(elf, table)
+    existing = sorted(p.stem for p in project.glob("*.gpr")) if project.is_dir() else []
+    name = args.name or (xbox360.project_name(project, None) if existing else target.stem)
+    logs = project / "logs"
+    files = {
+        "seeds": logs / f"{target.name}.seeds.txt",
+        "functions": logs / f"{target.name}.functions.tsv",
+        "functions_report": logs / f"{target.name}.functions.report.tsv",
+        "labels": logs / f"{target.name}.labels.tsv",
+        "labels_report": logs / f"{target.name}.labels.report.tsv",
+    }
+    toc = int(facts["toc"], 16)
+    command = import_command(install, project, name, target, files, toc, args.timeout, args.force)
+    if args.plan:
+        plan = {"command": command, "functions": len(functions), "labels": len(labels)}
+        print(json.dumps({**plan, "seeds": len(seeds)}, indent=2))
+        return 0
+    if not args.force and target.name in xbox360.program_names(project, name):
+        raise Ps3Error(f"{target.name} is already in {project}; pass --force to redo it")
+    logs.mkdir(parents=True, exist_ok=True)
+    files["seeds"].write_text("".join(f"0x{a:x}\n" for a in seeds))
+    files["functions"].write_text("".join(f"{row}\n" for row in functions), encoding="utf-8")
+    files["labels"].write_text("".join(f"{row}\n" for row in labels), encoding="utf-8")
+    log = logs / f"analyze-{target.name}.log"
+    print(f"ps3: analyzing {target.name} (log: {log})", file=sys.stderr)
+    ghidra_run(command, project, log, args.timeout + 300)
+    text = log.read_text(errors="replace")
+    if "Import succeeded" not in text and "REPORT: Save succeeded" not in text:
+        raise Ps3Error(f"import failed; see {log}")
+    prepared = re.search(r"Ps3Prepare: toc=(\S+) blocks=(\d+) seeds=(\d+) created=(\d+)", text)
+    named = _results(files["functions_report"])
+    labelled = _results(files["labels_report"])
+    summary = {
+        "program": target.name,
+        "language": LANGUAGE,
+        "census": facts,
+        "prepare": prepared.group(0) if prepared else None,
+        "functions_named": named,
+        "labels_named": labelled,
+    }
+    summary_path = logs / f"{target.name}.summary.json"
+    summary_path.write_text(json.dumps(summary, indent=1) + "\n")
+    libs = facts["imports"]
+    print(f"Project: {project / name}.gpr; program: {target.name} ({LANGUAGE})")
+    print(
+        f"Imports: {facts['import_functions']} functions, {facts['import_variables']} variables"
+        f" from {len(libs)} libraries: "
+        + ", ".join(f"{lib} {r['functions'] + r['variables']}" for lib, r in sorted(libs.items()))
+    )
+    if facts["exports"]:
+        print("Exports: " + ", ".join(f"{k or 'module'} {v}" for k, v in facts["exports"].items()))
+    print(
+        f"Names: {named.get('named', 0) + named.get('created', 0)} functions"
+        f" ({named.get('created', 0)} created, {named.get('kept', 0)} kept their own),"
+        f" {labelled.get('named', 0)} labels ({labelled.get('kept', 0)} kept);"
+        f" r2 = {facts['toc']}, {len(seeds)} seeds ({facts['opd_functions']} from OPDs)"
+        + (f", {prepared.group(4)} functions started" if prepared else "")
+    )
+    calls = ", ".join(f"{c['name'] or c['number']} {c['sites']}" for c in facts["syscalls"])
+    print(f"Syscalls: {facts['syscall_sites']} sc sites" + (f": {calls}" if calls else ""))
+    spu = facts["spu"]
+    print(f"SPU: {len(spu['images'])} embedded images, {len(spu['imports'])} SPU/SPURS imports")
+    print(f"Summary: {summary_path}")
+    for line in limits(facts):
+        print(f"Limit: {line}")
+    if not prepared:
+        print(f"Limit: Ps3Prepare.java reported nothing; see {log}")
+    return 0
+
+
 # --- commands -----------------------------------------------------------------------------------
 
 
@@ -579,14 +973,15 @@ def info(data: bytes, table: NidTable | None) -> dict:
 
 
 def _library_json(lib: Library, table: NidTable | None) -> dict:
-    def named(rows: list[tuple[int, int]]) -> list[dict]:
+    def named(rows: list[tuple[int, int, int]]) -> list[dict]:
         return [
             {
                 "nid": f"0x{n:08x}",
-                "address": f"0x{a:x}",
+                "entry": f"0x{a:x}",
+                "value": f"0x{v:x}",
                 "name": table.name(n, lib.name) if table else "",
             }
-            for n, a in rows
+            for n, a, v in rows
         ]
 
     return {
@@ -598,13 +993,14 @@ def _library_json(lib: Library, table: NidTable | None) -> dict:
     }
 
 
-def import_rows(elf: Elf, table: NidTable | None) -> list[tuple[str, str, int, int, str]]:
+def import_rows(elf: Elf, table: NidTable | None) -> list[tuple[str, str, int, int, int, str]]:
+    """(library, kind, NID, slot, stub or reference, name) per import."""
     _, _, _, imports = elf.tables()
     rows = []
     for lib in elf.libraries(*imports, imports=True):
         for kind, entries in (("function", lib.functions), ("variable", lib.variables)):
-            for n, a in entries:
-                rows.append((lib.name, kind, n, a, table.name(n, lib.name) if table else ""))
+            for n, a, v in entries:
+                rows.append((lib.name, kind, n, a, v, table.name(n, lib.name) if table else ""))
     return rows
 
 
@@ -629,13 +1025,55 @@ def resolve(tokens: list[str], table: NidTable) -> list[tuple[int, str, str, str
     return rows
 
 
+BUILD_SETTING = "REA_RPCS3_BUILD"
+
+
+def rpcs3_build() -> dict[str, str | None]:
+    """The RPCS3 build installed, the pinned one, the one REA_RPCS3_BUILD asks for (or None),
+    and the RPCS3 source commit installed for the NID names."""
+    import yaml
+
+    state_file = ROOT / "tools" / "state.json"
+    state = json.loads(state_file.read_text()) if state_file.is_file() else {}
+    spec = yaml.safe_load((ROOT / "common" / "tools.yml").read_text())["tools"]["rpcs3"]
+    return {
+        "installed": state.get("rpcs3"),
+        "pinned": str(spec["version"]),
+        "wanted": os.environ.get(BUILD_SETTING, "").strip() or None,
+        "source": state.get("rpcs3-source"),
+    }
+
+
+def build_problem(build: dict[str, str | None]) -> str | None:
+    """Why the installed RPCS3 is not the build asked for (the setting, else the pin)."""
+    installed, wanted = build["installed"], build["wanted"]
+    if not installed or wanted == "latest":
+        return None  # `latest` moves with `rea-suite tools update rpcs3`, not checked offline
+    if installed != (wanted or build["pinned"]):
+        asked = f"{BUILD_SETTING}={wanted}" if wanted else f"the pin {build['pinned']}"
+        return f"RPCS3 {installed} is installed, not {asked}: rea-suite tools install rpcs3"
+    return None
+
+
 def check(source: Path | None, rpcs3: str | None) -> int:
     problems = []
+    build = rpcs3_build()
+    if problem := build_problem(build):
+        problems.append(problem)
+    if build["installed"]:
+        chosen = f"{BUILD_SETTING}={build['wanted']}" if build["wanted"] else "pinned"
+        print(f"RPCS3 build: {build['installed']} ({chosen})")
+        commit = build["installed"].removeprefix("build-")
+        if build["source"] and build["source"] != commit and not source:
+            print(
+                f"NID names from RPCS3 source {build['source'][:8]}, not the build's {commit[:8]}"
+            )
     try:
         src = default_source(source)
         table = NidTable(src)
         names = sum(len(rows) for rows in table.by_nid.values())
         print(f"NID names: {names} for {len(table.by_nid)} NIDs from {src.describe()}")
+        print(f"Syscall names: {len(table.syscalls)}")
     except (Ps3Error, OSError) as exc:
         problems.append(str(exc))
     binary = find_rpcs3(rpcs3)
@@ -698,12 +1136,40 @@ def main(argv: list[str] | None = None) -> int:
     )
     q.add_argument("--rpcs3", help="the RPCS3 binary (default REA_RPCS3, else rpcs3 on PATH)")
     q.add_argument("--timeout", type=int, default=300)
-    q = sub.add_parser("check", help="RPCS3 and the NID source installed")
+    q = sub.add_parser(
+        "census", help="libraries, syscalls and SPU images an ELF or PRX uses (JSON)"
+    )
+    q.add_argument("file", type=Path)
+    q.add_argument("-o", "--output", type=Path)
+    q = sub.add_parser(
+        "analyze", help="import and analyze an ELF, PRX or SELF into a Ghidra project"
+    )
+    q.add_argument("file", type=Path)
+    q.add_argument("--project", type=Path, required=True, help="Ghidra project folder")
+    q.add_argument("--name", help="project name (default: the folder's one .gpr, else the file's)")
+    q.add_argument("--force", action="store_true", help="import again over the same program")
+    q.add_argument("--plan", action="store_true", help="print the Ghidra command only")
+    q.add_argument("--timeout", type=int, default=1800, help="seconds (default 1800)")
+    q.add_argument("--klic", help="for a SELF: the KLIC of an NPDRM title without a RAP file")
+    q.add_argument("--data", type=Path, help="for a SELF: another RPCS3 data folder")
+    q.add_argument("--rpcs3", help="for a SELF: the RPCS3 binary")
+    q = sub.add_parser("check", help="RPCS3 (its build) and the NID source installed")
     q.add_argument("--rpcs3")
     args = p.parse_args(argv)
     try:
         if args.command == "check":
             return check(args.nid_source and (args.caller_cwd / args.nid_source), args.rpcs3)
+        if args.command == "analyze":
+            if args.timeout < 1:
+                p.error("--timeout must be positive")
+            return analyze(args, ghidra_install())
+        if args.command == "census":
+            data = (args.caller_cwd / args.file).resolve().read_bytes()
+            facts = census(Elf(data), _table(args, required=False))
+            emit(args, json.dumps(facts, indent=1) + "\n")
+            for line in limits(facts):
+                print(f"Limit: {line}", file=sys.stderr)
+            return 0
         if args.command == "nids":
             rows = resolve(args.tokens, _table(args, required=True))
             lines = ["nid\tmodule\tname\thow"] + [
@@ -733,8 +1199,8 @@ def main(argv: list[str] | None = None) -> int:
             )
         else:
             rows = import_rows(Elf(data), _table(args, required=False))
-            lines = ["library\tkind\tnid\tslot\tname"] + [
-                f"{lib}\t{k}\t0x{n:08x}\t0x{a:x}\t{name}" for lib, k, n, a, name in rows
+            lines = ["library\tkind\tnid\tslot\tstub\tname"] + [
+                f"{lib}\t{k}\t0x{n:08x}\t0x{a:x}\t0x{v:x}\t{name}" for lib, k, n, a, v, name in rows
             ]
             emit(args, "\n".join(lines) + "\n")
             unnamed = sum(1 for *_, name in rows if not name)

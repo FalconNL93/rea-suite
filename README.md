@@ -270,14 +270,19 @@ ps3recomp, the NID names from RPCS3's source). Without Ghidra or a key:
 rea-suite ps3 info EBOOT.BIN              # SELF headers: program type, segments, encryption, NPDRM license
 rea-suite ps3 decrypt EBOOT.BIN -o plain  # your RPCS3 decrypts (its keys, your firmware and licenses)
 rea-suite ps3 info plain/EBOOT.elf        # ELF/PRX: sections, module, imports and exports, NIDs named
-rea-suite ps3 imports plain/EBOOT.elf     # TSV: library, kind, NID, slot address, name
+rea-suite ps3 imports plain/EBOOT.elf     # TSV: library, kind, NID, slot, stub, name
+rea-suite ps3 census plain/EBOOT.elf      # libraries, syscalls, SPU images, Cell-only VMX (JSON)
+rea-suite ps3 analyze plain/EBOOT.elf --project re/ghidra   # Ghidra project: 32-bit addresses,
+                                          # r2 set, stubs, exports and OPD functions named
 rea-suite ps3 nids 0x8b72cda1 cellPadGetData   # NID to name and name to NID
 rea-suite ps3 info PS3_GAME/PARAM.SFO     # title id, title, versions
-rea-suite ps3 check                       # RPCS3 and the NID source (doctor runs it with the component)
+rea-suite ps3 check                       # RPCS3's build and the NID source (doctor runs it with the component)
 ```
 
 `decrypt` runs `rpcs3 --decrypt` headless on a copy; `--data DIR` uses another RPCS3 profile (Linux,
-Windows), `--klic` gives an NPDRM title's key. Tests: `uv run --no-sync python -m unittest
+Windows), `--klic` gives an NPDRM title's key; `analyze` does the same for a SELF first. RPCS3 is
+pinned; `REA_RPCS3_BUILD=latest` (or a build's tag) in `.env` chooses another build for
+`rea-suite tools install rpcs3`. Tests: `uv run --no-sync python -m unittest
 rea_suite.test_ps3` in `common/` (synthetic SELF, ELF, PRX and SFO; a fake RPCS3); opt-in
 `REA_PS3_SAMPLE=<file>` with `REA_PS3_NID_SOURCE=<RPCS3 source>` (a real file, read-only).
 
@@ -887,7 +892,7 @@ absolute paths to extension JARs must follow the preserved module directory.
 | Emotion Engine: Reloaded | PS2 R5900/MMI/VU0 macro support (component `playstation`) | exact-version prebuilt |
 | XEXLoaderWV | Load Xbox 360 XEX executables (`rea-suite xbox360`; pinned, checked by doctor) | prebuilt or built |
 | ghidra-xbe | Load original Xbox XBE executables: kernel imports by ordinal, XDK library functions named by its XbSymbolDatabase CLI (`rea-ghidra`, `rea-suite xbox`; checked by doctor) | prebuilt only (no license file upstream; its build fetches its own Ghidra) |
-| Ps3GhidraScripts | PS3 ELF/PRX: import and export tables named by NID, the TOC from the OPDs, LV2 syscalls (component `ps3`; [route](docs/PS3.md)) | built (no 12.1.4 release; no license file upstream) |
+| Ps3GhidraScripts | PS3 ELF/PRX: import and export tables named by NID, the TOC from the OPDs, LV2 syscalls (component `ps3`; [route](docs/PS3.md)) | built (no 12.1.4 release; `--no-build` skips it; no license file upstream) |
 | ghidra-firmware-utils | Load UEFI images, PCI option ROMs and other firmware formats | prebuilt or built |
 | ghidra-lx-loader | Load LE/LX executables (DOS/4GW and DOS/16 LE, DOS32A, OS/2 LX, VxD) with their objects at their bases and every fixup applied (`rea-ghidra analyze`; REA's open_binary still refuses LE before Ghidra sees it) | built from a pinned commit |
 | ghidra-nativeaot | Recover .NET Native AOT binaries in Ghidra; REA's optional adapter is configured separately | prebuilt or built |

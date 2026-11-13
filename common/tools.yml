@@ -14,6 +14,8 @@
 # the active version. Launchers are generated in tools/bin/ (on PATH via .envrc).
 #
 # github:      owner/repo; `version` is `latest` or an exact release tag
+#              or `{linux, macos, windows}`: a repository per platform (RPCS3)
+# version-env: a variable that, when set (run or .env), replaces `version` (`latest`, a tag)
 # assets:      per-platform regex (linux, macos, windows) matched against release asset
 #              names; macOS means Apple Silicon. A .dmg is unpacked to its .app bundles.
 # strip:       leading path components to drop when extracting
@@ -767,16 +769,22 @@ tools:
   # --- component: ps3 ---
 
   # PS3 emulator and debugger (GPL-2): `rea-suite ps3 decrypt` (--decrypt, headless), the GDB
-  # stub (PPU threads), PINE/IPC memory access, logs. A rolling release published per platform in
-  # its own repository, so a direct URL; pinned to the build docs/PS3.md was checked with
-  # (2026-11-13). Move it with rpcs3-source below, same commit. Firmware is the player's own
-  # (rpcs3 --installfw PS3UPDAT.PUP).
+  # stub (PPU threads), PINE/IPC memory access, logs. A rolling release, published per platform
+  # in a repository of its own, with the same tag (build-<commit>) in each. Pinned to the build
+  # docs/PS3.md was checked with (2026-11-13); REA_RPCS3_BUILD (run or .env) chooses another:
+  # `latest` or a tag. Move the pin with rpcs3-source below, same commit. Firmware is the
+  # player's own (rpcs3 --installfw PS3UPDAT.PUP).
   rpcs3:
-    version: 0.0.43-20583-9b8974d3
-    url:
-      linux: https://github.com/RPCS3/rpcs3-binaries-linux/releases/download/build-9b8974d32e73c897a5fcd6bdf69413ca7e436b01/rpcs3-v0.0.43-20583-9b8974d3_linux64.AppImage
-      macos: https://github.com/RPCS3/rpcs3-binaries-mac-arm64/releases/download/build-9b8974d32e73c897a5fcd6bdf69413ca7e436b01/rpcs3-v0.0.43-20583-9b8974d3_macos_aarch64.7z
-      windows: https://github.com/RPCS3/rpcs3-binaries-win/releases/download/build-9b8974d32e73c897a5fcd6bdf69413ca7e436b01/rpcs3-v0.0.43-20583-9b8974d3_win64_msvc.7z
+    github:
+      linux: RPCS3/rpcs3-binaries-linux
+      macos: RPCS3/rpcs3-binaries-mac-arm64
+      windows: RPCS3/rpcs3-binaries-win
+    version: build-9b8974d32e73c897a5fcd6bdf69413ca7e436b01
+    version-env: REA_RPCS3_BUILD
+    assets:
+      linux: '^rpcs3-v[\d.]+-\d+-\w+_linux64\.AppImage$'
+      macos: '^rpcs3-v[\d.]+-\d+-\w+_macos_aarch64\.7z$'
+      windows: '^rpcs3-v[\d.]+-\d+-\w+_win64_msvc\.7z$'
     bin:
       linux:
         rpcs3: {path: 'rpcs3-*.AppImage', env: {APPIMAGE_EXTRACT_AND_RUN: '1'}}

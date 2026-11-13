@@ -26,8 +26,9 @@
 #   rea-suite xbox <command> <xbe>          original Xbox XBE without Ghidra: info, imports,
 #                                            image, symbols (XbSymbolDatabase), check (--help)
 #   rea-suite ps3 <command> ...             PS3 SELF/SPRX headers, ELF/PRX imports and exports
-#                                            with NIDs named, PARAM.SFO, NID lookup, decryption by
-#                                            your RPCS3, check (component ps3; --help)
+#                                            with NIDs named, PARAM.SFO, NID lookup, census,
+#                                            decryption by your RPCS3, analyze into a Ghidra
+#                                            project of yours, check (component ps3; --help)
 #   rea-suite functions <config> check|add|find|convert  a port's index of identified
 #                                            functions (no game bytes) and its gate; x86/x64 PE,
 #                                            Xbox 360 images (--help)

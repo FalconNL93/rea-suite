@@ -26,13 +26,14 @@ STRCPY = 0x04A183FC  # RPCS3's PPUFunction.cpp lists strcpy (sys_libc) under thi
 MODULE_START = 0xBC9A0086  # module_start, a management export listed by NID
 
 
-def elf(e_type: int, phdrs: list[tuple[int, int, int, int, int]], body: bytes) -> bytes:
-    """ELF64 big-endian, PPC64, CELL LV2; phdrs are (type, offset, vaddr, paddr, filesz)."""
+def elf(e_type: int, phdrs: list[tuple], body: bytes, entry: int = BASE + 0x200) -> bytes:
+    """ELF64 big-endian, PPC64, CELL LV2; phdrs are (type, offset, vaddr, paddr, filesz[, flags])."""
     head = b"\x7fELF" + bytes([2, 2, 1, ps3.OSABI_CELL_LV2]) + bytes(8)
-    head += struct.pack(">HHIQQQIHHHHHH", e_type, 0x15, 1, BASE + 0x200, 64, 0, 0, 64, 56,
+    head += struct.pack(">HHIQQQIHHHHHH", e_type, 0x15, 1, entry, 64, 0, 0, 64, 56,
                         len(phdrs), 64, 0, 0)  # fmt: skip
-    for kind, offset, vaddr, paddr, size in phdrs:
-        head += struct.pack(">IIQQQQQQ", kind, 5, offset, vaddr, paddr, size, size, 0x10)
+    for kind, offset, vaddr, paddr, size, *flags in phdrs:
+        head += struct.pack(">IIQQQQQQ", kind, (flags or [5])[0], offset, vaddr, paddr, size,
+                            size, 0x10)  # fmt: skip
     return head + body[len(head) :]
 
 
@@ -121,6 +122,9 @@ class FakeSource:
         yield ps3.NidEntry(STRCPY, "sys_libc", "strcpy", "function", True)
         yield ps3.NidEntry(MODULE_START, "", "module_start", "function", False)
 
+    def syscalls(self):
+        return {}
+
 
 class Nids(unittest.TestCase):
     def test_nid_is_the_ps3_hash_of_the_name(self):
@@ -179,8 +183,8 @@ class Formats(unittest.TestCase):
         self.assertEqual(
             rows,
             [
-                ("sys_libc", "function", STRCPY, BASE + 0x380, "strcpy"),
-                ("sys_libc", "function", 0x12345678, BASE + 0x384, ""),
+                ("sys_libc", "function", STRCPY, BASE + 0x318, BASE + 0x380, "strcpy"),
+                ("sys_libc", "function", 0x12345678, BASE + 0x31C, BASE + 0x384, ""),
             ],
         )
 
@@ -314,9 +318,171 @@ class Cli(unittest.TestCase):
                 code = ps3.main(["--caller-cwd", tmp, "imports", "a.elf"])
         self.assertEqual(code, 0)
         lines = out.getvalue().splitlines()
-        self.assertEqual(lines[0], "library\tkind\tnid\tslot\tname")
-        self.assertIn("sys_libc\tfunction\t0x04a183fc\t0x10380\tstrcpy", lines)
+        self.assertEqual(lines[0], "library\tkind\tnid\tslot\tstub\tname")
+        self.assertIn("sys_libc\tfunction\t0x04a183fc\t0x10318\t0x10380\tstrcpy", lines)
         self.assertIn("1 of 2 NIDs without a name", err.getvalue())
+
+
+CODE, DATA, TOC = 0x10000, 0x20000, 0x28000
+LI_R11_403, SC, LVLX, BLR = 0x39600193, 0x44000002, 0x7C03240E, 0x4E800020
+
+
+def data(offset: int) -> int:
+    """The address of a file offset in program()'s data segment."""
+    return DATA + offset - 0x400
+
+
+def program() -> bytes:
+    """An executable with code (r-x) and data (rw-) segments: two OPDs (the entry's first), a
+    `li r11,403; sc`, a bare `sc`, an lvlx, one import with its stub, and an SPU ELF in the data."""
+    body = bytearray(0x800)
+    words = [BLR] * 0x60
+    words[0] = LI_R11_403
+    words[1] = SC
+    words[0x10] = SC  # no li r11 before it
+    words[0x11] = LVLX
+    for i, w in enumerate(words):
+        struct.pack_into(">I", body, 0x200 + 4 * i, w)
+    struct.pack_into(">IIII", body, 0x400, CODE + 0x200, TOC, CODE + 0x240, TOC)  # OPDs
+    body[0x500:0x509] = b"sys_libc\0"
+    struct.pack_into(">I", body, 0x510, STRCPY)
+    struct.pack_into(">I", body, 0x518, CODE + 0x300)  # slot -> stub
+    stub = struct.pack(">BBHHHHHBB2xIIIII8x", 0x2C, 0, 1, 0x0009, 1, 0, 0, 0, 0,
+                       data(0x500), data(0x510), data(0x518), 0, 0)  # fmt: skip
+    body[0x540 : 0x540 + 0x2C] = stub
+    param = struct.pack(">8IHHI", 0x40, ps3.PRX_PARAM_MAGIC, 4, 0, data(0x540), data(0x540),
+                        data(0x540), data(0x56C), 1, 0, 0)  # fmt: skip
+    body[0x580 : 0x580 + len(param)] = param
+    spu = bytearray(0x80)
+    spu[0:7] = ps3.SPU_ELF
+    struct.pack_into(">HH", spu, 16, 2, ps3.EM_SPU)
+    struct.pack_into(">III", spu, 24, 0x40, 52, 0)
+    struct.pack_into(">HHHH", spu, 42, 32, 1, 40, 0)
+    struct.pack_into(">IIIII", spu, 52, 1, 0x60, 0, 0, 0x20)
+    body[0x600:0x680] = spu
+    phdrs = [
+        (1, 0, CODE, CODE, 0x400, 5),
+        (1, 0x400, DATA, DATA, 0x400, 6),
+        (0x60000002, 0x580, data(0x580), data(0x580), 0x40, 4),
+    ]
+    return elf(2, phdrs, body, entry=DATA)
+
+
+class FakeSyscalls(FakeSource):
+    def syscalls(self):
+        return {403: "sys_tty_write"}
+
+
+class Census(unittest.TestCase):
+    def setUp(self):
+        self.elf = ps3.Elf(program())
+        self.table = ps3.NidTable(FakeSyscalls())
+
+    def test_toc_from_the_entry_opd_and_functions_from_the_opds(self):
+        self.assertEqual(ps3.toc_of(self.elf), TOC)
+        self.assertEqual(ps3.opd_functions(self.elf, TOC), [CODE + 0x200, CODE + 0x240])
+        self.assertEqual(ps3.opd_functions(self.elf, 0), [])
+
+    def test_syscalls_by_the_li_r11_before_each_sc(self):
+        self.assertEqual(ps3.syscall_sites(self.elf), [(CODE + 0x204, 403), (CODE + 0x240, None)])
+
+    def test_census_counts_libraries_syscalls_spu_images_and_cell_vmx(self):
+        facts = ps3.census(self.elf, self.table)
+        self.assertEqual(facts["toc"], "0x28000")
+        self.assertEqual(
+            facts["imports"], {"sys_libc": {"functions": 1, "variables": 0, "unnamed": 0}}
+        )
+        self.assertEqual(facts["syscalls"], [{"number": 403, "name": "sys_tty_write", "sites": 1}])
+        self.assertEqual(facts["syscall_sites_unresolved"], ["0x10240"])
+        self.assertEqual(facts["cell_vmx"], {"lvlx": 1})
+        self.assertEqual(
+            facts["spu"]["images"],
+            [{"offset": 0x600, "size": 0x80, "entry": "0x40", "address": "0x20200"}],
+        )
+        self.assertEqual(facts["opd_functions"], 2)
+        lines = ps3.limits(facts)
+        self.assertTrue(any("lvlx: 1" in line for line in lines))
+        self.assertTrue(any("SPU image" in line for line in lines))
+        self.assertTrue(any("0x10240" in line for line in lines))
+
+    def test_ghidra_names_stubs_slots_and_seeds(self):
+        functions, labels, seeds = ps3.ghidra_names(self.elf, self.table)
+        self.assertEqual(functions, ["0x10300\tstrcpy\timport sys_libc 0x04a183fc"])
+        self.assertEqual(labels, ["0x20118\t__imp_strcpy\t"])
+        self.assertEqual(seeds, [CODE + 0x200, CODE + 0x240, CODE + 0x300])
+
+    def test_unnamed_imports_get_the_library_and_nid(self):
+        functions, _, _ = ps3.ghidra_names(self.elf, None)
+        self.assertEqual(functions, ["0x10300\tsys_libc_04A183FC\timport sys_libc 0x04a183fc"])
+
+    def test_prx_exports_name_the_opd_and_its_code(self):
+        functions, labels, _ = ps3.ghidra_names(ps3.Elf(prx()), ps3.NidTable(FakeSource()))
+        self.assertIn("0x200\t__opd_module_start\t", labels)
+        self.assertTrue(
+            any(
+                row.endswith("export libtestA 0x" + f"{ps3.nid('testFunc'):08x}")
+                for row in functions
+            )
+        )
+
+    def test_rpcs3_source_names_syscalls_by_their_comment_number(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cell = Path(tmp) / "rpcs3" / "Emu" / "Cell"
+            (cell / "lv2").mkdir(parents=True)
+            (cell / "PPUFunction.cpp").write_text("")
+            (cell / "lv2" / "lv2.cpp").write_text(
+                "{\n\tnull_func,\n"
+                "\tBIND_SYSC(sys_process_getpid),                          //1   (0x001)\n"
+                "\tuns_func, uns_func,                                     //2-3  UNS\n"
+                "\tNULL_FUNC(_sys_process_spawn),                          //21  (0x015)  DBG\n"
+                "\tnull_func,//BIND_SYSC(sys_usbd_...),                    //557 (0x22D)\n}\n"
+            )
+            self.assertEqual(
+                ps3.Rpcs3Source(Path(tmp)).syscalls(),
+                {1: "sys_process_getpid", 21: "_sys_process_spawn"},
+            )
+
+
+class Analyze(unittest.TestCase):
+    def test_plan_imports_with_the_32_bit_address_language_and_the_scripts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            Path(tmp, "EBOOT.elf").write_bytes(program())
+            out = io.StringIO()
+            with (
+                contextlib.redirect_stdout(out),
+                contextlib.redirect_stderr(io.StringIO()),
+                mock.patch.object(ps3, "default_source", lambda _: FakeSyscalls()),
+                mock.patch.dict(os.environ, {"GHIDRA_INSTALL_DIR": tmp}),
+            ):
+                code = ps3.main(
+                    ["--caller-cwd", tmp, "analyze", "EBOOT.elf", "--project", "gh", "--plan"]
+                )
+        self.assertEqual(code, 0)
+        plan = json.loads(out.getvalue())
+        command = plan["command"]
+        self.assertEqual(command[command.index("-processor") + 1], ps3.LANGUAGE)
+        self.assertEqual(command[command.index("-preScript") + 1 : command.index("-preScript") + 3],
+                         ["Ps3Prepare.java", "0x28000"])  # fmt: skip
+        self.assertEqual(command.count("ApplyNames.java"), 2)
+        self.assertEqual(command[2], "EBOOT")
+        self.assertNotIn("-overwrite", command)
+        self.assertEqual((plan["functions"], plan["labels"], plan["seeds"]), (1, 1, 3))
+
+    def test_an_spu_elf_or_other_file_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            Path(tmp, "x.bin").write_bytes(b"MZ" + bytes(60))
+            with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+                ps3.main(["--caller-cwd", tmp, "analyze", "x.bin", "--project", "gh", "--plan"])
+
+
+class Build(unittest.TestCase):
+    def test_the_pin_the_setting_and_latest(self):
+        base = {"installed": "build-a", "pinned": "build-a", "wanted": None, "source": "a"}
+        self.assertIsNone(ps3.build_problem(base))
+        self.assertIn("the pin build-b", ps3.build_problem({**base, "pinned": "build-b"}))
+        self.assertIn("REA_RPCS3_BUILD=build-c", ps3.build_problem({**base, "wanted": "build-c"}))
+        self.assertIsNone(ps3.build_problem({**base, "wanted": "latest", "pinned": "build-b"}))
+        self.assertIsNone(ps3.build_problem({**base, "installed": None}))
 
 
 @unittest.skipUnless(os.environ.get("REA_PS3_SAMPLE"), "set REA_PS3_SAMPLE to a SELF, ELF or PRX")

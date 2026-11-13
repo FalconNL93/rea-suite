@@ -48,12 +48,18 @@ class Tool:
     @classmethod
     def from_manifest(cls, name: str, spec: dict) -> Tool:
         version = str(spec.get("version", "latest"))
+        # `version-env: VAR`: the run's VAR (or .env's) replaces the pin, e.g. `latest`
+        if (setting := spec.get("version-env")) and os.environ.get(setting, "").strip():
+            version = os.environ[setting].strip()
+        repo = spec.get("github")
+        if isinstance(repo, dict):  # a repository per platform (RPCS3's builds)
+            repo = repo.get(PLATFORM)
         return cls(
             name=name,
             version=resolve_version(version),
             follows_pip=version.startswith("pip:"),
             build=spec.get("build") or {},
-            github=spec.get("github"),
+            github=repo,
             appdistrib=spec.get("appdistrib") or {},
             dotnet_tool=spec.get("dotnet-tool"),
             url=spec.get("url") or {},

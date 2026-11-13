@@ -51,7 +51,8 @@ installation.
   (run by `update` and `doctor`) says when a new rea-agents moves them. The `xexloaderwv`
   extension pin is the release `rea-suite xbox360` was verified with; it moves with the Ghidra pin,
   after `rea-suite xbox360 check` and the opt-in Xbox 360 tests pass. `rpcs3` and `rpcs3-source`
-  are the RPCS3 build and source commit `rea-suite ps3` was checked with; they move together.
+  are the RPCS3 build and source commit `rea-suite ps3` was checked with; they move together
+  (`REA_RPCS3_BUILD` lets a user install another build without moving the pin).
 
 ## Adding a tool
 

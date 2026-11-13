@@ -11,7 +11,7 @@
     .\platforms\windows\rea-suite.ps1 playstation [options]  # prepare PS1/PS2 projects
     .\platforms\windows\rea-suite.ps1 xbox360 <command> [options]  # Xbox 360 XEX/PE in your Ghidra project
     .\platforms\windows\rea-suite.ps1 xbox info|imports|image|symbols|check <xbe>  # original Xbox XBE without Ghidra
-    .\platforms\windows\rea-suite.ps1 ps3 info|imports|nids|decrypt|check ...  # PS3 SELF/ELF/PRX, NIDs, decryption by your RPCS3
+    .\platforms\windows\rea-suite.ps1 ps3 info|imports|nids|census|decrypt|analyze|check ...  # PS3 SELF/ELF/PRX, NIDs, your RPCS3, Ghidra
     .\platforms\windows\rea-suite.ps1 functions <config> check|add|find|convert  # a port's function index and gate
     .\platforms\windows\rea-suite.ps1 steamstub <exe>...  # SteamStub DRM signs
     .\platforms\windows\rea-suite.ps1 pe <command> <exe> ...  # PE scans: RTTI, references, callers, strings, disasm, resources
