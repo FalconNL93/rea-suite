@@ -29,6 +29,8 @@ What lies around this page:
 | N64 (MIPS) | [N64Recomp](https://github.com/N64Recomp/N64Recomp) and N64ModernRuntime | libultra (threads, messages, VI, audio), RSP microcode recompiled, a renderer (RT64) | a decompilation's ELF, an emulator |
 | PS1 (R3000A) | [psxrecomp](https://github.com/mstan/psxrecomp) (noncommercial license), [RecompOne](https://github.com/flafmg/RecompOne) (MIT, C#) | the BIOS (recompiled, with an HLE tier), GPU, SPU, CD-ROM; or the PsyQ libraries | PCSX-Redux, Beetle |
 | PS2 (R5900 EE, IOP, VUs) | [PS2Recomp](https://github.com/ran-j/PS2Recomp) | EE syscalls and SDK functions bound by name or address; IOP modules run; VU1 interpreted | PCSX2 |
+| GameCube and Wii (PowerPC 750, paired singles) | [DolRecomp](https://github.com/ExpansionPak/DolRecomp) (GPL-3.0, CPU only: DOLs and RELs to C or LLVM); [WiiCompiled](https://github.com/patchzyy/WiiCompiled) (GPL-3.0, one game, on aurora's GX layer); route: [GAMECUBE-WII.md](GAMECUBE-WII.md) | the SDK linked into the game (GX, DVD, PAD, CARD) replaced by name; IOS IPC on the Wii; DSP microcode | Dolphin |
+| PSP (Allegrex MIPS, VFPU) | [psprecomp](https://github.com/sp00nznet/psprecomp) (MIT, early; its README lists three other PSP recompilers); route: [PSP.md](PSP.md) | firmware imports by NID; GE display lists; the Media Engine's codecs | PPSSPP |
 | Any, with the source wanted | a matching decompilation (splat, objdiff, decomp.me), then a port of it | the SDK (libultra, PsyQ, the XDK) or the graphics library | the original, function by function |
 | An engine with a documented data format | a reimplementation (OpenTTD, OpenMW, CorsixTH) | the original's data files only | the original, by eye and by save files |
 

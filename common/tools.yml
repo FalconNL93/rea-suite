@@ -139,6 +139,21 @@ tools:
         component: playstation
         github: chaoticgd/ghidra-emotionengine-reloaded
         asset: '^ghidra_{ghidra}_PUBLIC_\d+_ghidra-emotionengine-reloaded\.zip$'
+      # GameCube/Wii DOL, REL, apploader and RAM dump loader with the Gekko/Broadway language
+      # (paired singles); component gamecube, docs/GAMECUBE-WII.md. Upstream's newest build (1.3.1)
+      # is for Ghidra 12.1, which 12.1.4 refuses, so its source is built for the installed Ghidra.
+      gamecube:
+        component: gamecube
+        github: Cuyler36/Ghidra-GameCube-Loader
+        asset: '^GameCubeLoader-.*-Ghidra_{ghidra}\.zip$'
+        build: true
+      # PSP Allegrex processor: VFPU, PSP relocations, PPSSPP .sym scripts (component psp,
+      # docs/PSP.md). REA's PSP profile (6.8.0 and 6.9.0) uses it from Extensions/ghidra-allegrex.
+      # Not pinned: v21.4 is the newest release with a 12.1.4 build; v21.5 and later are 12.2 only.
+      allegrex:
+        component: psp
+        github: kotcrab/ghidra-allegrex
+        asset: '^ghidra_{ghidra}_PUBLIC_\d+_ghidra-allegrex\.zip$'
       # .NET Native AOT analysis; rea uses its jar (REA_GHIDRA_NATIVEAOT_JAR)
       nativeaot:
         github: Washi1337/ghidra-nativeaot
@@ -234,6 +249,62 @@ tools:
       windows:
         objdiff-cli: objdiff-cli-windows-x86_64.exe
         objdiff: objdiff-windows-x86_64.exe
+
+  # --- component: gamecube ---
+
+  # GameCube/Wii emulator with a GDB stub (General.GDBPort) and DolphinTool (convert, verify,
+  # extract). Pinned to 2609b, the release docs/GAMECUBE-WII.md was read at (2026-11-13); no
+  # GitHub releases, so a direct download. Linux uses the distribution's dolphin-emu (apt), which
+  # has dolphin-tool and dolphin-emu-nogui; the macOS app has no DolphinTool.
+  dolphin:
+    url:
+      macos: https://dl.dolphin-emu.org/releases/2609b/dolphin-2609b-universal.dmg
+      windows: https://dl.dolphin-emu.org/releases/2609b/dolphin-2609b-x64.7z
+    version: '2609b'
+    strip: 1
+    bin:
+      macos:
+        dolphin: Dolphin.app/Contents/MacOS/Dolphin
+      windows:
+        dolphin: Dolphin.exe
+        dolphin-tool: DolphinTool.exe
+
+  # decomp-toolkit: splits a DOL and its RELs into objects for a matching decompilation, with
+  # symbol and split files; dtk-template is the project layout around it.
+  dtk:
+    github: encounter/decomp-toolkit
+    version: latest
+    assets:
+      linux: '^dtk-linux-x86_64$'
+      macos: '^dtk-macos-arm64$'
+      windows: '^dtk-windows-x86_64\.exe$'
+    bin:
+      linux:
+        dtk: dtk-linux-x86_64
+      macos:
+        dtk: dtk-macos-arm64
+      windows:
+        dtk: dtk-windows-x86_64.exe
+
+  # --- component: psp ---
+
+  # PSP emulator with a debugger (GUI), the WebSocket debugger API (subprotocol
+  # debugger.ppsspp.org) and .sym export. Pinned to v1.20.4, the tag docs/PSP.md read
+  # Core/Debugger/WebSocket at (2026-11-13); move it after reading that again.
+  ppsspp:
+    github: hrydgard/ppsspp
+    version: v1.20.4
+    assets:
+      linux: '^PPSSPP-v[\d.]+-anylinux-x86_64\.AppImage$'
+      macos: '^PPSSPPSDL-macOS-v[\d.]+\.zip$'
+      windows: '^PPSSPP-v[\d.]+-Windows-x64\.zip$'
+    bin:
+      linux:
+        ppsspp: {path: 'PPSSPP-*.AppImage', env: {APPIMAGE_EXTRACT_AND_RUN: '1'}}
+      macos:
+        ppsspp: PPSSPPSDL.app/Contents/MacOS/PPSSPPSDL
+      windows:
+        ppsspp: PPSSPPWindows64.exe
 
   # Original upstream publishes Windows CLI binaries; Linux/macOS builds are not configured.
   xgdtool:

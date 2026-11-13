@@ -61,9 +61,15 @@ with the reason when it is dropped.
   - chdman on Windows: MAME's winget package needs an install location the suite's winget list cannot
     give; its release (`mame*b_x64.exe`, a 7-Zip self-extractor) holds `chdman.exe`.
 
-- **ghidra-allegrex (PSP)**: REA 6.8.0 has a PSP Allegrex profile that expects this Ghidra
-  extension; kotcrab/ghidra-allegrex publishes exact-version builds (12.1.4 in v21.4). Needs a
-  check of its license and REA's expectations before it joins a component.
+- **GameCube, Wii and PSP, from the routes' first drafts** (2026-11-13; docs/GAMECUBE-WII.md,
+  docs/PSP.md; ghidra-allegrex joined component `psp`):
+  - The GameCube loader's source build for Ghidra 12.1.4 has not run; run `rea-suite setup` with the
+    component and `rea-suite gamecube check`, then import a DOL with it.
+  - Oracle back ends for the suite's region format: GDB (Dolphin, and the other GDB stubs) and
+    PPSSPP's WebSocket API (no GDB stub there).
+  - A PSP NID name table (pspsdk's stubs or PPSSPP's HLE tables, read at a pinned version) so
+    `rea-suite psp info` names imports without a list of your own.
+  - CSO v2, ZSO and RSO readers; DSP ADPCM and GX texture converters.
 
 - **Original Xbox, from the route's first draft** (2026-11-12; the route is docs/XBOX-CLASSIC.md):
   - A kernel-call log from xemu, the counterpart of `rea-suite dosbox`: gdb on xemu's stub with a

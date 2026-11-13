@@ -1372,6 +1372,27 @@ wheels = [
 ]
 
 [[package]]
+name = "nod-rs"
+version = "2.0.0a12"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/2e/c2/7cd277709849ccc5cb5ad2a21e56f44e621aef94e4881d8d700e7f7a5af9/nod_rs-2.0.0a12.tar.gz", hash = "sha256:2c8a7f7c8929499670db394868dbef100da891f09761d88c8f1ee12fbc84194a", size = 138895, upload-time = "2026-09-16T05:44:43.285Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d1/5d/d9f7d660e7d16d354a81c1e3f534692ee1bb4f7781eadda28135ea565c36/nod_rs-2.0.0a12-cp310-abi3-macosx_10_12_x86_64.whl", hash = "sha256:5dc2627f0e56c87ea3a26c2feb46e4fdb3a5192a407d6335473fb73fb6bba189", size = 1162832, upload-time = "2026-09-16T05:43:59.87Z" },
+    { url = "https://files.pythonhosted.org/packages/65/42/600e146e6b20a5d721352d509e40b5a520b6238c55b6c9d25893c043db79/nod_rs-2.0.0a12-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:dbb66012820c5dec4c64bb44516c85fb502ff34203cc6dcd8e200dea53a80538", size = 1020947, upload-time = "2026-09-16T05:44:02.239Z" },
+    { url = "https://files.pythonhosted.org/packages/29/48/195635f8b7964dd6c2f3866578966601d1a9f27bd780ee60c03df8c768ec/nod_rs-2.0.0a12-cp310-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:041bd150a0d9b74e5e12c4d970f92aba9b8b16027c9f0cdfe096f5cd4747ab8b", size = 1079735, upload-time = "2026-09-16T05:44:04.248Z" },
+    { url = "https://files.pythonhosted.org/packages/f1/16/e0aa12e040e70a359305188d5b6e1c487c98ff3440969e56cfa91e4ede26/nod_rs-2.0.0a12-cp310-abi3-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:7704d11c8aaadc84fea68d80f0792d2a19811f9e93cb9ac00dc77cb75267dcb4", size = 1122136, upload-time = "2026-09-16T05:44:05.779Z" },
+    { url = "https://files.pythonhosted.org/packages/11/21/5c42da6b6ead7a58193b8d22c57a97a015ea5a65af84c49160e49b8a25cd/nod_rs-2.0.0a12-cp310-abi3-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:19510e465b9a14090e965c87b71c7e9f2ffc6c99d6216ac80ecd85ca7e1f7390", size = 1263193, upload-time = "2026-09-16T05:44:07.407Z" },
+    { url = "https://files.pythonhosted.org/packages/69/d2/a34c60fe348883f26459a68f445f6aa770406a636901dac901268d6f3bb9/nod_rs-2.0.0a12-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:cfaf57137a8d5a67b908f8f589fc439b8930218931e02950d4dd74445eea9504", size = 1149533, upload-time = "2026-09-16T05:44:09.051Z" },
+    { url = "https://files.pythonhosted.org/packages/69/57/379c0f1913b382be74b7fd589d4cb0071dd0ce9b4b617039669fea632227/nod_rs-2.0.0a12-cp310-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:b365f8735bc05b7705d25224a2436b16f9bc5e98544ab043863b4da51f5e2b22", size = 1077910, upload-time = "2026-09-16T05:44:10.745Z" },
+    { url = "https://files.pythonhosted.org/packages/93/31/0e9bfea3f027e8f5e421b052253a771ead8020f374f8c0f530c0ece6cbb9/nod_rs-2.0.0a12-cp310-abi3-musllinux_1_2_armv7l.whl", hash = "sha256:f763a594d70be4ef98a479de936cdd1ea128be93341f0e03644667b5c0c41ce9", size = 1122268, upload-time = "2026-09-16T05:44:12.214Z" },
+    { url = "https://files.pythonhosted.org/packages/39/03/51ae9aec711a8ef6d5293f66e008b434b1ef2d1082fb98c81a54ee1b2b7b/nod_rs-2.0.0a12-cp310-abi3-musllinux_1_2_i686.whl", hash = "sha256:a9cbf6f196613f50db92e18d64ebcb2154bfd430cc9d1f39ada54387f6d9eff5", size = 1218850, upload-time = "2026-09-16T05:44:13.969Z" },
+    { url = "https://files.pythonhosted.org/packages/d7/04/c94c2ae94820838655411f33aaf9db049d79138323421c8e69190f35b715/nod_rs-2.0.0a12-cp310-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:c3bcad6bbf6d1ee214e8fff56f8270dbe7f7d100b8ca2b91f3777ed8d5bc782c", size = 1148274, upload-time = "2026-09-16T05:44:15.492Z" },
+    { url = "https://files.pythonhosted.org/packages/9a/b6/85cdeb552c6d319d289f5120876491af19d78aaa7b8938e022528524e231/nod_rs-2.0.0a12-cp310-abi3-win32.whl", hash = "sha256:8f61cf32f55a2bf818da7490d21727bc38ac1c0e291ac44c89312821df8e8390", size = 928470, upload-time = "2026-09-16T05:44:16.998Z" },
+    { url = "https://files.pythonhosted.org/packages/e4/c8/928042ee4af598c48e7ec3839d4e392e2119a3fb28b36b9a69a7e64b1832/nod_rs-2.0.0a12-cp310-abi3-win_amd64.whl", hash = "sha256:dbd3e921f8fc099007da7de54f16b567f6c805dc42c767f116bdf4dc15fdce3b", size = 980160, upload-time = "2026-09-16T05:44:18.827Z" },
+    { url = "https://files.pythonhosted.org/packages/60/0b/6cd213180dfd5cf5dcf0ac022bfea9cde4a45a25c749dfc839acd79e2226/nod_rs-2.0.0a12-cp310-abi3-win_arm64.whl", hash = "sha256:b84a45fa60f45669587da6b0b70c2d18e61459b59f9a8186b422c2f8d764bde1", size = 951171, upload-time = "2026-09-16T05:44:20.378Z" },
+]
+
+[[package]]
 name = "objection"
 version = "1.12.5"
 source = { registry = "https://pypi.org/simple" }
@@ -1985,6 +2006,9 @@ dev = [
     { name = "ruff" },
     { name = "shellcheck-py" },
 ]
+gamecube = [
+    { name = "nod-rs" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -2015,6 +2039,7 @@ dev = [
     { name = "ruff", specifier = ">=0.8" },
     { name = "shellcheck-py", specifier = ">=0.11" },
 ]
+gamecube = [{ name = "nod-rs", specifier = "==2.0.0a12" }]
 
 [[package]]
 name = "requests"

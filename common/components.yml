@@ -102,3 +102,14 @@ components:
   xbox:
     description: Original Xbox (2001) games - xemu with QEMU's GDB stub (rea-suite xbox, docs/XBOX-CLASSIC.md) and extract-xiso; the XBE loader for Ghidra is always installed
     tools: [xemu, extract-xiso]
+
+  gamecube:
+    description: GameCube and Wii - Dolphin with its GDB stub and DolphinTool (Linux from the distribution), dtk (decomp-toolkit; it also reads and extracts disc images in every format), nod-rs for rea-suite gamecube's RVZ/WBFS/WIA images, and the GameCube loader for Ghidra (built from source)
+    # The Debian and Ubuntu name (Ubuntu 26.04 carries 2512); Fedora and Arch names not checked.
+    apt: [dolphin-emu]
+    uv-groups: [gamecube]
+    tools: [dolphin, dtk]
+
+  psp:
+    description: PSP - PPSSPP with its WebSocket debugger, and ghidra-allegrex for Ghidra, which REA's PSP profile uses (rea-suite psp)
+    tools: [ppsspp]
