@@ -24,12 +24,14 @@ from pathlib import Path
 
 import pefile
 
+from rea_suite.text import decoded
+
 ENCRYPTED = 7.2
 CODE = 0x20  # IMAGE_SCN_CNT_CODE
 
 
 def section_name(section) -> str:
-    return section.Name.rstrip(b"\0").decode("ascii", "replace")
+    return decoded(section.Name.rstrip(b"\0"), "ascii")
 
 
 def inspect(path: Path) -> dict:

@@ -27,6 +27,9 @@ dependencies = [
     "objection>=1.12",
     # Binary diffing on top of Ghidra/pyghidra (CLI: ghidriff)
     "ghidriff>=1",
+    # Internet Archive CLI (`ia`: search, metadata, download, upload) for preserved game builds,
+    # manuals and patches on archive.org; `ia configure` keeps credentials in the user's own config
+    "internetarchive>=5",
     # AES for decrypting Xbox 360 XEX images (rea-suite xbox360; also a mitmproxy dependency)
     "cryptography>=44",
     # Original Xbox XBE headers, sections, libraries and kernel imports (rea-suite xbox)
@@ -55,6 +58,16 @@ dev = [
     "ruff>=0.8",
     # shellcheck binary as a wheel, so it comes from uv like ruff
     "shellcheck-py>=0.11",
+]
+# What the unit tests import beyond the standard library, so CI (`rea-suite check`) installs these
+# and the linters only: `uv sync --only-group dev --only-group test`. Versions follow the main list.
+test = [
+    "pyyaml>=6",
+    "pefile>=2024.8.26",
+    "capstone>=5",
+    "keystone-engine>=0.9.2",
+    "cryptography>=44",
+    "pyxbe>=1.0.4",
 ]
 
 [tool.uv]

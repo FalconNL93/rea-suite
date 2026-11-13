@@ -8,11 +8,11 @@ import json
 import os
 import re
 import shutil
-import signal
 import struct
 import subprocess
 from pathlib import Path, PurePosixPath
 
+from rea_suite import bounded, ghidra_headless
 from rea_suite.archive import seven_zip
 
 # ELF type of an IOP module (IRX): an SCE-specific relocatable, R3000 code for the IOP.
@@ -175,35 +175,7 @@ def extraction(source: Path, project: Path, kind: str) -> list[str]:
 
 def run(command: list[str], project: Path, log, timeout: int) -> None:
     """Bound owned tool processes, including their children on timeout or interruption."""
-    with subprocess.Popen(
-        command,
-        cwd=project,
-        stdout=log,
-        stderr=subprocess.STDOUT,
-        start_new_session=os.name != "nt",
-    ) as child:
-        try:
-            code = child.wait(timeout=timeout)
-        except BaseException:
-            if child.poll() is None:
-                if os.name == "nt":
-                    subprocess.run(
-                        ["taskkill", "/F", "/T", "/PID", str(child.pid)],
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                        check=False,
-                    )
-                    if child.poll() is None:
-                        child.kill()
-                else:
-                    try:
-                        os.killpg(child.pid, signal.SIGKILL)
-                    except ProcessLookupError:
-                        pass
-                child.wait()
-            raise
-        if code:
-            raise subprocess.CalledProcessError(code, command)
+    bounded.run(command, project, log, timeout)
 
 
 def prepare(args: argparse.Namespace) -> dict:
@@ -259,19 +231,11 @@ def prepare(args: argparse.Namespace) -> dict:
                 raise ValueError(
                     "boot ELF is not identified as R5900; import IOP/modules separately"
                 )
-            install = os.environ.get("GHIDRA_INSTALL_DIR")
-            if not install:
-                raise ValueError("GHIDRA_INSTALL_DIR missing; run through rea-suite")
-            runner = (
-                Path(install)
-                / "support"
-                / ("analyzeHeadless.bat" if os.name == "nt" else "analyzeHeadless")
-            )
+            runner = ghidra_headless.headless()
             root = Path(state["root"])
             target = root / boot["path"] if root.is_dir() else root
-            ghidra = [
-                str(runner),
-                str(project / "ghidra"),
+            ghidra = runner.command(
+                project / "ghidra",
                 "playstation",
                 "-import",
                 str(target),
@@ -294,10 +258,9 @@ def prepare(args: argparse.Namespace) -> dict:
                 "DecompileAt.java",
                 str(project / "analysis/entry.c"),
                 boot["entry"],
-            ]
+            )
             state["ghidra_command"] = ghidra
-            with (project / "logs/ghidra.log").open("w") as log:
-                run(ghidra, project, log, args.timeout + 120)
+            runner.run(ghidra, project / "logs/ghidra.log", args.timeout + 120)
             database = project / "ghidra/playstation.gpr"
             if not database.is_file():
                 raise ValueError("Ghidra produced no project; inspect logs/ghidra.log")

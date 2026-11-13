@@ -9,8 +9,7 @@ first port adds its own. Nothing about one game belongs on this page.
 
 What lies around this page:
 
-- The Xbox 360 lane, the closest relative (PowerPC too): the README's "Console games and disc images"
-  (`rea-suite xbox360`).
+- The Xbox 360 route, the closest relative (PowerPC too): [XBOX360.md](XBOX360.md) (`rea-suite xbox360`).
 - The PS1 and PS2 routes: [PS1.md](PS1.md), [PS2.md](PS2.md); their tools: [PLAYSTATION.md](PLAYSTATION.md).
 - What ps3recomp and the other static recompilers solved, and how: [RECOMPILATION.md](RECOMPILATION.md).
 - The port's platform work (the master, the SDK, the port checklist): master-server's docs/PORTING.md.
@@ -327,10 +326,11 @@ Traps the projects record:
 - **A retail game through this route**, and the Ghidra steps with Ps3GhidraScripts built (its source
   build was not run here).
 - **An RPCS3 oracle command** like `rea-suite dosbox`: named regions read over PINE at sync points,
-  and module calls from the trace log, as JSON lines (TODO.md).
-- **An SPU language for Ghidra** that builds with the pinned Ghidra (TODO.md).
+  and module calls from the trace log, as JSON lines (issue #30).
+- **An SPU language for Ghidra** that builds with the pinned Ghidra (issue #31).
 - **A PPU language with the Cell-specific VMX loads and stores**, and `r2` preserved in the PS3
-  compiler spec, without editing the Ghidra install.
+  compiler spec, without editing the Ghidra install (issue #32).
+- **A real PRX through `analyze`**: its exports were named on synthetic files only (issue #33).
 
 ## Existing PS3 recompilations and decompilations
 

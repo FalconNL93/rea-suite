@@ -198,14 +198,17 @@ class Loader(unittest.TestCase):
             sample = install / "Ghidra/Extensions/ghidra-xbe/tests/xbefiles/triangle.xbe"
             sample.parent.mkdir(parents=True)
             sample.write_bytes(synthetic())
-            for log, code in (
+            for text, code in (
                 ("INFO  Using Loader: Raw Binary (ProgramLoader)", 1),
                 (f"INFO  Using Loader: {xbox.LOADER_NAME} (ProgramLoader)", 0),
             ):
+
+                def probe(runner, command, log, timeout=None, check=True, text=text):
+                    log.write_text(text)
+                    return 0
+
                 with (
-                    patch(
-                        "subprocess.run", return_value=subprocess.CompletedProcess([], 0, log, "")
-                    ),
+                    patch.object(xbox.ghidra_headless.AnalyzeHeadless, "run", probe),
                     contextlib.redirect_stdout(io.StringIO()),
                 ):
                     self.assertEqual(xbox.check(install), code)

@@ -233,13 +233,18 @@ class ProjectTests(unittest.TestCase):
         (self.root / "a.xex").write_bytes(b"XEX2")
 
         def ghidra(command, project, log, timeout):
-            log.write("INFO  Using Loader: Raw Binary (ProgramLoader)\nREPORT: Import succeeded\n")
+            log.write_text(
+                "INFO  Using Loader: Raw Binary (ProgramLoader)\nREPORT: Import succeeded\n"
+            )
 
         args = argparse.Namespace(
             caller_cwd=self.root, file=Path("a.xex"), project=Path("p"), name=None,
             timeout=60, force=False, plan=False,
         )  # fmt: skip
-        with patch.object(xbox360, "run", ghidra), self.assertRaisesRegex(ValueError, "Raw Binary"):
+        with (
+            patch.object(xbox360, "ghidra", ghidra),
+            self.assertRaisesRegex(ValueError, "Raw Binary"),
+        ):
             xbox360.analyze(args, install)
 
 
@@ -399,10 +404,14 @@ class LoaderCheckTests(unittest.TestCase):
 
     def test_check_fails_when_ghidra_does_not_ask_the_loader(self):
         install = fake_ghidra(self.root)
-        result = argparse.Namespace(stdout="INFO nothing\n", stderr="")
+
+        def probe(command, log, timeout=None, check=True):
+            log.write_text("INFO nothing\n")
+            return 0
+
         out = io.StringIO()
         with (
-            patch.object(xbox360.subprocess, "run", return_value=result),
+            patch.object(xbox360.ghidra_headless, "run", probe),
             contextlib.redirect_stdout(out),
         ):
             self.assertEqual(xbox360.check(install), 1)

@@ -90,24 +90,24 @@ Checked 2026-11-12 against the upstream repositories and release pages linked. T
 | ghidra-ps2sdk (abelbriggs1) | PS2 SDK library analyzer and type databases on top of EE Reloaded | **no**: its GitHub repository answers 404 (2026-11-12); no other source found |
 | [splat](https://github.com/ethteck/splat) | split PSX/PS2/N64/PSP executables for a decompilation | yes (component `decomp`) |
 | [objdiff](https://github.com/encounter/objdiff) | per-function match against the original | yes (component `decomp`) |
-| [maspsx](https://github.com/mkst/maspsx) | makes GCC's assembly assemble as PsyQ's ASPSX did, for matching PS1 code | no: no release or package; decompilation projects carry it as a submodule |
+| [maspsx](https://github.com/mkst/maspsx) | makes GCC's assembly assemble as PsyQ's ASPSX did, for matching PS1 code | no: maspsx itself has no release or package (its one release tag, `aspsx`, 2026-10-13, holds the original ASPSX binaries and a `psyq-obj-parser` build, not maspsx; checked 2026-11-13); decompilation projects carry it as a submodule |
 | [asm-differ](https://github.com/simonlindholm/asm-differ), [m2c](https://github.com/matt-kempster/m2c) | assembly diff; MIPS assembly to a C draft | no: no release (the PyPI name `m2c` belongs to another project); projects carry them as submodules, [decomp.me](https://decomp.me) runs both online |
 | [decompals/old-gcc](https://github.com/decompals/old-gcc) | the GCC 2.x builds PsyQ shipped, for matching | no: a project's own toolchain, downloaded by its build (Linux x86_64 releases) |
 | [psy-q-splitter](https://github.com/sozud/psy-q-splitter), [psyz](https://github.com/Xeeynamo/psyz) | splitting the PsyQ libraries; replacing them with native code for a PC build | no: source only, niche |
 | [PCSX-Redux](https://github.com/pcsx-redux/pcsx-redux) | PS1 debugger, GDB server, Lua, psyq-obj-parser | yes |
-| [DuckStation](https://github.com/stenzek/duckstation) | accurate PS1 emulation, debugger | no: PCSX-Redux covers RE; DuckStation's source tree has no GDB server any more (2026-11-12) and its license is CC BY-NC-ND 4.0 |
+| [DuckStation](https://github.com/stenzek/duckstation) | accurate PS1 emulation, debugger | no: PCSX-Redux covers RE. DuckStation has a GDB server (`src/core/gdb_server.cpp`, settings `GDBServer` and `GDBServerPort`, checked 2026-11-13), so it could be a second oracle; its license is CC BY-NC-ND 4.0, which allows running it unmodified |
 | [PCSX2](https://github.com/PCSX2/pcsx2) | PS2 debugger (EE/IOP), symbol import, PINE | yes. It has **no GDB stub** (none in its source tree, 2026-11-12) |
 | [mkpsxiso](https://github.com/Lameguy64/mkpsxiso) | PS1 CD extract and rebuild | yes |
 | [jPSXdec](https://github.com/m35/jpsxdec) | PS1 video, audio, images | yes |
 | [chdman](https://docs.mamedev.org/tools/chdman.html) | CHD to CUE/BIN or ISO | yes, Linux and macOS |
-| [armips](https://github.com/Kingcom/armips) | assemble patches into an executable | no: its only release (v0.11.0, 2019) is a 32-bit Windows build |
-| [psxrecomp](https://github.com/mstan/psxrecomp), [RecompOne](https://github.com/flafmg/RecompOne) | PS1 static recompilation (to C/C++; to C#) | no: source only, no releases; a port takes one as its own dependency. psxrecomp is PolyForm Noncommercial, RecompOne MIT |
-| [PS2Recomp](https://github.com/ran-j/PS2Recomp) | PS2 static recompilation (R5900 to C++, a runtime, IOP modules) | no: source only (CMake, submodules, tested mainly with MSVC), GPL; a port's own dependency |
+| [armips](https://github.com/Kingcom/armips) | assemble patches into an executable | no: its newest release, v0.11.0 (2020-05-10), has one asset, a 32-bit Windows build; no Linux or macOS build exists (checked 2026-11-13) |
+| [psxrecomp](https://github.com/RetroPortingToolKit/psxrecomp), [RecompOne](https://github.com/BlackLabelHQ/RecompOne) | PS1 static recompilation (to C/C++; to C#) | no: a port takes one as its own dependency. psxrecomp (PolyForm Noncommercial) now has releases: v0.3.7-alpha (2026-11-07) with a Windows x86_64 CLI, a source zip and SHA256SUMS, plus nightlies. RecompOne (MIT) has none. Both moved; the old URLs redirect (checked 2026-11-13) |
+| [PS2Recomp](https://github.com/ran-j/PS2Recomp) | PS2 static recompilation (R5900 to C++, a runtime, IOP modules) | no: pre-release tags v0.2 to v0.4 (newest 2026-04-05) with no binaries, so in practice source only (CMake, submodules, tested mainly with MSVC), GPL; a port's own dependency (checked 2026-11-13) |
 | PS2 DVD rebuild | a patched PS2 DVD with the original file order | no: no maintained tool found; see [PS2.md](PS2.md) |
 
 ## REA
 
-Installed REA **6.8.0** has no verified PS-X EXE or PS2 EE profile. Its generic MIPS policy rejects
+Installed REA **6.8.0** has no verified PS-X EXE or PS2 EE profile. REA 6.9.0 was published on 2026-11-12 (npm `rea-agents`); it still pins Ghidra 12.1.4 and ships a `GhidraMipsProfile.js`. Whether it opens these formats is checked after `rea-suite update` moves to it, not here. Its generic MIPS policy rejects
 R5900 machine variants. The `playstation` command uses Ghidra directly; it does not add MCP tools or
 make `rea-suite analyze` support these formats. Track [REA #6746](https://github.com/morluto/rea/issues/6746).
 
