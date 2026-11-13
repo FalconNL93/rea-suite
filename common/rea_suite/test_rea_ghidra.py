@@ -1,5 +1,6 @@
 """bin/rea-ghidra against a stand-in analyzeHeadless that records its arguments: a port's own
-project folder, logs under it, and no re-import that would lose the project's names."""
+project folder, logs under it, no re-import that would lose the project's names, and no project
+Ghidra would refuse. The limits of every run are test_ghidra_headless's."""
 
 from __future__ import annotations
 
@@ -125,6 +126,14 @@ class ReaGhidra(unittest.TestCase):
         self.assertEqual(done.returncode, 1)
         self.assertIn("no program Other.exe", done.stderr)
         self.assertEqual(self.call_lines(), [])
+
+    def test_a_project_under_a_dotted_folder_is_refused_with_the_reason(self) -> None:
+        project = self.root / ".claude" / "worktrees" / "port" / "ghidra"
+        done = self.run_tool("analyze", "--project", str(project), str(self.binary))
+        self.assertEqual(done.returncode, 1)
+        self.assertIn("starts with '.'", done.stderr)
+        self.assertEqual(self.call_lines(), [])
+        self.assertFalse(project.exists())
 
     def test_force_is_refused_for_queries(self) -> None:
         done = self.run_tool("decomp", "--force", str(self.binary), "0x401000")

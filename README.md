@@ -907,6 +907,7 @@ rea-ghidra decomp    work/target.exe 0x401000 0x4020a0 > out.c
 rea-ghidra xrefs     work/target.exe "license" "serial" > out.c
 ```
 
+On Windows the same commands run as `bin\rea-ghidra.cmd` (`platforms\windows\rea-ghidra.ps1`).
 Projects live in `work/ghidra/<binary name>/`, logs in its `logs/`. The scripts are in
 `common/ghidra_scripts/` (taken over from the rogue-spear port). A port keeps its own project
 with `--project DIR` (and `--name`, default the folder's one `.gpr`); the queries then take the
@@ -938,6 +939,13 @@ project folder. This is the x86/x64 PE counterpart of `rea-suite xbox360 analyze
   (default in `common/env.sh`), which also bounds REA, otherwise without a limit; a function past
   it says so in the output. A program REA analyzed itself keeps the Alignment
   ([known issues](docs/REA-KNOWN-ISSUES.md), item 15): decompile those functions with `rea-ghidra`.
+- **Every run is bounded** (`common/rea_suite/ghidra_headless.py`, which `rea-suite xbox360`, `xbox`
+  and `playstation` use too): `REA_GHIDRA_IMPORT_TIMEOUT_SECONDS` (default 3600) limits one
+  `analyzeHeadless` run, after which it and its children are stopped and the error names the log;
+  `REA_GHIDRA_MAXMEM` (default 4G) caps Ghidra's heap. Ghidra refuses a project path with a
+  component that starts with `.` ("Path element starting with '.' is not permitted"), so a
+  project in a worktree under `.claude/` is refused up front: use `--project` elsewhere or
+  `REA_GHIDRA_PROJECTS`.
 - **One process per project.** Ghidra locks a project for a whole run, so a second agent's
   read-only queries fail with "locked by another process". Give parallel agents a copy of the
   project each, or a route that needs none (`rea-suite pe`, or `rea-suite le dump-image` and Rizin).
@@ -945,8 +953,8 @@ project folder. This is the x86/x64 PE counterpart of `rea-suite xbox360 analyze
   decompiles nothing. Use an array (`"${addrs[@]}"`) or `${=addrs}`.
 REA's own Ghidra provider gives up on a first import after 330 s by default, too short for a large
 game; raise `REA_GHIDRA_STARTUP_TIMEOUT_MS` first ([known issues](docs/REA-KNOWN-ISSUES.md), item 9).
-Tests: `uv run --no-sync python -m unittest rea_suite.test_rea_ghidra` in `common/` (a stand-in
-for `analyzeHeadless`).
+Tests: `uv run --no-sync python -m unittest rea_suite.test_rea_ghidra rea_suite.test_ghidra_headless`
+in `common/` (a stand-in for `analyzeHeadless`).
 
 ## Build toolchains
 

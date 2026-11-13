@@ -69,7 +69,7 @@ installation.
 
 | Path | Holds |
 |---|---|
-| `bin/` | Entry points: `rea-suite` (setup/update/doctor), `rea` (REA with the suite environment), `rea-ghidra` (headless Ghidra). |
+| `bin/` | Entry points: `rea-suite` (setup/update/doctor), `rea` (REA with the suite environment), `rea-ghidra` (headless Ghidra); `.cmd` launchers for Windows. |
 | `common/` | Cross-platform: `env.sh`, `box.sh` (distrobox on immutable hosts), `tools.yml`, `components.yml`, `uv-tools.txt`, `rea_suite/` (Python: `rea-tools`, `diec`, components, agents), `ghidra_scripts/`. |
 | `platforms/linux/`, `platforms/macos/`, `platforms/windows/` | Bootstrap, system package lists (apt, Brewfile, winget), Windows equivalents of the shell scripts. |
 | `.agents/skills/` | Process skills (see its README). |
@@ -94,7 +94,9 @@ installation.
 * REA is the agent's front door (`rea-suite agents` registers it); its skill covers the workflow.
 * For scripted Ghidra work use `rea-ghidra` (analyze once, then `decomp`, `xrefs`, `functions`;
   `--project` for a port's own project, whose names `analyze --force` keeps);
-  add new headless scripts to `common/ghidra_scripts/` with a usage line at the top.
+  add new headless scripts to `common/ghidra_scripts/` with a usage line at the top. Every
+  `analyzeHeadless` run goes through `common/rea_suite/ghidra_headless.py` (time limit, heap
+  cap, refused dotted project paths); a large import runs under ci-images' `heavy run`.
 * Findings about a target belong to that target's own project, not to this repository.
 
 ## Git

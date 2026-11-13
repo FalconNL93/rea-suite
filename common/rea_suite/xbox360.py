@@ -40,8 +40,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from rea_suite import ppc, xex
-from rea_suite.playstation import run
+from rea_suite import ghidra_headless, ppc, xex
 
 # XEXLoaderWV's own choice; Ghidra's PE opinions know only little-endian PowerPC (0x01f0/0x01f1).
 LANGUAGE = "PowerPC:BE:64:A2ALT-32addr"
@@ -97,8 +96,7 @@ def loader_problem(install: Path) -> str | None:
 
 
 def runner(install: Path) -> str:
-    name = "analyzeHeadless.bat" if os.name == "nt" else "analyzeHeadless"
-    return str(install / "support" / name)
+    return str(ghidra_headless.AnalyzeHeadless(install).executable)
 
 
 def project_name(project: Path, name: str | None) -> str:
@@ -205,14 +203,8 @@ def read_summary(path: Path) -> dict:
 
 
 def ghidra(command: list[str], project: Path, log: Path, timeout: int) -> None:
-    """Runs analyzeHeadless into its log; a failure names the log."""
-    try:
-        with log.open("w") as stream:
-            run(command, project, stream, timeout)
-    except subprocess.TimeoutExpired as exc:
-        raise ValueError(f"Ghidra ran past {timeout}s (--timeout); see {log}") from exc
-    except subprocess.CalledProcessError as exc:
-        raise ValueError(f"Ghidra exited with {exc.returncode}; see {log}") from exc
+    """Runs analyzeHeadless into its log, bounded (ghidra_headless); a failure names the log."""
+    ghidra_headless.run(command, log, timeout)
 
 
 def analyze(args: argparse.Namespace, install: Path) -> int:
@@ -424,8 +416,14 @@ def check(install: Path) -> int:
         sample = Path(tmp) / "probe.bin"
         sample.write_bytes(bytes(64))
         command = [runner(install), tmp, "probe", "-import", str(sample), "-readOnly"]
-        result = subprocess.run(command, capture_output=True, text=True, timeout=300, check=False)
-    if "XEX Loader: Checking Signature" not in result.stdout + result.stderr:
+        log = Path(tmp) / "probe.log"
+        try:
+            ghidra_headless.run(command, log, 300, check=False)
+        except ghidra_headless.GhidraError as exc:
+            print(exc)
+            return 1
+        text = log.read_text(errors="replace") if log.is_file() else ""
+    if "XEX Loader: Checking Signature" not in text:
         print(f"Ghidra {ghidra_version(install)} did not load XEXLoaderWV; run {FIX}")
         return 1
     print(f"XEXLoaderWV loads in Ghidra {ghidra_version(install)}")
@@ -600,7 +598,12 @@ def main(argv: list[str] | None = None) -> int:
     for parser in [a, n, *(sub.choices[c] for c in ("decomp", "xrefs", "functions"))]:
         parser.add_argument("--project", type=Path, required=True, help="Ghidra project folder")
         parser.add_argument("--name", help="project name (default: the folder's one .gpr)")
-        parser.add_argument("--timeout", type=int, default=1800, help="seconds (default 1800)")
+        parser.add_argument(
+            "--timeout",
+            type=int,
+            help=f"seconds (default {ghidra_headless.TIMEOUT_SETTING},"
+            f" else {ghidra_headless.DEFAULT_TIMEOUT_SECONDS})",
+        )
         parser.add_argument("--plan", action="store_true", help="print the Ghidra command only")
     a.add_argument("--force", action="store_true", help="import again over the same program")
     sub.add_parser("check", help="XEXLoaderWV installed for this Ghidra, and loading")
@@ -612,6 +615,8 @@ def main(argv: list[str] | None = None) -> int:
         install = ghidra_install()
         if args.command == "check":
             return check(install)
+        if args.timeout is None:
+            args.timeout = ghidra_headless.timeout_seconds()
         if args.timeout < 1:
             p.error("--timeout must be positive")
         if args.command == "analyze":

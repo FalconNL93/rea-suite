@@ -28,6 +28,8 @@ from pathlib import Path
 
 import xbe as pyxbe
 
+from rea_suite import ghidra_headless
+
 MAGIC = 0x48454258  # "XBEH"
 # The entry point and the kernel thunk table are stored XORed with a key per build kind.
 KEYS = {
@@ -268,11 +270,19 @@ def check(install: Path) -> int:
     if not sample.is_file():
         print(f"{sample.name} missing from {EXTENSION}; run {FIX}")
         return 1
-    runner = install / "support" / ("analyzeHeadless.bat" if os.name == "nt" else "analyzeHeadless")
+    runner = ghidra_headless.AnalyzeHeadless(install)
     with tempfile.TemporaryDirectory() as tmp:
-        command = [str(runner), tmp, "probe", "-import", str(sample), "-noanalysis", "-readOnly"]
-        result = subprocess.run(command, capture_output=True, text=True, timeout=300, check=False)
-    if f"Using Loader: {LOADER_NAME}" not in result.stdout + result.stderr:
+        command = runner.command(
+            Path(tmp), "probe", "-import", str(sample), "-noanalysis", "-readOnly"
+        )
+        log = Path(tmp) / "probe.log"
+        try:
+            runner.run(command, log, 300, check=False)
+        except ghidra_headless.GhidraError as exc:
+            print(exc)
+            return 1
+        text = log.read_text(errors="replace") if log.is_file() else ""
+    if f"Using Loader: {LOADER_NAME}" not in text:
         print(
             f"Ghidra {ghidra_version(install)} did not load {sample.name} with {EXTENSION}; run {FIX}"
         )
