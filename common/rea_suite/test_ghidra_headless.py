@@ -30,11 +30,17 @@ esac
 
 
 def alive(pid: int) -> bool:
+    """Running, not a zombie: in a container without an init (CI's), a killed grandchild stays a
+    zombie, since nothing reaps orphans there, and a signal 0 still finds it."""
     try:
         os.kill(pid, 0)
     except ProcessLookupError:
         return False
-    return True
+    try:
+        stat = Path(f"/proc/{pid}/stat").read_text()
+    except OSError:
+        return True  # no /proc (macOS): signal 0 is all there is
+    return stat.rsplit(")", 1)[1].split()[0] != "Z"
 
 
 @unittest.skipIf(sys.platform == "win32", "POSIX stand-in")
