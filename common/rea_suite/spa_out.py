@@ -301,10 +301,22 @@ PLAIN = str.maketrans(
 )
 
 
-def ascii_text(text: str, where: str, limit: int, notes: list[str], joiner: str = " ") -> str:
-    """The text as printable ASCII within `limit`, each change noted; DeclarationError otherwise."""
-    lines = [line.strip() for line in re.split(r"[\r\n]+", text)]
-    folded = joiner.join(line for line in lines if line)
+def join_lines(lines: list[str]) -> str:
+    """Lines as one: a space after a line that ends a phrase (`:`, `.`, `!`, `?`, `;`, `,`), else ", ", so a
+    listed achievement text reads "Photograph: A, B, C" rather than "Photograph: A B C" (Lost: Via Domus)."""
+    out = ""
+    for line in lines:
+        out = line if not out else out + (" " if out[-1] in ":.!?;," else ", ") + line
+    return out
+
+
+def ascii_text(
+    text: str, where: str, limit: int, notes: list[str], joiner: str | None = None
+) -> str:
+    """The text as printable ASCII within `limit`, each change noted; DeclarationError otherwise. Line breaks
+    are joined by `joiner` when given, else as a list (join_lines)."""
+    lines = [line for line in (part.strip() for part in re.split(r"[\r\n]+", text)) if line]
+    folded = joiner.join(lines) if joiner is not None else join_lines(lines)
     folded = unicodedata.normalize("NFKD", folded.translate(PLAIN))
     folded = "".join(c for c in folded if not unicodedata.combining(c))
     bad = sorted({c for c in folded if not " " <= c <= "~"})

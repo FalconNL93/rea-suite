@@ -336,3 +336,16 @@ class WriterTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class JoinLinesTests(unittest.TestCase):
+    def test_a_listed_text_reads_as_a_list(self) -> None:
+        self.assertEqual(
+            spa_out.join_lines(
+                ["Photograph:", "Kelvin's jump suit", "Medical cabinet", "Desmond's mural"]
+            ),
+            "Photograph: Kelvin's jump suit, Medical cabinet, Desmond's mural",
+        )
+
+    def test_a_sentence_break_keeps_one_space(self) -> None:
+        self.assertEqual(spa_out.join_lines(["Find it.", "Then go"]), "Find it. Then go")
