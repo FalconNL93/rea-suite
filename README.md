@@ -5,6 +5,7 @@ Personal reverse engineering workbench: [REA](https://github.com/morluto/rea)
 on Linux/WSL, macOS (Apple Silicon) and Windows so that everything stays updatable
 from one place.
 Rules for contributors and agents: `AGENTS.md`.
+Every document, one line each: [docs/README.md](docs/README.md).
 
 ## Layout
 
