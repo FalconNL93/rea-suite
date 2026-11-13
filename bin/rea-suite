@@ -22,7 +22,8 @@
 #   rea-suite playstation [options]         prepare PS1/PS2 disc images or extracted trees
 #   rea-suite xbox360 <command> [options]   Xbox 360 XEX or PE image in a Ghidra project of yours:
 #                                            analyze, decomp, xrefs, functions, check, and
-#                                            Ghidra-free info, extract, imports, refs, ... (--help)
+#                                            Ghidra-free info, extract, imports, refs, spa
+#                                            (achievements, strings, presence), ... (--help)
 #   rea-suite xbox <command> <xbe>          original Xbox XBE without Ghidra: info, imports,
 #                                            image, symbols (XbSymbolDatabase), check (--help)
 #   rea-suite functions <config> check|add|find|convert  a port's index of identified

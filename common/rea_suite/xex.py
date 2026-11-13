@@ -12,6 +12,7 @@ import struct
 from functools import cache
 from pathlib import Path
 
+from rea_suite import xdbf
 from rea_suite.text import decoded
 
 MAGIC = b"XEX2"
@@ -297,25 +298,25 @@ def imports(info: dict, img: bytes) -> list[dict]:
     return rows
 
 
-def title_image(info: dict, img: bytes) -> bytes:
-    """The dashboard title image (PNG): XDBF resource named after the title id, entry 0x8000."""
+def title_resource(info: dict, img: bytes) -> bytes:
+    """The title's own resource (its SPA, an XDBF): the one named after the title id."""
     base = int(info["headers"]["IMAGE_BASE_ADDRESS"]["value"], 16)
     title = info["headers"].get("EXECUTION_INFO", {}).get("title_id", "")
     r = Reader(img)
     for res in info["headers"].get("RESOURCE_INFO", {}).get("resources", []):
-        if not title or res["name"].upper() != title:
-            continue
-        xdbf = Reader(r.bytes(int(res["addr"], 16) - base, int(res["size"], 16)))
-        if xdbf.bytes(0, 4) != b"XDBF":
-            break
-        entries_max, entries, free_max = xdbf.u32(8), xdbf.u32(12), xdbf.u32(16)
-        start = 24 + entries_max * 18 + free_max * 8
-        for i in range(min(entries, entries_max, 65536)):
-            namespace, eid, offset, length = struct.unpack(">HQII", xdbf.bytes(24 + i * 18, 18))
-            if namespace == 2 and eid == 0x8000:
-                png = xdbf.bytes(start + offset, length)
-                if png[:8] == b"\x89PNG\r\n\x1a\n":
-                    return png
+        if title and res["name"].upper() == title:
+            return r.bytes(int(res["addr"], 16) - base, int(res["size"], 16))
+    raise XexError(f"no resource named after the title id ({title or 'none'}) in this XEX")
+
+
+def title_image(info: dict, img: bytes) -> bytes:
+    """The dashboard title image (PNG): the title's XDBF resource, image entry 0x8000."""
+    try:
+        entry = xdbf.read(title_resource(info, img)).find(xdbf.IMAGE, 0x8000)
+    except xdbf.XdbfError as exc:
+        raise XexError(f"title resource: {exc}") from exc
+    if entry and entry.data[:8] == b"\x89PNG\r\n\x1a\n":
+        return entry.data
     raise XexError("no title image (XDBF image 0x8000) in this XEX")
 
 

@@ -20,6 +20,8 @@ Without Ghidra, on an XEX, its extracted PE image, or a raw memory dump (--base)
   rea-suite xbox360 extract <xex> -o IMAGE            decrypted, decompressed image at its base
   rea-suite xbox360 imports <xex> [-o TSV]            import thunks with their names
   rea-suite xbox360 icon    <xex> -o OUT.png|.ico     the dashboard title image
+  rea-suite xbox360 spa     <xex|spa> [--out DIR] [--format json|declarations] [--lang en-US]
+                                                      achievements, strings, images, presence
   rea-suite xbox360 pdata   <image> [address...]      .pdata functions (containing the addresses)
   rea-suite xbox360 callers <image> <address>...      b/bl instructions to the addresses
   rea-suite xbox360 refs    <image> <text|0xaddr>...  lis + addi/load/store pairs building them
@@ -40,7 +42,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from rea_suite import ghidra_headless, ppc, xex
+from rea_suite import ghidra_headless, ppc, spa, spa_out, xex
 
 # XEXLoaderWV's own choice; Ghidra's PE opinions know only little-endian PowerPC (0x01f0/0x01f1).
 LANGUAGE = "PowerPC:BE:64:A2ALT-32addr"
@@ -557,6 +559,17 @@ def static(args: argparse.Namespace) -> int:
     return 0
 
 
+def spa_command(args: argparse.Namespace) -> int:
+    path = (args.caller_cwd / args.file).resolve()
+    out = args.out
+    if out is None:
+        found, _ = spa.load(path)
+        out = Path(f"spa-{found.title()['titleId'] or path.stem}")
+    sdk = (args.caller_cwd / args.sdk).resolve() if args.sdk else None
+    options = spa_out.Options((args.caller_cwd / out).resolve(), args.lang, args.game, sdk)
+    return spa_out.run(path, options, args.format)
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         prog="rea-suite xbox360",
@@ -608,8 +621,17 @@ def main(argv: list[str] | None = None) -> int:
     a.add_argument("--force", action="store_true", help="import again over the same program")
     sub.add_parser("check", help="XEXLoaderWV installed for this Ghidra, and loading")
     static_parsers(sub)
+    s = sub.add_parser("spa", help="a title's achievements, strings, images and presence (SPA)")
+    s.add_argument("file", type=Path, help="default.xex, an .spa or another XDBF file")
+    s.add_argument("--out", type=Path, help="folder to write (default: spa-<title id>)")
+    s.add_argument("--format", choices=sorted(spa_out.WRITERS), default="json")
+    s.add_argument("--lang", default="en-US", help="the declarations' language (default en-US)")
+    s.add_argument("--game", help="the declarations' game id (default: the title id)")
+    s.add_argument("--sdk", type=Path, help=f"master-sdk checkout (default ${spa_out.SDK_ENV})")
     args = p.parse_args(argv)
     try:
+        if args.command == "spa":
+            return spa_command(args)
         if args.command in STATIC:
             return static(args)
         install = ghidra_install()

@@ -70,6 +70,45 @@ compression) with that reason; step 3's `analyze` reads them through XEXLoaderWV
 *Feeds:* the size of the job, the image for step 3 and the recompiler, the helper addresses for its
 config.
 
+## Achievements, strings and presence: the SPA
+
+`rea-suite xbox360 spa <default.xex | .spa | XDBF> [--out DIR] [--format json|declarations] [--lang en-US]`
+reads the title's SPA: the XDBF resource the XEX names after its title id (an LZX-compressed XEX is
+refused, as `extract` refuses it; give the SPA itself then). It reads, by section:
+
+| Section | Gives |
+| --- | --- |
+| XTHD, XSTC, string 0x8000 | title id, type and version; the default language; the title's name |
+| XACH | achievements: id, name and description string ids, image id, gamerscore, type, secret |
+| XSTR (namespace 3) | every string by id, per language |
+| images (namespace 2), XITB | every PNG by id; their source file names |
+| XCXT, XPRP, XRPT, XPBM, XMAT | contexts and their highest value, properties, the presence modes with the contexts and properties each uses, matchmaking |
+| XVC2 | stats views: the count and their property bags; the rest is kept as hex, not decoded |
+| XSRC | the embedded XLAST (gzip, XML): saved, and the source of what the binary sections leave out |
+
+The binary sections hold no presence templates, no context value strings and no friendly names;
+the XLAST does, so presence is complete only when the SPA embeds it. It is also compared with the
+binary sections (achievements, strings, contexts, properties, mode count) and every difference is
+printed. A section, namespace or XLAST element the tool does not read is listed, never dropped.
+
+- `--format json` (default): `spa.json` (everything above, ids kept), `images/<id>.png` and
+  `xlast.xml` as the SPA holds it (UTF-16 in shipped titles).
+- `--format declarations`: master-sdk's `achievements.json` (`gm-achievements-v1`) and
+  `presence.json` (`gm-presence-v1`) in `--lang` (a missing text falls back to the default language,
+  said), with the 360's achievement ids, types (the numbers are the same) and pictures as base64
+  PNG. A presence mode becomes an entry (its friendly name in snake case), `{cN}` a choice token on
+  a list of the context's values, `{pN}` a number or name token. Text is folded to printable ASCII
+  (accents dropped, line breaks joined with ` - ` in templates), each change printed; a text over a
+  limit stops the run with its place. A picture over 256x256 or 64 KiB is scaled down, said. The
+  result goes through master-sdk's `sdk/tools/declarations.py check` when the checkout is at
+  `~/Dev/Falcon/master-sdk` (or `--sdk`, `REA_MASTER_SDK`); its limits come from its `limits.json`.
+
+Checked on Lost: Via Domus (2026-11-13): 30 achievements, 1000 G, 17 secret, 3 presence modes, 3 XLAST
+contexts with 58 values, 13 XLAST properties (18 in XPRP: the 5 system ones have no string), 5
+languages of 145 strings, 4 pictures and the title image, no cross-check difference. XPRP stores a
+string property's size as 2 where the XLAST says 0. Code: `common/rea_suite/xdbf.py` (the container),
+`spa.py` (one parser per section, the XLAST), `spa_out.py` (one writer per format).
+
 ## 3. Ghidra
 
 `rea-suite xbox360` runs the suite's Ghidra headless on an XEX (by its `XEX2` magic, through the
@@ -189,8 +228,8 @@ The recompiled-games list (2026-11-12) has two more CoD3 ports, and the CoD3 por
 
 ## Tests
 
-`uv run --no-sync python -m unittest rea_suite.test_xex rea_suite.test_xbox360` in `common/` (synthetic
-samples); opt-in with Ghidra: `REA_XBOX360_INTEGRATION=1` (a synthetic PE) and
+`uv run --no-sync python -m unittest rea_suite.test_xex rea_suite.test_xbox360 rea_suite.test_spa` in
+`common/` (synthetic samples); opt-in with Ghidra: `REA_XBOX360_INTEGRATION=1` (a synthetic PE) and
 `REA_XBOX360_SAMPLE=<file>` with `REA_XBOX360_ADDRESS=<hex>` (a real executable, read-only).
 XEXLoaderWV is pinned in `common/tools.yml`; `rea-suite tools reinstall ghidra` puts it back when doctor
 reports it missing. Its newest release is built for Ghidra 12.1.3 and none exists for 12.2 yet
