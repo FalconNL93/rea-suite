@@ -159,7 +159,12 @@ gdb-multiarch -ex 'set architecture powerpc:750' -ex 'target remote 127.0.0.1:23
   blocks; it loads and saves `.map` symbol maps, so names move between Ghidra, dtk and Dolphin.
 - **What a run settles**: which RELs load and at which addresses, the files read up to the first frame,
   the DSP microcode the game uploads, the IOS devices a Wii game opens.
-- The GDB stub's behavior with a real game has not been checked here; only its source was read.
+- **The oracle**: `rea-suite oracle run --target gdb://127.0.0.1:2345 --arch gekko --regions game.toml`
+  reads named regions at sync points through the GDB stub, for `rea-suite oracle compare` against the
+  port's sequence ([PORT-TOOLS.md](PORT-TOOLS.md#the-oracle-regions-at-sync-points-rea-suite-oracle)). Regions are big-endian: give typed ones `endian = "big"`.
+- The GDB stub's behavior with a real game has not been checked here; only its source was read (it
+  has no no-ack mode, sends the PC in its stop reply and answers `g` with r0-r31 only; the oracle's
+  back end allows for all three).
 
 *Feeds:* the REL load addresses for step 3, the first-frame call list that bounds a port's first work.
 
@@ -242,7 +247,7 @@ What a recompilation of a GameCube or Wii game needs, whichever recompiler is us
 
 ## Still missing
 
-- A GDB back end for the suite's oracle format, for Dolphin and the other GDB stubs.
+- A run of `rea-suite oracle` against Dolphin with a real game.
 - An RSO reader in `rea-suite gamecube`; dtk covers it today.
 - DSP ADPCM and GX texture converters.
 

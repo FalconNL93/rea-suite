@@ -610,6 +610,154 @@ outside file, a write through a junction from `allowed` to the outside folder an
 `cmd.exe` were all refused, and the outside file was unchanged. Not yet run against a game, and
 not on x86 (the offsets follow the pointer size; untested).
 
+## The oracle: regions at sync points (`rea-suite oracle`)
+
+An oracle for a port's game tests: the same scripted input runs in an emulator and in the port, both
+read the same named memory regions at the same sync points, in order, and `compare` reports the
+first place they part. remc2 (Magic Carpet 2) does this with a DOSBox-X fork
+([RECOMPILATION.md](RECOMPILATION.md)); here the suite reads the memory through the emulator's own
+debugger, so a stock build will do. One format for every emulator: the regions file, the sequence
+file and the comparison below are the same for DOSBox-X and the rest; what differs is how a regions
+file names addresses and triggers (its dialect) and how the suite reaches the emulator (its back end).
+
+```sh
+# a game in an emulator with a GDB stub (started by you, stopped or running)
+rea-suite oracle run --target gdb://127.0.0.1:2345 --arch gekko --regions game.toml \
+  --sync boot@start --seconds 120                 # writes work/oracle/<run>/regions.jsonl
+rea-suite oracle compare work/oracle/<run>/regions.jsonl port.jsonl --regions game.toml
+# a DOS game: the same file formats, DOSBox-X started and driven by the suite (below)
+rea-suite dosbox run --ints '' --regions tp.toml --input-file tp.keys game/GAME.EXE
+```
+
+| Emulator | Target | `--arch` | The debugger, and how to turn it on |
+| --- | --- | --- | --- |
+| DOSBox-X | `rea-suite dosbox run --regions` | (x86, real and protected mode) | its debugger, started by the suite ([DOS programs](#dos-programs-rea-suite-dosbox)) |
+| xemu (original Xbox) | `gdb://` | `x86` | QEMU's stub: `-gdb tcp:127.0.0.1:1234` ([XBOX-CLASSIC.md](XBOX-CLASSIC.md), step 5) |
+| Dolphin (GameCube, Wii) | `gdb://` | `ppc` (`gekko`, `broadway`, `750`) | `-C Dolphin.General.GDBPort=2345` ([GAMECUBE-WII.md](GAMECUBE-WII.md), step 4) |
+| DuckStation (PS1) | `gdb://` | `mips` (`r3000`) | `[Debug] EnableGDBServer = true`, `GDBServerPort` (default 2345) in its settings.ini ([PS1.md](PS1.md), step 4) |
+| PCSX-Redux (PS1) | `gdb://` | `mips` | `-gdb -gdb-port 3333` ([PS1.md](PS1.md), step 4) |
+| melonDS (DS) | `gdb://` | `arm` (`arm9`, `arm7`) | its GDB stub, one port per CPU, in the emulator's settings |
+| PPSSPP (PSP) | `ppsspp://` | (MIPS Allegrex) | "Allow remote debugger"; mind the privacy trap ([PSP.md](PSP.md), step 5) |
+
+**The regions file** (TOML; JSON with the same keys when its name ends in `.json`) names the regions
+and the sync points. For the emulator back ends:
+
+```toml
+[regions.score]                 # a name: [A-Za-z0-9_-] reads best, any TOML key works
+addr = "0x80451230"             # hex, 0x optional: a virtual address as the CPU sees it
+len = 4                         # decimal, or "0x40"
+type = "u32"                    # optional, for display: bytes (default), ascii, u8, i8, u16, i16, u32, i32
+endian = "big"                  # optional, for display: little (default) or big (PowerPC)
+
+[regions.actors]
+addr = "80500000"
+len = "0x4000"
+ignore = ["0x10:4"]             # optional: OFFSET:LEN ranges `compare --regions` skips (a frame counter)
+
+[[sync]]
+name = "frame"                  # unique
+at = "pc=80012340"              # start, pc=ADDR (software breakpoint), hw=ADDR (hardware), t=SECONDS
+regions = ["score", "actors"]   # optional: every region, in the file's order
+repeat = true                   # optional: every hit of the breakpoint is a sync point, not the first only
+```
+
+`--sync NAME@TRIGGER[@REGION,REGION]` adds a sync point on the command line (then the file needs no
+`[[sync]]`). `start` reads where the CPU stood on connecting; `t=SECONDS` is the host's clock from
+connecting, the CPU stopped wherever it is (fit for a region that holds still, not a counter). A
+breakpoint at an instruction the game runs at the same moment in every run (its frame function, a
+file load, the call that reads the pad) is the backbone. A `repeat` sync point keeps the run going
+until `--seconds` (default 60) or `--max-points`; when the run ends, the breakpoints are cleared and
+the emulator detached and left running. A JSON line on stdout says each sync point, a stop that was
+none (the emulator's own), the end, and a summary with the sync points that never came. Exit 0 when
+every sync point came, 1 when one never did, 2 on bad input or a debugger that could not be reached.
+
+**The sequence file** is what a port writes from its own run, so it is specified here. JSON lines,
+UTF-8, one object a line:
+
+- **Line 1, the header**: `{"format": "rea-regions", "version": 1}`, plus optional `producer` (who
+  wrote it) and `sidecar` (the file name, relative to the sequence file, of the binary sidecar).
+  A reader refuses any other format or version.
+- **Then a line per region read**, in the order read:
+
+  | Key | | What |
+  | --- | --- | --- |
+  | `index` | required | the sync point's place in the run, from 0, one more for each sync point; every line of one sync point has the same index |
+  | `sync` | required | the sync point's name (the regions file's `name`) |
+  | `region` | required | the region's name; once per sync point |
+  | `len` | required | the region's length in bytes |
+  | `hex` | one of three | the bytes, as lowercase or uppercase hex |
+  | `offset` | one of three | where the bytes start in the sidecar (`len` bytes from there); the runners use this above 4096 bytes |
+  | `error` | one of three | the region could not be read (text); `compare` counts it as a difference |
+  | `sha256` | optional | of the bytes, lowercase hex; checked when present |
+  | `hit` | optional | how many times this sync point has come, this one included (for `repeat`) |
+  | `type` | optional | the region's type, for display when `compare` has no regions file |
+  | `endian` | optional | `big` for a big-endian region's display; absent is little |
+  | anything else | optional | ignored by `compare`: the runners add `addr` and `pc` (`oracle run`), or `addr`, `linear`, `mode`, `at`, `wanted`, `moved`, `gave_up` (`dosbox run`, below) |
+
+  ```json
+  {"format": "rea-regions", "version": 1, "producer": "rea-suite dosbox", "sidecar": "regions.bin"}
+  {"index": 0, "sync": "level", "hit": 1, "region": "money", "len": 4, "type": "i32", "sha256": "b6c2...", "hex": "10270000", "addr": "0168:0001A2B0", "mode": "pm", "at": "0168:0002F3C1"}
+  {"index": 0, "sync": "level", "hit": 1, "region": "map", "len": 16384, "sha256": "4f1a...", "offset": 0, "addr": "1A2B30", "linear": "001A2B30", "mode": "pm", "at": "0168:0002F3C1"}
+  ```
+
+A port writes the minimum: the header, then for each sync point, in order, a line per region with
+`index`, `sync`, `region`, `len` and `hex`. It reads the same memory its own way (the guest's address
+in a recompilation, a structure's fields in a rewrite), at the same events: its own handling of the
+same frame, the same file open, the same script item.
+
+**`compare A B [--regions FILE] [--context N]`** (`rea-suite oracle compare`, or `rea-suite dosbox
+compare`, the same code) walks both sequences a sync point at a time and stops at the first
+difference: a sync point named differently, a region one side lacks, a region that could not be
+read, or differing bytes, outside the `ignore` ranges. It prints the sync point (index, name and
+hit), the region, the first differing offset, how many bytes differ, the element of a typed region
+that holds it (in its byte order), and N bytes (default 16) each side as hex rows with the first
+differing byte in brackets. A sequence that ends early is a difference too. With `--regions` only
+that file's regions are compared, with its types, byte order and `ignore` ranges (any dialect's
+file: its addresses and triggers are not read). Exit 0 when equal, 1 on a difference, 2 on bad
+input (a file missing, not JSON, without the header, a line without its required keys, hex of the
+wrong length, a `sha256` that does not match).
+
+```text
+1 sync point(s) equal, then:
+sync point 1 (end #1), region 'state': offset 0x4 (4), 1 byte(s) differ
+ A: u16 [2] = 104
+  00000000  0d 1c ff ff[68]00 30 00
+ B: u16 [2] = 105
+  00000000  0d 1c ff ff[69]00 30 00
+```
+
+**The back ends.** `oracle.py` holds the format, the comparison, `EmulatorTarget` (the interface a
+back end implements: connect, set and clear a breakpoint, resume until a stop or a time limit, read
+memory, close) and the driver that takes a target from trigger to trigger. A new emulator is a new
+`EmulatorTarget` and a scheme in `backends()`, nothing else.
+
+- **`gdb://HOST:PORT`** (`oracle_gdb.py`): GDB's remote serial protocol, in Python: `qSupported`
+  (the packet size; `QStartNoAckMode` where offered), `?`, `m` in packet-sized pieces, `Z0`/`Z1` and
+  `z0`/`z1`, `c`, `s` (to step off a breakpoint the CPU stands on, as GDB does), a 0x03 byte to stop
+  at a time limit, `D` to detach (`c` where the stub has none). The PC comes from the stop reply's
+  registers where the stub sends them (Dolphin), else `p`, else `g`; `--arch` says which register it
+  is, its size and byte order (`ARCHES`: x86, x86-64, ppc, mips, arm). Read in the stubs' source
+  (2026-11-13): Dolphin's (`PowerPC/GDBStub.cpp`) offers no no-ack mode, sends the PC (register 40h)
+  in its stop reply and answers `g` with r0-r31 only; DuckStation's (`core/gdb_server.cpp`) stops at
+  an execute breakpoint with a bare `S05` and has the PC at register 37.
+- **`ppsspp://HOST:PORT`** (`oracle_ppsspp.py`): PPSSPP's WebSocket debugger (`/debugger`,
+  subprotocol `debugger.ppsspp.org`): `version`, `cpu.status`, `cpu.stepping`, `cpu.resume`,
+  `cpu.breakpoint.add`/`remove`, `memory.read`, with a minimal WebSocket client of its own. PPSSPP
+  reports your local address to report.ppsspp.org while that server runs ([PSP.md](PSP.md)), so
+  the suite neither starts PPSSPP nor turns `RemoteDebuggerOnStartup` on: you do, knowing that.
+  Hardware breakpoints (`hw=`) are software ones there.
+
+Checked 2026-11-13 on Linux by `test_oracle.py` (the emulator dialect, `--sync`, byte order, the
+driver against a scripted target: start, breakpoints, repeats, a stop that is none, time triggers,
+unreadable regions, `--max-points` and `--seconds`; `oracle compare` on a DOSBox-X sequence),
+`test_oracle_gdb.py` (an in-process stand-in stub: framing, escapes and run lengths, ack and no-ack
+mode, memory in packet-sized pieces and its errors, `Z0`/`Z1`, stepping off a breakpoint, the PC from
+`T`, `p` and the arch table, the 0x03 stop, the program's end, a stub without detach, and `oracle run`
+then `compare` end to end) and `test_oracle_ppsspp.py` (a stand-in WebSocket debugger: the handshake,
+masked frames, tickets, breakpoints, `memory.read`, the time limit, `oracle run`). Not yet run against
+a real emulator: xemu, Dolphin, DuckStation, PCSX-Redux, melonDS and PPSSPP are known here from their
+source and documentation only.
+
 ## DOS programs: `rea-suite dosbox`
 
 `rea-suite dosbox run PROGRAM [ARG...]` runs a DOS program in DOSBox-X (component `dos`) and writes
@@ -801,11 +949,9 @@ and the poked bytes, and the scripted click ends the program.
 
 ### Named regions at sync points: the oracle (`--regions`, `compare`)
 
-An oracle for a port's game tests: the same scripted input runs in DOSBox-X and in the port, both
-read the same named memory regions at the same sync points, in order, and `compare` reports the
-first place they part. remc2 (Magic Carpet 2) does this with a DOSBox-X fork
-([RECOMPILATION.md](RECOMPILATION.md)); here the runner's debugger reads the memory, so any DOSBox-X
-build with the debugger will do.
+The oracle ([above](#the-oracle-regions-at-sync-points-rea-suite-oracle)) for a DOS game: DOSBox-X's
+debugger reads the regions, so any DOSBox-X build with the debugger will do. What is DOS's own is the
+dialect of the regions file: addresses as `--dump` takes them, the triggers of `--dump`, and `mode`.
 
 ```sh
 rea-suite dosbox run --ints '' --regions tp.toml --input-file tp.keys --seconds 300 \
@@ -854,57 +1000,9 @@ call, is passed over and the program's protected-mode call taken). `any`: where 
 as it lands. `start` and `exit` take no `pm`. Each region's line records the stop it was read at
 (`mode`, `at`) and how it got there (`wanted`, `moved`, `gave_up`).
 
-**The sequence file** is what a port writes from its own run, so it is specified here. JSON lines,
-UTF-8, one object a line:
-
-- **Line 1, the header**: `{"format": "rea-regions", "version": 1}`, plus optional `producer` (who
-  wrote it) and `sidecar` (the file name, relative to the sequence file, of the binary sidecar).
-  A reader refuses any other format or version.
-- **Then a line per region read**, in the order read:
-
-  | Key | | What |
-  | --- | --- | --- |
-  | `index` | required | the sync point's place in the run, from 0, one more for each sync point; every line of one sync point has the same index |
-  | `sync` | required | the sync point's name (the regions file's `name`) |
-  | `region` | required | the region's name; once per sync point |
-  | `len` | required | the region's length in bytes |
-  | `hex` | one of three | the bytes, as lowercase or uppercase hex |
-  | `offset` | one of three | where the bytes start in the sidecar (`len` bytes from there); the runner uses this above 4096 bytes |
-  | `error` | one of three | the region could not be read (text); `compare` counts it as a difference |
-  | `sha256` | optional | of the bytes, lowercase hex; checked when present |
-  | `hit` | optional | how many times this sync point has come, this one included (for `repeat`) |
-  | `type` | optional | the region's type, for display when `compare` has no regions file |
-  | anything else | optional | ignored by `compare`: the runner adds `addr`, `linear`, `mode`, `at` (the stop the region was read at), and `wanted`, `moved`, `gave_up` as in the `sync` record |
-
-  ```json
-  {"format": "rea-regions", "version": 1, "producer": "rea-suite dosbox", "sidecar": "regions.bin"}
-  {"index": 0, "sync": "level", "hit": 1, "region": "money", "len": 4, "type": "i32", "sha256": "b6c2...", "hex": "10270000", "addr": "0168:0001A2B0", "mode": "pm", "at": "0168:0002F3C1"}
-  {"index": 0, "sync": "level", "hit": 1, "region": "map", "len": 16384, "sha256": "4f1a...", "offset": 0, "addr": "1A2B30", "linear": "001A2B30", "mode": "pm", "at": "0168:0002F3C1"}
-  ```
-
-A port writes the minimum: the header, then for each sync point, in order, a line per region with
-`index`, `sync`, `region`, `len` and `hex`. It reads the same memory its own way (the guest's linear
-address in a recompilation, a structure's fields in a rewrite), at the same events: its own handling
-of the same INT 21h open, the same INT 16h poll, the same script item.
-
-**`compare A B [--regions FILE] [--context N]`** walks both sequences a sync point at a time and
-stops at the first difference: a sync point named differently, a region one side lacks, a region that
-could not be read, or differing bytes, outside the `ignore` ranges. It prints the sync point (index,
-name and hit), the region, the first differing offset, how many bytes differ, the element of a typed
-region that holds it, and N bytes (default 16) each side as hex rows with the first differing byte in
-brackets. A sequence that ends early is a difference too. With `--regions` only that file's regions
-are compared, with its types and `ignore` ranges. Exit 0 when equal, 1 on a difference, 2 on bad input
-(a file missing, not JSON, without the header, a line without its required keys, hex of the wrong
-length, a `sha256` that does not match).
-
-```text
-1 sync point(s) equal, then:
-sync point 1 (end #1), region 'state': offset 0x4 (4), 1 byte(s) differ
- A: u16 [2] = 104
-  00000000  0d 1c ff ff[68]00 30 00
- B: u16 [2] = 105
-  00000000  0d 1c ff ff[69]00 30 00
-```
+The sequence file and `compare` are the oracle's ([above](#the-oracle-regions-at-sync-points-rea-suite-oracle)).
+Each region's line from `dosbox run` adds `addr`, `linear` (where known), `mode` and `at` (the stop it
+was read at), and `wanted`, `moved`, `gave_up` as in the `sync` record.
 
 What makes a good sync point:
 

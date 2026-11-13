@@ -91,6 +91,13 @@ pcsx-redux -portable work/game/redux -cli -iso work/game-src/game.cue -run -dofi
   counters). Those bound the first work of a port.
 - `gdb-multiarch` comes with the `build` component on Linux; PCSX-Redux's own debugger windows need
   no GDB.
+- **The oracle**: `rea-suite oracle run --target gdb://127.0.0.1:3333 --arch r3000 --regions game.toml`
+  reads named regions at sync points (a breakpoint in the game's frame function, say) through the same
+  GDB server, for `rea-suite oracle compare` against the port's sequence ([PORT-TOOLS.md](PORT-TOOLS.md#the-oracle-regions-at-sync-points-rea-suite-oracle)). DuckStation
+  is the second PS1 oracle, through its own GDB server: `EnableGDBServer = true` and `GDBServerPort`
+  (default 2345) under `[Debug]` in its `settings.ini`, then `--target gdb://127.0.0.1:2345 --arch
+  r3000`. Two emulators that agree make a difference from the port the port's own. Neither has been
+  run with the oracle yet (2026-11-13); both stubs were read in their source.
 
 *Feeds:* overlay load addresses for step 3, the first-frame call list, and the oracle for comparing
 the port's runs.

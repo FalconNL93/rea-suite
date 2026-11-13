@@ -63,6 +63,10 @@
 #                                            `dos`); memory dumps and pokes at a trigger, scripted
 #                                            keys, mouse positions and clicks; named regions at
 #                                            sync points, compared with a port's (compare)
+#   rea-suite oracle run|compare ...      named memory regions at sync points of a game
+#                                            running in an emulator (GDB stub: xemu, Dolphin,
+#                                            DuckStation, PCSX-Redux, melonDS; PPSSPP's WebSocket
+#                                            debugger), compared with a port's sequence
 #   rea-suite pad --presses 30:DOWN,33:A    a virtual Xbox 360 pad on a schedule (ViGEm;
 #                                            Windows only, --dry-run anywhere)
 #   rea-suite run [options] --start PROGRAM ...  one bounded, observed run of a Windows program:
@@ -641,6 +645,7 @@ case "$cmd" in
   steamstub) uv run --offline --no-sync common/rea_suite/steamstub.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   frida) uv run --offline --no-sync common/rea_suite/frida_run.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   dosbox) uv run --offline --no-sync common/rea_suite/dosbox.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
+  oracle) uv run --offline --no-sync common/rea_suite/oracle.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   pad) uv run --offline --no-sync common/rea_suite/vigem_pad.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   run) uv run --offline --no-sync common/rea_suite/run_harness.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   pe) uv run --offline --no-sync common/rea_suite/pe.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;

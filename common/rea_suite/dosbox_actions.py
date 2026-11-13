@@ -21,6 +21,8 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from rea_suite import oracle
+
 # --- triggers --------------------------------------------------------------------------------------
 
 # INT 21h functions that end the program, and those that open a file by name.
@@ -162,15 +164,7 @@ def parse_address(text: str) -> Address:
         ) from None
 
 
-def parse_length(text: str) -> int:
-    t = text.strip().lower()
-    try:
-        value = int(t, 16) if t.startswith("0x") else int(t)
-    except ValueError:
-        raise ValueError(f"length {text!r}: decimal, or hex with 0x") from None
-    if not 0 < value <= 1 << 28:
-        raise ValueError(f"length {text!r}: from 1 byte to 256 MiB")
-    return value
+parse_length = oracle.parse_length  # decimal or 0x hex, 1 byte to 256 MiB
 
 
 @dataclass
@@ -320,18 +314,12 @@ def dump_filename(index: int, dump: Dump) -> str:
     return f"dump-{index:02d}-{trigger or 'x'}.bin"
 
 
-# --- named regions at sync points (--regions; the file and the sequence: dosbox_regions) ----------
+# --- named regions at sync points (--regions; the dialect: dosbox_regions, the format: oracle) -----
 
 
-@dataclass(frozen=True)
-class Region:
-    """A named range of memory: ADDR as --dump takes it, a length, and for display a type."""
-
-    name: str
-    address: Address
-    length: int
-    type: str = "bytes"
-    ignore: tuple[tuple[int, int], ...] = ()  # (offset, length) a comparison skips
+# A named range of memory, its address as --dump takes it (Address): the oracle's, shared by every
+# emulator back end.
+Region = oracle.Region
 
 
 @dataclass

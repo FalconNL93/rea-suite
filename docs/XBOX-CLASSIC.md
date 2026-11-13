@@ -159,6 +159,9 @@ gdb -q -ex 'set architecture i386' -ex 'target remote 127.0.0.1:1234'
 - In gdb, the game's addresses are its XBE addresses (base 0x00010000). Once the kernel has loaded the
   game, the thunk table holds the kernel functions' addresses (`0x80xxxxxx`): a breakpoint there, or on
   each thunk's target, logs the kernel calls with their arguments, the run's counterpart of step 4.
+- **The oracle**: `rea-suite oracle run --target gdb://127.0.0.1:1234 --arch x86 --regions game.toml`
+  reads named regions at sync points through the same stub, for `rea-suite oracle compare` against the
+  port's sequence ([PORT-TOOLS.md](PORT-TOOLS.md#the-oracle-regions-at-sync-points-rea-suite-oracle)); addresses are the XBE's. Not yet run against xemu (2026-11-13).
 - xemu's monitor (the backtick key, or Debug > Monitor) answers `info registers`, `x/20i <address>` and
   `trace-event <name> on` (`nv2a_pgraph_*` for graphics) without gdb.
 

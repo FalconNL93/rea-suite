@@ -137,10 +137,14 @@ ppsspp ~/Games/<game>/game.iso       # the GUI debugger: Debug menu, disassembly
 - **Privacy trap**: while that web server runs, PPSSPP reports your local IP address and port to
   `report.ppsspp.org` every nine minutes (`RegisterServer` in `Core/WebServer.cpp`), so its phone apps
   can find it. No setting turns that off in v1.20.4: the call is unconditional once the server starts
-  (`ReportingHost` only governs compatibility reports). So the suite does not start PPSSPP with the
-  debugger on: today it does not start PPSSPP at all, and the WebSocket back end to come keeps
-  `RemoteDebuggerOnStartup` off and needs your choice to turn it on. When you turn it on, block
-  `report.ppsspp.org` at your firewall or hosts file if that matters to you.
+  (`ReportingHost` only governs compatibility reports). So the suite does not start PPSSPP and never
+  turns `RemoteDebuggerOnStartup` on: its oracle back end only connects to a PPSSPP you started with the
+  debugger on, your choice. When you turn it on, block `report.ppsspp.org` at your firewall or hosts
+  file if that matters to you.
+- **The oracle**: `rea-suite oracle run --target ppsspp://127.0.0.1:<port> --regions game.toml` reads
+  named regions at sync points through that debugger (`cpu.breakpoint.add`, `cpu.resume`,
+  `memory.read`), for `rea-suite oracle compare` against the port's sequence ([PORT-TOOLS.md](PORT-TOOLS.md#the-oracle-regions-at-sync-points-rea-suite-oracle)). Checked
+  against a stand-in only; not yet run against PPSSPP (2026-11-13).
 - **Headless**: `PPSSPPHeadless` (the `headless/` target) runs without a window and takes
   `--debugger=PORT`, `--timeout`, `--screenshot`, `--root`; it is a source build only, not in the
   releases.
@@ -197,7 +201,7 @@ What a recompilation of a PSP game needs:
 
 ## Still missing
 
-- A WebSocket back end for the suite's oracle format (PPSSPP has no GDB stub).
+- A run of `rea-suite oracle` against PPSSPP with a real game.
 - CSO v2 and ZSO in `rea-suite psp`.
 - A run of REA's PSP profile on a PSPDEV-built ELF with the extension installed.
 

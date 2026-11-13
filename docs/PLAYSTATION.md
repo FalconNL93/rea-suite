@@ -95,7 +95,7 @@ Checked 2026-11-12 against the upstream repositories and release pages linked. T
 | [decompals/old-gcc](https://github.com/decompals/old-gcc) | the GCC 2.x builds PsyQ shipped, for matching | no: a project's own toolchain, downloaded by its build (Linux x86_64 releases) |
 | [psy-q-splitter](https://github.com/sozud/psy-q-splitter), [psyz](https://github.com/Xeeynamo/psyz) | splitting the PsyQ libraries; replacing them with native code for a PC build | no: source only, niche |
 | [PCSX-Redux](https://github.com/pcsx-redux/pcsx-redux) | PS1 debugger, GDB server, Lua, psyq-obj-parser | yes |
-| [DuckStation](https://github.com/stenzek/duckstation) | accurate PS1 emulation, debugger | no: PCSX-Redux covers RE. DuckStation has a GDB server (`src/core/gdb_server.cpp`, settings `GDBServer` and `GDBServerPort`, checked 2026-11-13), so it could be a second oracle; its license is CC BY-NC-ND 4.0, which allows running it unmodified |
+| [DuckStation](https://github.com/stenzek/duckstation) | accurate PS1 emulation, debugger | no: PCSX-Redux covers RE. DuckStation has a GDB server (`src/core/gdb_server.cpp`, `[Debug] EnableGDBServer` and `GDBServerPort`, checked 2026-11-13), so it is the second oracle (`rea-suite oracle`, [PS1.md](PS1.md) step 4); its license is CC BY-NC-ND 4.0, which allows running it unmodified |
 | [PCSX2](https://github.com/PCSX2/pcsx2) | PS2 debugger (EE/IOP), symbol import, PINE | yes. It has **no GDB stub** (none in its source tree, 2026-11-12) |
 | [mkpsxiso](https://github.com/Lameguy64/mkpsxiso) | PS1 CD extract and rebuild | yes |
 | [jPSXdec](https://github.com/m35/jpsxdec) | PS1 video, audio, images | yes |
