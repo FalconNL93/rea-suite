@@ -1,8 +1,8 @@
 ---
 name: git-guardrails
-description: Set up a Claude Code hook that blocks destructive git commands (reset --hard, clean -f, discarding checkout or restore, branch -D of unmerged work, force push, stash pop/drop) before they run. Use when adding git safety hooks or preventing destructive git operations in a shared checkout.
+description: Set up a Claude Code hook that blocks destructive git commands (reset --hard, clean -f, discarding checkout or restore, branch -D of unmerged work, force push, stash pop/clear) before they run. Use when adding git safety hooks or preventing destructive git operations in a shared checkout.
 metadata:
-  shared-template: git-guardrails@1880bc6c73ad
+  shared-template: git-guardrails@370351ec0115
 ---
 
 # Git guardrails
@@ -21,7 +21,8 @@ sessions and their agents share these checkouts, their index and their stash sta
 - `git branch -D` (or `-d --force`) of a branch not merged into HEAD or origin's default branch
 - any force push: `--force`, `-f`, `--force-with-lease`, `--force-if-includes`, `--mirror`, a
   `+refspec`
-- `git stash pop`, `git stash drop`, `git stash clear`
+- `git stash pop`, `git stash clear`, and `git stash drop` without naming an entry (`git stash drop stash@{n}` of
+  your own entry is allowed)
 
 A plain `git push` (to master too) is allowed: the owner allows pushing. Refused, Claude sees the
 reason and the safe alternative, and asks the user when the command must run anyway.
