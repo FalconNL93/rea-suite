@@ -91,7 +91,7 @@ loses them.
 11. **Evidence ids from `execute_rizin_command` are in no bundle.** Record what a Rizin command
     showed in the target's own notes.
 12. **`export_evidence_bundle` overwrites a file of the same name** without asking (also in
-    [TODO](../TODO.md), "Upstream wishes for REA").
+    the work queue, issue [#9](https://git.falcon-net.nl/FalconNL93/rea-suite/issues/9)).
 13. **`export_evidence_bundle` and `close_binary` refuse a folder that does not exist yet**, and a
     refused `close_binary` leaves the session open.
 14. **Imports are named `<DLL>::<function>`** (`GDI32.DLL::StartDocA`); the bare name answers

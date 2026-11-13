@@ -37,7 +37,7 @@ platforms/
   windows/              bootstrap.ps1, rea-suite.ps1, rea.ps1 (= bin/rea), env.ps1, winget list,
                         run-harness.ps1 (the engine of `rea-suite run`)
 AGENTS.md               rules for contributors and agents (CLAUDE.md imports it)
-TODO.md                 tools still to add, each with why
+TODO.md                 points to the work queue (Forgejo issues, mirrored in docs/work/)
 .agents/skills/         process skills for agents working on this repository
                         (.claude/skills links here for Claude Code)
 .devcontainer/          Ubuntu 26.04 container running the Linux bootstrap
@@ -1066,7 +1066,7 @@ Notes:
 - **Ghidra MCP plugins** (GhidraMCP, ghidra-mcp, GhidrAssistMCP), **jadx-ai-mcp**:
   overlap with REA; pick at most one if needed.
 - **BinExport/BinDiff**: last binary releases target old Ghidra; ghidriff covers diffing
-  for now (see `TODO.md`).
+  for now (issue [#4](https://git.falcon-net.nl/FalconNL93/rea-suite/issues/4)).
 - **Ghidrathon** (archived; PyGhidra is built in), **efiSeek** (gone; firmware-utils),
   **frida-dexdump**, **fridump**, **de4dot**, **API Monitor**: unmaintained.
 - **rz-ghidra for the rizin CLI**: needs a shared Rizin build; Cutter bundles it.

@@ -207,12 +207,12 @@ source only, cloned into a port's own project and built there, so the suite does
 - **A retail game through this route.** Every step above ran on homebrew or synthetic files only; the
   first port checks XbSymbolDatabase's yield on a retail XBE and replaces step 4's traps with its own.
 - **A kernel-call log from xemu**, the counterpart of `rea-suite dosbox`'s interrupt log: gdb breakpoints
-  on the thunks, written as JSON lines (TODO.md).
+  on the thunks, written as JSON lines (issue [#22](https://git.falcon-net.nl/FalconNL93/rea-suite/issues/22)).
 - **An XDK FunctionID set** built from the owner's own XDK libraries, as the README's Visual C++ 6.0
-  recipe does for the PC runtime (TODO.md).
+  recipe does for the PC runtime (issue [#23](https://git.falcon-net.nl/FalconNL93/rea-suite/issues/23)).
 - **Cxbx-Reloaded** (GPL-2.0, Windows; Wine on Linux), the high-level emulator whose library patches
   are the model for step 4's layer: its builds are GitHub pre-releases only (`CI-<commit>`), which the
-  suite's `latest` lookup skips, so it is not installed (TODO.md).
+  suite's `latest` lookup skips, so it is not installed (issue [#24](https://git.falcon-net.nl/FalconNL93/rea-suite/issues/24)).
 - REA cannot open an XBE (TODO.md, "Upstream wishes").
 
 ## Outputs, kept where they belong

@@ -74,7 +74,7 @@ installation.
 | `platforms/linux/`, `platforms/macos/`, `platforms/windows/` | Bootstrap, system package lists (apt, Brewfile, winget), Windows equivalents of the shell scripts. |
 | `.agents/skills/` | Process skills (see its README). |
 | `work/` | Targets, captures, Ghidra projects (`rea-ghidra` uses `work/ghidra/`). Ignored. |
-| `TODO.md` | Tools still to add, one line each on why; an entry leaves it when the tool is added or dropped. |
+| `TODO.md`, `docs/work/` | Open work is Forgejo issues on FalconNL93/rea-suite (`./ci work`, the `work-queue` skill); `docs/work/` mirrors the open ones for when the forge is away, `TODO.md` points there. New work goes in as an issue, never into a list. |
 
 ## Python and shell
 

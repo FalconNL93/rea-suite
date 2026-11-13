@@ -175,4 +175,4 @@ mkpsxiso work/game/disc.xml -o work/patched.bin -c work/patched.cue
 - A PS1 profile in REA (open_binary refuses PS-X EXEs): [REA #6746](https://github.com/morluto/rea/issues/6746).
 - An overlay import in `rea-suite playstation` (each overlay at a given load address into the same
   Ghidra project); today it imports the boot executable only.
-- armips, maspsx, m2c and asm-differ as installed tools: none has a release; see TODO.md.
+- armips, maspsx, m2c and asm-differ as installed tools: none has a release; see issue [#17](https://git.falcon-net.nl/FalconNL93/rea-suite/issues/17).

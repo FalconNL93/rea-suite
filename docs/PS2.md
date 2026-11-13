@@ -156,7 +156,7 @@ What a recompilation of a PS2 game needs, whichever recompiler is used:
 
 ## Still missing
 
-- PS2 SDK library signatures for Ghidra (ghidra-ps2sdk is gone); see TODO.md.
+- PS2 SDK library signatures for Ghidra (ghidra-ps2sdk is gone); see issue [#15](https://git.falcon-net.nl/FalconNL93/rea-suite/issues/15).
 - A VU microcode disassembler or Ghidra language.
 - A PS2 profile in REA: [REA #6746](https://github.com/morluto/rea/issues/6746).
 - A PS2 DVD rebuild that keeps the layout.
