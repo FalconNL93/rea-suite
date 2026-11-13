@@ -37,6 +37,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
+from rea_suite import ghidra_headless
+
 ROOT = Path(__file__).resolve().parents[2]  # this checkout: tools/ is beside common/
 
 # The 16 bytes the PS3 appends to a symbol name before hashing it into a NID (RPCS3's
@@ -736,30 +738,24 @@ def ghidra_names(elf: Elf, table: NidTable | None) -> tuple[list[str], list[str]
     return functions, labels, sorted(set(seeds + opd_functions(elf, toc_of(elf))))
 
 
-# --- Ghidra: the one place this module runs it ----------------------------------------------------
-# Through xbox360's runner today; when the suite's runners become one module (the gaps branch:
-# ghidra_headless), only these three functions change.
+# --- Ghidra: the one place this module runs it, through the suite's one runner (ghidra_headless) ---
 
 LANGUAGE = "PowerPC:BE:64:A2ALT-32addr"
 SCRIPTS = ROOT / "common" / "ghidra_scripts"
 
 
 def ghidra_install() -> Path:
-    from rea_suite import xbox360
-
-    return xbox360.ghidra_install()
+    return ghidra_headless.install_dir()
 
 
 def ghidra_command(install: Path, project: Path, name: str, *arguments: str) -> list[str]:
-    from rea_suite import xbox360
-
-    return [xbox360.runner(install), str(project), name, *arguments]
+    return ghidra_headless.headless(install).command(project, name, *arguments)
 
 
 def ghidra_run(command: list[str], project: Path, log: Path, timeout: int) -> None:
-    from rea_suite import xbox360
-
-    xbox360.ghidra(command, project, log, timeout)
+    """Bounded, its output in the log; a failure raises GhidraError naming the log. The project
+    is command[1], which the runner checks (Ghidra refuses a dotted path component)."""
+    ghidra_headless.run(command, log, timeout)
 
 
 def import_command(install: Path, project: Path, name: str, target: Path, files: dict[str, Path],
@@ -1149,7 +1145,12 @@ def main(argv: list[str] | None = None) -> int:
     q.add_argument("--name", help="project name (default: the folder's one .gpr, else the file's)")
     q.add_argument("--force", action="store_true", help="import again over the same program")
     q.add_argument("--plan", action="store_true", help="print the Ghidra command only")
-    q.add_argument("--timeout", type=int, default=1800, help="seconds (default 1800)")
+    q.add_argument(
+        "--timeout",
+        type=int,
+        help=f"seconds (default {ghidra_headless.TIMEOUT_SETTING},"
+        f" else {ghidra_headless.DEFAULT_TIMEOUT_SECONDS})",
+    )
     q.add_argument("--klic", help="for a SELF: the KLIC of an NPDRM title without a RAP file")
     q.add_argument("--data", type=Path, help="for a SELF: another RPCS3 data folder")
     q.add_argument("--rpcs3", help="for a SELF: the RPCS3 binary")
@@ -1160,6 +1161,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "check":
             return check(args.nid_source and (args.caller_cwd / args.nid_source), args.rpcs3)
         if args.command == "analyze":
+            if args.timeout is None:
+                args.timeout = ghidra_headless.timeout_seconds()
             if args.timeout < 1:
                 p.error("--timeout must be positive")
             return analyze(args, ghidra_install())

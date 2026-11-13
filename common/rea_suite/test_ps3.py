@@ -468,6 +468,15 @@ class Analyze(unittest.TestCase):
         self.assertNotIn("-overwrite", command)
         self.assertEqual((plan["functions"], plan["labels"], plan["seeds"]), (1, 1, 3))
 
+    def test_ghidra_runs_through_the_suites_one_runner(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            command = ps3.ghidra_command(Path(tmp), Path(tmp) / "gh", "game", "-import", "x")
+            self.assertEqual(command[0], str(Path(tmp) / "support" / Path(command[0]).name))
+            self.assertEqual(command[1:], [str(Path(tmp) / "gh"), "game", "-import", "x"])
+            with mock.patch.object(ps3.ghidra_headless, "run") as run:
+                ps3.ghidra_run(command, Path(tmp) / "gh", Path(tmp) / "log", 60)
+            run.assert_called_once_with(command, Path(tmp) / "log", 60)
+
     def test_an_spu_elf_or_other_file_is_refused(self):
         with tempfile.TemporaryDirectory() as tmp:
             Path(tmp, "x.bin").write_bytes(b"MZ" + bytes(60))
