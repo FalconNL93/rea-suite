@@ -19,6 +19,8 @@ from pathlib import Path
 
 import pefile
 
+from rea_suite.text import decoded, printable
+
 EXECUTE = 0x20000000  # IMAGE_SCN_MEM_EXECUTE
 CODE = 0x20  # IMAGE_SCN_CNT_CODE
 WRITE = 0x80000000  # IMAGE_SCN_MEM_WRITE
@@ -93,7 +95,7 @@ class Image:
         self.size_of_headers = header.SizeOfHeaders
         self.sections = [
             Section(
-                s.Name.rstrip(b"\0").decode("ascii", "replace"),
+                decoded(s.Name.rstrip(b"\0"), "ascii"),
                 s.VirtualAddress,
                 s.Misc_VirtualSize,
                 s.PointerToRawData,
@@ -185,7 +187,7 @@ class Image:
         end = self.data.find(b"\0", at, at + limit + 1)
         if end < 0:
             raise ValueError(f"no string terminator within {limit} bytes at {rva:#x}")
-        return self.data[at:end].decode("ascii")
+        return printable(self.data[at:end].decode("ascii"), limit)
 
     def section_bytes(self, section: Section) -> bytes:
         return self.data[section.offset : section.offset + min(section.raw_size, section.end)]
@@ -213,9 +215,9 @@ class Image:
             ("DIRECTORY_ENTRY_DELAY_IMPORT", True),
         ):
             for entry in getattr(self.pe, attribute, []):
-                dll = entry.dll.decode("ascii", "replace")
+                dll = decoded(entry.dll, "ascii")
                 for function in entry.imports:
-                    name = function.name.decode("ascii", "replace") if function.name else None
+                    name = decoded(function.name, "ascii") if function.name else None
                     result.append(
                         Import(dll, name, function.ordinal if not name else None,
                                function.address - self.base, delay)
@@ -234,10 +236,10 @@ class Image:
             return []
         return [
             Export(
-                e.name.decode("ascii", "replace") if e.name else None,
+                decoded(e.name, "ascii") if e.name else None,
                 e.ordinal,
                 e.address,
-                e.forwarder.decode("ascii", "replace") if e.forwarder else None,
+                decoded(e.forwarder, "ascii") if e.forwarder else None,
             )
             for e in directory.symbols
         ]

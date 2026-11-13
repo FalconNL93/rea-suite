@@ -29,6 +29,8 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from rea_suite.text import decoded
+
 CPU = {1: "80286", 2: "80386", 3: "80486", 4: "Pentium"}
 OS = {0: "unknown", 1: "OS/2", 2: "Windows", 3: "DOS 4.x", 4: "Windows 386 (VxD)"}
 OBJECT_FLAGS = [
@@ -338,11 +340,11 @@ def read_module(path: Path) -> Module:
     imports = []
     if h["import_modules"]:
         names = r.names(at + h["import_modules"], h["import_module_count"])
-        imports = [n.decode("latin-1") for n in names]
+        imports = [decoded(n, "latin-1") for n in names]
     name = None
     if h["resident_names"]:
         names = r.names(at + h["resident_names"])
-        name = names[0].decode("latin-1") if names else None
+        name = decoded(names[0], "latin-1") if names else None
     return Module(
         path,
         r.data,

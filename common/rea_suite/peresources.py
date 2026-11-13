@@ -23,6 +23,7 @@ from pathlib import Path
 import pefile
 
 from .pemodel import Image
+from .text import DOCUMENT_LIMIT, decoded, printable
 
 TYPES = {
     1: "CURSOR", 2: "BITMAP", 3: "ICON", 4: "MENU", 5: "DIALOG", 6: "STRING", 7: "FONTDIR",
@@ -63,9 +64,9 @@ class Resource:
 def label(entry) -> int | str:
     if entry.name is not None:
         return (
-            entry.name.decode("utf-8", "replace")
+            decoded(entry.name, "utf-8")
             if hasattr(entry.name, "decode")
-            else str(entry.name)
+            else printable(str(entry.name))
         )
     return entry.id
 
@@ -126,7 +127,7 @@ class Reader:
             end += 2
         if end + 1 >= len(self.data):
             raise IndexError("unterminated string")
-        value = self.data[self.at : end].decode("utf-16-le", "replace")
+        value = decoded(self.data[self.at : end], "utf-16-le")
         self.at = end + 2
         return value
 
@@ -277,7 +278,7 @@ def string_table(data: bytes, block: int) -> dict:
         if r.at + 2 > len(data):
             break
         length = r.take("H")
-        text = data[r.at : r.at + 2 * length].decode("utf-16-le", "replace")
+        text = decoded(data[r.at : r.at + 2 * length], "utf-16-le")
         r.at += 2 * length
         if length:
             strings.append({"id": (block - 1) * 16 + index, "text": text})
@@ -326,7 +327,7 @@ def message_table(data: bytes) -> dict:
                 break
             raw = data[at + 4 : at + length]
             text = raw.decode("utf-16-le" if flags & 1 else "cp1252", "replace")
-            messages.append({"id": ident, "text": text.rstrip("\0").rstrip("\r\n")})
+            messages.append({"id": ident, "text": printable(text.rstrip("\0").rstrip("\r\n"))})
             at += length
     return {"messages": messages}
 
@@ -343,7 +344,9 @@ def version_node(data: bytes, at: int, depth: int = 0) -> tuple[dict, int]:
     key = r.wstring()
     r.align()
     if kind == 1:  # text: the length counts UTF-16 units
-        value = data[r.at : r.at + 2 * value_length].decode("utf-16-le", "replace").rstrip("\0")
+        value = printable(
+            data[r.at : r.at + 2 * value_length].decode("utf-16-le", "replace").rstrip("\0")
+        )
         r.at += 2 * value_length
     else:
         value = data[r.at : r.at + value_length]
@@ -436,7 +439,7 @@ DECODERS = {
     "BITMAP": lambda r, d: bitmap_info(d),
     "ICON": lambda r, d: bitmap_info(d),
     "CURSOR": lambda r, d: bitmap_info(d[4:]),
-    "MANIFEST": lambda r, d: {"text": d.decode("utf-8", "replace")},
+    "MANIFEST": lambda r, d: {"text": decoded(d, "utf-8", DOCUMENT_LIMIT, multiline=True)},
 }
 
 

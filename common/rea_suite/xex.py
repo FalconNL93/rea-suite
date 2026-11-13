@@ -12,6 +12,8 @@ import struct
 from functools import cache
 from pathlib import Path
 
+from rea_suite.text import decoded
+
 MAGIC = b"XEX2"
 # The retail and devkit keys that wrap each title's AES key (public: Xenia, XEXLoaderWV, free60)
 RETAIL_KEY = bytes.fromhex("20B185A59D28FDC340583FBB0896BF91")
@@ -84,7 +86,7 @@ class Reader:
         end = self.data.find(b"\0", offset, offset + limit)
         if end < 0:
             raise XexError(f"unterminated string at 0x{offset:x}")
-        return self.data[offset:end].decode("latin-1")
+        return decoded(self.data[offset:end], "latin-1", limit)
 
 
 def parse(data: bytes) -> dict:
@@ -154,7 +156,7 @@ def optional(r: Reader, name: str, at: int, h: dict) -> None:
         libs = []
         for j in range(min((r.u32(at) - 4) // 16, MAX_HEADERS)):
             o = at + 4 + j * 16
-            lib = r.bytes(o, 8).rstrip(b"\0").decode("latin-1")
+            lib = decoded(r.bytes(o, 8).rstrip(b"\0"), "latin-1")
             major, minor, build, qfe = (r.u16(o + 8 + 2 * k) for k in range(4))
             libs.append(f"{lib} {major}.{minor}.{build}.{qfe & 0x7FFF}")
         h["libs"] = libs
@@ -165,7 +167,7 @@ def optional(r: Reader, name: str, at: int, h: dict) -> None:
     elif name == "RESOURCE_INFO":
         h["resources"] = [
             {
-                "name": r.bytes(at + 4 + j * 16, 8).rstrip(b"\0").decode("latin-1"),
+                "name": decoded(r.bytes(at + 4 + j * 16, 8).rstrip(b"\0"), "latin-1"),
                 "addr": hex(r.u32(at + 12 + j * 16)),
                 "size": hex(r.u32(at + 16 + j * 16)),
             }
