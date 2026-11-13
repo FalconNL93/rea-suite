@@ -5,6 +5,7 @@ Personal reverse engineering workbench: [REA](https://github.com/morluto/rea)
 on Linux/WSL, macOS (Apple Silicon) and Windows so that everything stays updatable
 from one place.
 Rules for contributors and agents: `AGENTS.md`.
+Every document, one line each: [docs/README.md](docs/README.md).
 
 ## Layout
 
@@ -281,61 +282,7 @@ Component `xbox` adds xemu, whose GDB stub (`-gdb tcp:127.0.0.1:1234 -S`) debugs
 owner's MCPX boot ROM, BIOS and an HDD image. Tests: `uv run --no-sync python -m unittest rea_suite.test_xbox`
 in `common/` (synthetic XBEs); opt-in `REA_XBOX_SAMPLE=<default.xbe>` (a real executable, read-only).
 
-Xbox 360: `rea-suite xbox360` runs the suite's Ghidra headless on an XEX (by its `XEX2` magic,
-through the XEXLoaderWV extension) or on the PE image extracted from one (COFF machine 0x01f2),
-both as `PowerPC:BE:64:A2ALT-32addr` (big-endian 64-bit with Altivec, 32-bit addresses). REA
-itself does not open either (its PowerPC lane is ELF32 only). The Ghidra project is yours: pass
-its folder; the suite keeps nothing in `work/`.
-
-```sh
-rea-suite xbox360 analyze game/default.xex --project re/ghidra-project --name game  # once
-rea-suite xbox360 decomp --project re/ghidra-project -o out.c 0x82514710 0x8234e2e8
-rea-suite xbox360 xrefs --project re/ghidra-project "connect"   # functions using strings
-rea-suite xbox360 functions --project re/ghidra-project -o functions.tsv
-rea-suite xbox360 names --project re/ghidra-project --program mp --from re/functions.tsv --where game=mp
-rea-suite xbox360 check                     # XEXLoaderWV installed and loading (doctor runs it)
-```
-
-`names` writes a port's map into the project (the porting rule "map the whole unit once": the names in the
-port's docs and in its Ghidra project): a TSV whose header names `address` and `name`, `what` or `comment` the
-plate comment, filtered by `--where column=value`. A name Ghidra gave (`FUN_...`) is replaced; one a person or an
-import gave, and a different plate comment, are kept and reported (`kept`), so running it again changes nothing
-(`same`); `-o` writes the per-entry report. It needs `--program` when the project holds several. `--functions`
-says the map lists functions: where Ghidra found none and the code disassembles, one is created before it is
-named (reported `created`), else the name goes on a label. Not read-only, it also saves the helpers' repair (as `analyze` does).
-The queries open the project read-only and take `--program` when it holds more than one; Ghidra's
-logs go to `<project>/logs/`. `common/ghidra_scripts/XenonHelpers.java` runs before analysis
-and before every query: it finds the register save/restore helpers (`__savegprlr_*`,
-`__restgprlr_*`, `__savefpr_*`, `__restfpr_*`, `__savevmx_*`, `__restvmx_*`) by their instruction
-pattern, names them and gives them a call-fixup without effect, so Ghidra's "Non-Returning
-Functions - Discovered" analyzer leaves them alone. Without it they are marked non-returning and
-every caller is cut off after its prologue; projects analyzed before are repaired in memory.
-An image extracted from an XEX is laid out as loaded while its section table still gives the
-linker's file offsets: `analyze` imports a copy whose section table matches. Each command ends with
-`Limit:` lines: instructions Ghidra cannot decode (VMX128 is missing from Ghidra's PowerPC
-language; disassembly and decompiles stop there), and for a PE image the XEX import names it lacks.
-
-Without Ghidra, on an XEX, its extracted image or a raw dump (`--base`, default 0x82000000):
-
-| Command | Gives |
-| --- | --- |
-| `info <xex>` | the XEX2 headers as JSON: format, execution info, libraries, resources, security info |
-| `extract <xex> -o image.bin` | the decrypted (retail or devkit key) image as loaded; basic compression only |
-| `imports <xex>` | import thunks with their names (Xenia's export tables, `common/rea_suite/data/`) |
-| `icon <xex> -o title.png\|.ico` | the dashboard title image from the title's XDBF resource |
-| `pdata <image> [address...]` | the `.pdata` function table, or the functions containing the addresses |
-| `callers <image> <address>...` | `b`/`bl` instructions to the addresses |
-| `refs <image> <text\|0xaddr>...` | `lis` + `addi`/load/store pairs building the address of a string or value, which Ghidra often leaves unresolved on 360 code |
-| `rtti <image> <Class>...` | MSVC RTTI: type descriptor, complete object locators, vtables |
-| `helpers <image>` | the save/restore helpers' first entries, as XenonRecomp's config keys |
-| `disasm <image> <address> [count]` | Capstone disassembly; undecoded words are marked (VMX128) |
-
-`extract` refuses LZX-compressed XEX files (normal and delta compression) with that reason;
-`analyze` reads them through XEXLoaderWV. XEXLoaderWV is pinned in `common/tools.yml`;
-`rea-suite tools reinstall ghidra` puts it back when doctor reports it missing. Tests:
-`uv run --no-sync python -m unittest rea_suite.test_xex rea_suite.test_xbox360` in `common/`
-(synthetic samples); opt-in with Ghidra: `REA_XBOX360_INTEGRATION=1` (a synthetic PE) and
-`REA_XBOX360_SAMPLE=<file>` with `REA_XBOX360_ADDRESS=<hex>` (a real executable, read-only).
+Xbox 360: [the route](docs/XBOX360.md) from the disc image to a recompilation, with `rea-suite xbox360`.
 
 ## Offline analysis projects
 
@@ -906,6 +853,12 @@ REA_TOOLS_NO_BUILD=1 rea-suite update           # only prebuilt extensions, no s
 ```
 
 Projects opened in a newer Ghidra are upgraded and no longer open in older ones.
+
+Ghidra 12.2 (2026-10-22) needs JDK 25 and saves programs that "may not be usable by an earlier Ghidra
+version" (its WhatsNew.md). The owner's decision (2026-11-13): stay on 12.1.4 until REA pins 12.2 (6.9.0
+still pins 12.1.4) and the Xbox loaders have 12.2 builds (ghidra-xbe and XEXLoaderWV had none on
+2026-11-13; ghidra_psx_ldr 2026.11.08 and Emotion Engine: Reloaded v2.1.39 do), then move every port's
+project at once.
 
 ### Headless Ghidra from the shell
 

@@ -9,7 +9,7 @@ traps; nothing about a particular game belongs on this page.
 
 What lies around this page:
 
-- The Xbox 360 lane, for comparison: the README's "Console games and disc images" (`rea-suite xbox360`)
+- The Xbox 360 route, for comparison: [XBOX360.md](XBOX360.md) (`rea-suite xbox360`)
   and [GAME-ARCHIVES.md](GAME-ARCHIVES.md) (extract-xiso, XGDTool).
 - The DOS route, [DOS-GAMES.md](DOS-GAMES.md): the same shape for another x86 target, recompiled onto
   the same runtime.
@@ -80,11 +80,13 @@ rea-suite xbox symbols default.xbe -o xdk-symbols.tsv    # the same library name
   `xboxkrnl.exe::<name>` external references, and during analysis its "Xbox Symbol Database Analyzer"
   labels the XDK functions XbSymbolDatabase recognizes, in a namespace per library (`D3D8::...`).
 - REA does not open an XBE (REA 6.8.0: "unsupported binary format", checked 2026-11-12): use
-  `rea-ghidra` and the `rea-suite xbox` commands.
+  `rea-ghidra` and the `rea-suite xbox` commands. REA 6.9.0 (2026-11-12) is out and not yet checked here.
 - **Library names come from XbSymbolDatabase's patterns** (Cxbx-Reloaded's OOVPA signatures, per XDK
   build), not from Ghidra's FunctionID. Ghidra's own `vsOlder_x86` set names some of the statically
   linked C runtime (xboxrecomp's ghidra_naming measured 134 names on Burnout 3); there is no XDK
-  FunctionID set.
+  FunctionID set. TGP482/XboxXBERecomp's `xbe_symbols` has the shape of one: per XDK build
+  (`xdk/<build>/signatures.toml`), the lengths and hashes of the library functions with their addresses
+  masked, never the library code (its README, 2026-11-13).
 - **Types**: mborgerson's [xbox-includes](https://github.com/mborgerson/xbox-includes) (GPL-2.0) holds
   the kernel and library headers: File > Parse C Source on `xbox.h`, then Apply Function Datatypes
   (ghidra-xbe's README). Keep the parsed archive in the port's project, not in git of a non-GPL port.
@@ -195,12 +197,20 @@ ports: winrt's static recompiler and interpreter (no emulator):
   on each unknown kernel ordinal or library call with its name, fixed one at a time against the xemu run
   of step 5.
 
-[xboxrecomp](https://github.com/sp00nznet/xboxrecomp) (MIT, Python with Capstone and a C runtime) is the
-public reference for this whole route: an XBE parser, disassembly, library identification, ABI recovery,
-lifting to C, and a runtime with all 371 kernel ordinals routed to Win32, Direct3D 8 onto Direct3D 11 or
+[xboxrecomp](https://github.com/sp00nznet/xboxrecomp) (MIT, Python with Capstone and a C runtime) is one
+of two public references for this whole route: an XBE parser, disassembly, library identification, ABI
+recovery, lifting to C, and a runtime with all 371 kernel ordinals routed to Win32, Direct3D 8 onto Direct3D 11 or
 OpenGL, the APU and an NV2A push-buffer executor; v0.17.0 lists about a dozen games as playable. It is
 source only, cloned into a port's own project and built there, so the suite does not install it. Read its
 `docs/formats/kernel-exports.md` and kernel bridge before writing a port's own.
+
+The second is [XboxXBERecomp](https://github.com/TGP482/XboxXBERecomp) (TGP482, MIT, last commit
+2026-11-08): an SDK that recompiles an XBE's code to C++, with Direct3D 8 on Direct3D 12 and XAudio2,
+Windows x64 only (Clang and Ninja). Its README names its author's ports of Splinter Cell: Double Agent,
+BLACK, 007: From Russia With Love, 007: Nightfire and Red Dead Revolver; the recompiled-games list adds
+others' (Darkwatch, The Warriors, MVP Baseball 2005; checked 2026-11-13). A release ships no game code: it
+builds the recompiled code on the player's PC from the player's own XBE. Read it beside xboxrecomp;
+like it, it is a port's own dependency.
 
 ## What is still missing
 
@@ -209,11 +219,14 @@ source only, cloned into a port's own project and built there, so the suite does
 - **A kernel-call log from xemu**, the counterpart of `rea-suite dosbox`'s interrupt log: gdb breakpoints
   on the thunks, written as JSON lines (issue [#22](https://git.falcon-net.nl/FalconNL93/rea-suite/issues/22)).
 - **An XDK FunctionID set** built from the owner's own XDK libraries, as the README's Visual C++ 6.0
-  recipe does for the PC runtime (issue [#23](https://git.falcon-net.nl/FalconNL93/rea-suite/issues/23)).
+  recipe does for the PC runtime (issue [#23](https://git.falcon-net.nl/FalconNL93/rea-suite/issues/23)). XboxXBERecomp's masked signatures per XDK build are the
+  format to follow.
 - **Cxbx-Reloaded** (GPL-2.0, Windows; Wine on Linux), the high-level emulator whose library patches
   are the model for step 4's layer: its builds are GitHub pre-releases only (`CI-<commit>`), which the
-  suite's `latest` lookup skips, so it is not installed (issue [#24](https://git.falcon-net.nl/FalconNL93/rea-suite/issues/24)).
-- REA cannot open an XBE (TODO.md, "Upstream wishes").
+  suite's `latest` lookup skips, so it is not installed (issue [#24](https://git.falcon-net.nl/FalconNL93/rea-suite/issues/24)). Low priority now: its newest
+  pre-release and last commit are from 2026-04-19, XbSymbolDatabase's last commit from 2025-08-23, and
+  xboxrecomp and XboxXBERecomp model the layer better (checked 2026-11-13).
+- REA cannot open an XBE (issue [#8](https://git.falcon-net.nl/FalconNL93/rea-suite/issues/8)).
 
 ## Outputs, kept where they belong
 
@@ -233,7 +246,8 @@ source only, cloned into a port's own project and built there, so the suite does
 - XbSymbolDatabase: [Cxbx-Reloaded/XbSymbolDatabase](https://github.com/Cxbx-Reloaded/XbSymbolDatabase)
   (MIT), v3.1.160 the newest release (v4.0.166 a pre-release); the CLI's output format is
   `src/cli/main.c` (`LIBRARY__name = 0xaddress`).
-- pyxbe: [mborgerson/pyxbe](https://github.com/mborgerson/pyxbe) (MIT), 1.0.4 on PyPI; the kernel
+- pyxbe: [XboxDev/pyxbe](https://github.com/XboxDev/pyxbe) (MIT; moved from mborgerson/pyxbe, which
+  redirects; GitHub release v1.0.4 of 2026-06-08, checked 2026-11-13), 1.0.4 on PyPI; the kernel
   export table and the XBE structures.
 - xemu: [xemu-project/xemu](https://github.com/xemu-project/xemu) v0.8.139;
   [guest debugging](https://xemu.app/docs/dev/debug/guest/) (`-s`, `-S`, port 1234, the monitor),
