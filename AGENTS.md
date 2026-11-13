@@ -108,8 +108,15 @@ installation.
 
 ## Git
 
-* Commits read like a person wrote them: a short imperative subject (72 characters at most), a body
-  only when there is something to explain. No references to AI tools, no `Co-Authored-By` or
-  "Generated with" lines, no emoji.
+* Commits follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/), as every
+  platform repository's: `type(scope): imperative description` (types `feat` `fix` `perf`
+  `refactor` `docs` `test` `build` `ci` `chore` `style` `revert`; a lowercase scope such as
+  `ghidra`, `pe`, `rmdp`, `tools`, `windows`), 72 characters at most, then a body of one to three
+  sentences on why, only when there is something to explain. No references to AI tools, no
+  `Co-Authored-By` or "Generated with" lines, no emoji, US English. `.githooks/commit-msg` (a byte
+  copy of games/ci-images', changed there first) enforces it; history before 2026-11-13 is
+  left as it is.
+* Before a push, `./ci runs last --repo FalconNL93/rea-suite` (in games/ci-images): never push
+  onto a red master.
 * One commit per finished change, files staged by name. A red tree is not committed: say what failed.
 * Lockfile changes from `rea-suite update` (`uv.lock`, `package-lock.json`) are committed on their own.

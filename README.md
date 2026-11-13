@@ -11,7 +11,7 @@ Rules for contributors and agents: `AGENTS.md`.
 ```
 activate, activate.ps1  load the environment without direnv
 .envrc                  direnv entry point -> common/env.sh (+ .env)
-.githooks/              pre-commit (lint + gitleaks) and pre-push (gitleaks) hooks, lint.sh
+.githooks/              pre-commit (lint + gitleaks), commit-msg (commit style), pre-push (gitleaks), lint.sh
 .forgejo/workflows/     server-side gitleaks scan and lint
 .env.example            copy to .env: component selection, GITHUB_TOKEN
 .node-version           Node for fnm (rea-agents has a strict engines range; 24 because the Playwright
@@ -857,6 +857,15 @@ gitleaks (from `tools.yml`) runs in three places with the same config (`.gitleak
 `rea-suite setup` enables the hooks (`git config core.hooksPath .githooks`); `rea-suite doctor`
 checks that they are on. Findings are shown redacted (rule, file, line). Tokens belong in `.env`
 (ignored); a false positive gets an allowlist entry with its reason in `.gitleaks.toml`.
+
+## Commit messages
+
+`.githooks/commit-msg` holds every commit to the platform's shared style: a Conventional Commits
+subject (`type(scope): imperative description`, at most 72 characters), a blank line before the
+body, no AI attribution, no emoji, US English. It is a byte copy of games/ci-images'
+`.githooks/commit-msg`, the one every game repository copies; a change goes there first and is
+copied here. The same `core.hooksPath` enables it beside the gitleaks hooks, which it does not
+replace: they run on their own hooks (`pre-commit`, `pre-push`).
 
 ## Ghidra and its extensions
 

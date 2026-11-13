@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# Refuses a commit message that breaks the games' shared commit style (master-server's CLAUDE.md, "Git"):
+# a Conventional Commits subject (type(scope): imperative description) of at most 72 characters, a blank line
+# before the body, no AI attribution (trailer, footer, link), no emoji, US English. The one copy is games/ci-images'
+# .githooks/commit-msg; master-server and every port keep a byte copy, which ci-images' port-check compares.
+# Enabled once per clone: git config core.hooksPath .githooks   (bypass: git commit --no-verify)
+set -euo pipefail
+
+msg="$(grep -v '^#' "$1" || true)"
+subject="$(head -n 1 <<< "${msg}")"
+
+fail() {
+  printf 'commit-msg: %s\n' "$1" >&2
+  exit 1
+}
+
+case "${subject}" in
+  Merge\ * | Revert\ * | fixup!\ * | squash!\ * | amend!\ *) exit 0 ;;
+esac
+
+[ -n "${subject// /}" ] || fail "the subject line is empty."
+[ "${#subject}" -le 72 ] || fail "the subject line is ${#subject} characters; keep it to 72."
+types='feat|fix|perf|refactor|docs|test|build|ci|chore|style|revert'
+[[ "${subject}" =~ ^(${types})(\([a-z0-9][a-z0-9-]*\))?!?:\ [a-z0-9] ]] ||
+  fail "the subject is not 'type(scope): description' (types: ${types//|/ }; scope and description lowercase)."
+[[ "${subject}" != *. ]] || fail "the subject ends with a period; drop it."
+second="$(sed -n '2p' <<< "${msg}")"
+[ -z "${second//[[:space:]]/}" ] || fail "the body starts on the second line; leave a blank line after the subject."
+
+# The description is an instruction: "add", not "added", "adds" or "adding", and not a sentence's opener.
+first="$(printf '%s' "${subject#*: }" | sed 's/ .*//' | tr '[:upper:]' '[:lower:]' | tr -cd "a-z'")"
+not_imperative=' added adds adding fixed fixes fixing updated updates updating changed changes changing removed removes removing implemented implements implementing refactored refactors refactoring improved improves improving created creates creating made makes making moved moves moving renamed renames deleted deletes introduced introduces allowed allows allowing enabled enables enabling supported supports bumped bumps cleaned cleans wrote writes tweaked tweaks reverted reverts switched switching using adjusted adjusts handled handles handling '
+not_verb=' a an the this that these those it its we i you your they their there here what which who whose why how when where every each all some any no not one only just now still also our my his her whether if because so and but '
+case "${not_imperative}" in *" ${first} "*) fail "the description starts with '${first}'; write it as an instruction ('add', not 'added')." ;; esac
+case "${not_verb}" in *" ${first} "*) fail "the description starts with '${first}'; start it with a verb in the imperative." ;; esac
+
+# An AI tool or its attribution: a tool's name as a word, or a co-author trailer or "generated with" footer naming
+# one. The agents' folder (.claude, .claude/...) and CLAUDE.md are file names and pass; the word alone, in a path
+# without its dot (a/claude/b) or as a scope stays refused. A person's Co-Authored-By trailer stays allowed.
+ai='co-authored-by:.*(claude|anthropic|copilot|openai|chatgpt|gemini|cursor)|generated (with|by) .*(claude|copilot|chatgpt|gpt|gemini|cursor|ai\b)|\bai[- ]generated\b|\b((?<!\.)claude(?!\.md\b)|anthropic|chatgpt|openai|copilot|codex|gemini|llm)\b'
+if hit="$(AI="${ai}" perl -ne 'if (/$ENV{AI}/i) { print "$&\n"; exit }' <<< "${msg}")" && [ -n "${hit}" ]; then
+  fail "the message names an AI tool or carries its attribution ('${hit}'); remove that line."
+fi
+
+# US English: the British forms that actually get written. The one list: master-server's `scripts/dev lint` reads it.
+british='amongst|armours?|artefacts?|coloured|dialogues?|fulfil|judgements?|metres?|programmes?|recentre[ds]?|behaviours?|colours?|favours?|honours?|labours?|neighbours?|licence|centres?|catalogues?|grey|whilst|cancell(ed|ing)|labell(ed|ing)|modell(ed|ing)|travell(ed|ing)|signall(ed|ing)|analys(e|ed|es|ing)|(organ|recogn|initial|normal|serial|author|minim|maxim|optim|priorit|util|summar|real|special|custom|categor|synchron|sanit|standard|apolog)is(e|ed|es|ing|ation|ations)'
+if word="$(grep -o -i -w -E "${british}" <<< "${msg}" | head -n 1)" && [ -n "${word}" ]; then
+  fail "'${word}' is British spelling; write US English."
+fi
+
+if perl -CS -ne 'exit 1 if /[\x{1F000}-\x{1FAFF}\x{2600}-\x{27BF}]/' <<< "${msg}"; then :; else
+  fail "the message contains emoji."
+fi
