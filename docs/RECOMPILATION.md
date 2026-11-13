@@ -229,6 +229,36 @@ Small and readable; the wiki has the port guide.
   them to real implementations, move per-game hacks into overrides, retest from a cold boot.
 - `.recomp.json` at a project's root describes it to trackers.
 
+### XboxXBERecomp (original Xbox)
+
+[XboxXBERecomp](https://github.com/TGP482/XboxXBERecomp) (TGP482, MIT, no releases, last commit
+2026-11-08). The second XBE recompiler beside xboxrecomp, proven on several retail games (see
+[XBOX-CLASSIC.md](XBOX-CLASSIC.md), step 6). x86 to C++ ahead of time; the kernel and the XDK libraries
+(Direct3D 8, DirectSound, XAPI, XNet) answered at their API on Windows; Direct3D 12 and XAudio2; Windows
+x64 only.
+
+- **XDK signatures per build** (`xbe_symbols`): lengths and hashes of the library functions with their
+  addresses masked, never library code, kept per XDK build in `xdk/<build>/signatures.toml`. A miss is
+  listed and becomes a trapping stub. This is the shape an XDK FunctionID set should have.
+- **No game code in a release**: the recompiled code is built on the player's PC from the player's own
+  XBE, with a bundled recompiler, Clang and LLD.
+
+### Recompilers for platforms without a route here
+
+Read as references when a route for their platform starts. Status and licenses checked 2026-11-13
+(releases, last commits and LICENSE files at HEAD).
+
+| Recompiler | Platform | License | Status |
+|---|---|---|---|
+| [DolRecomp](https://github.com/ExpansionPak/DolRecomp) | GameCube, Wii; Wii U RPX early | GPL-3.0 | no releases, last commit 2026-10-10. CPU only (DOL, REL, RPX to C or LLVM); the runtime is the host's (ModernGekko-Template). Eternal Darkness, Sunshine and Wind Waker ports use it |
+| [WiiCompiled](https://github.com/patchzyy/Wiicompiled) | Wii | GPL-3.0 | v0.9.4 (2026-11-10), Windows, Linux and macOS builds. The translation runs locally against the user's disc; Mario Kart Wii first, several Wii ports since |
+| [psprecomp](https://github.com/sp00nznet/psprecomp) | PSP (Allegrex) | MIT | v0.5.0 (2026-10-23), early: no game renders on it yet (the tracker) |
+| [snesrecomp](https://github.com/RetroPortingToolKit/snesrecomp) | SNES (65816) | PolyForm Noncommercial 1.0.0 | v0.3.0-alpha (2026-10-14), beta by its README; PPU and audio still emulated. Super Mario World, Super Metroid, A Link to the Past and Mega Man X ports |
+| [ndsrecomp](https://github.com/RetroPortingToolKit/ndsrecomp) | Nintendo DS (ARM9, ARM7) | its own scope notice: PolyForm Noncommercial for most of it, MIT for the runner and oracle trees | v0.6.11 (2026-11-01), "very early pre-alpha" by its README. Metroid Prime Hunters port |
+
+psxrecomp, snesrecomp and ndsrecomp are RetroPortingToolKit's (mstan's projects, joined into one group);
+its shared runtime, netplay and launcher pieces are not covered here.
+
 ## Static recompilers for x86 PC and DOS
 
 The same problems as xboxrecomp, without a console's fixed hardware and with the whole of Win32 or DOS
@@ -299,6 +329,19 @@ the exception machinery (`_EH_prolog`, `__CxxFrameHandler`, `_except_handler3`).
 - [ps3recomp](https://github.com/sp00nznet/ps3recomp) (MIT): PS3 runtime libraries; xboxrecomp's
   conformance method comes from it (check the decoder against the SDK's objdump, check the lifter by
   compiling a C corpus, running both sides and requiring bit-exact results).
+- **Win32 peers of winrt** (checked 2026-11-13; game-specific, so maps rather than tools):
+  [cricket07-browser](https://github.com/Dhaiwat10/cricket07-browser) (MIT, no releases): EA Sports
+  Cricket 07, every x86 function to C, then WebAssembly, Direct3D 8 on WebGPU.
+  [nfsu2-web](https://github.com/th0mk/nfsu2-web) (MIT, no releases): NFS Underground 2 to WebAssembly,
+  Direct3D 9 on WebGPU, built on NFSU2Recomp.
+  [NFSU2Recomp](https://github.com/TalhaMudo/NFSU2Recomp) (all rights reserved, v2.6-2026.11.08): x86
+  to ARM64 for Apple silicon, Direct3D 9 on Metal.
+  [nfsu2-recompiled](https://github.com/codepdbh/nfsu2-recompiled) (no license file, v0.14.14,
+  2026-11-10): a pcrecomp fork, x86 to C for Android, DXVK on Vulkan.
+  [Skyrim_Android](https://github.com/ttom795/Skyrim_Android) (no license file, 0.30.6, 2026-11-05):
+  TESV.exe x86 to arm64, Direct3D 9 on Vulkan.
+  [source-recomp](https://github.com/kanapitsas/source-recomp) (GPL-3.0, no releases; was
+  portal2-recomp, which redirects): Portal 2's Linux x86 ELF to ARM64 for macOS and iOS.
 - Trackers: [recompiled-games-list](https://github.com/wangxiaoxiang5599/recompiled-games-list) (CC BY 4.0,
   JSON and CSV, checked daily; 277 static recompilations on 2026-11-11), [recomp.fyi](https://recomp.fyi).
 
