@@ -1985,6 +1985,14 @@ dev = [
     { name = "ruff" },
     { name = "shellcheck-py" },
 ]
+test = [
+    { name = "capstone" },
+    { name = "cryptography" },
+    { name = "keystone-engine" },
+    { name = "pefile" },
+    { name = "pyxbe" },
+    { name = "pyyaml" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -2014,6 +2022,14 @@ angr = [{ name = "angr", specifier = ">=10" }]
 dev = [
     { name = "ruff", specifier = ">=0.8" },
     { name = "shellcheck-py", specifier = ">=0.11" },
+]
+test = [
+    { name = "capstone", specifier = ">=5" },
+    { name = "cryptography", specifier = ">=44" },
+    { name = "keystone-engine", specifier = ">=0.9.2" },
+    { name = "pefile", specifier = ">=2024.8.26" },
+    { name = "pyxbe", specifier = ">=1.0.4" },
+    { name = "pyyaml", specifier = ">=6" },
 ]
 
 [[package]]

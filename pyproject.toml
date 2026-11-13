@@ -56,6 +56,16 @@ dev = [
     # shellcheck binary as a wheel, so it comes from uv like ruff
     "shellcheck-py>=0.11",
 ]
+# What the unit tests import beyond the standard library, so CI (`rea-suite check`) installs these
+# and the linters only: `uv sync --only-group dev --only-group test`. Versions follow the main list.
+test = [
+    "pyyaml>=6",
+    "pefile>=2024.8.26",
+    "capstone>=5",
+    "keystone-engine>=0.9.2",
+    "cryptography>=44",
+    "pyxbe>=1.0.4",
+]
 
 [tool.uv]
 default-groups = ["dev"]

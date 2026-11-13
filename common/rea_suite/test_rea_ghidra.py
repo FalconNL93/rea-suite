@@ -50,8 +50,10 @@ class ReaGhidra(unittest.TestCase):
         self.project = self.root / "port" / "re" / "ghidra"
 
     def run_tool(self, *args: str) -> subprocess.CompletedProcess:
+        # Without REA_SUITE_COMPUTED: under `rea-suite check` it lists GHIDRA_INSTALL_DIR, and
+        # common/env.sh would drop the stand-in for the suite's own Ghidra.
         env = {
-            **os.environ,
+            **{k: v for k, v in os.environ.items() if k != "REA_SUITE_COMPUTED"},
             "GHIDRA_INSTALL_DIR": str(self.root / "ghidra"),
             "STUB_CALLS": str(self.calls),
             "REA_SUITE_DISTROBOX": "",

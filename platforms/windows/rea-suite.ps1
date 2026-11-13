@@ -28,12 +28,13 @@
     .\platforms\windows\rea-suite.ps1 tools <rea-tools args>
     .\platforms\windows\rea-suite.ps1 clean [caches|builds|tools|all]   # no argument: show sizes only
     .\platforms\windows\rea-suite.ps1 lint [file...]             # ruff, shellcheck, PowerShell parse (Git Bash)
+    .\platforms\windows\rea-suite.ps1 check            # lint, then every unit test (Python, Node); the gate before a push
 .NOTES
     Not tested on Windows yet.
 #>
 #Requires -Version 7
 param(
-    [Parameter(Position = 0)][ValidateSet('setup', 'select', 'winget', 'update', 'reinstall', 'agents', 'analyze', 'playstation', 'xbox', 'xbox360', 'functions', 'steamstub', 'pe', 'rmdp', 'yetibig', 'le', 'frida', 'dosbox', 'pad', 'run', 'doctor', 'status', 'tools', 'clean', 'lint')][string]$Command = 'setup',
+    [Parameter(Position = 0)][ValidateSet('setup', 'select', 'winget', 'update', 'reinstall', 'agents', 'analyze', 'playstation', 'xbox', 'xbox360', 'functions', 'steamstub', 'pe', 'rmdp', 'yetibig', 'le', 'frida', 'dosbox', 'pad', 'run', 'doctor', 'status', 'tools', 'clean', 'lint', 'check')][string]$Command = 'setup',
     [Parameter(Position = 1, ValueFromRemainingArguments)][string[]]$Rest = @()
 )
 $ErrorActionPreference = 'Stop'
@@ -243,6 +244,18 @@ switch ($Command) {
     }
     'tools' { Invoke-Checked uv run rea-tools @Rest }
     'lint' { Invoke-Checked bash .githooks/lint.sh @Rest }
+    'check' {
+        # counterpart of bin/rea-suite check: every part runs, the exit says whether any failed
+        $failed = @()
+        Step 'lint'; bash .githooks/lint.sh; if ($LASTEXITCODE) { $failed += 'lint' }
+        Step 'Python unit tests (common/rea_suite/test_*.py)'
+        $env:PYTHONPATH = "$Root\common" + $(if ($env:PYTHONPATH) { ";$env:PYTHONPATH" } else { '' })
+        & .venv\Scripts\python.exe -m unittest discover -s common/rea_suite -t common; if ($LASTEXITCODE) { $failed += 'python' }
+        Step 'Node unit tests (common/*.test.mjs)'
+        fnm exec --using=$Node -- node --test (Get-ChildItem common\*.test.mjs).FullName; if ($LASTEXITCODE) { $failed += 'node' }
+        if ($failed) { Write-Host "`ncheck failed: $($failed -join ' ')" -ForegroundColor Red; exit 1 }
+        Write-Host "`ncheck passed" -ForegroundColor Green
+    }
     'clean' {
         $caches = 'uv', 'npm', 'nuget', 'gradle' | ForEach-Object { "$env:REA_RUNTIME\cache\$_" }
         if (-not $Rest) {

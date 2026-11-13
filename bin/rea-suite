@@ -60,6 +60,9 @@
 #   rea-suite tools <args...>               tools.yml manager (= rea-tools)
 #   rea-suite lint [file...]                ruff, shellcheck and a PowerShell parse check on
 #                                            this repository (.githooks/lint.sh)
+#   rea-suite check                         the gate before a push and in CI: lint, then every
+#                                            unit test (Python, Node); the opt-in integration
+#                                            tests run only when their switches are set
 #   rea-suite clean [caches|builds|tools|all]  free disk space: download caches (uv, npm,
 #                                            NuGet, Gradle), source builds (.runtime/build)
 #                                            and inactive tool versions; without an
@@ -306,6 +309,26 @@ cmd_reinstall() {
       *) rea-tools reinstall "$what" ;;
     esac
   done
+}
+
+# lint, then the Python and Node unit tests; all of them run, the exit says whether any failed.
+# PYTHONPATH puts this checkout's rea_suite first: a .venv shared with another checkout (a
+# worktree) would otherwise import that checkout's copy in a test's child process.
+cmd_check() {
+  local failed=() venv=.venv/bin
+  [[ -d "$venv" ]] || venv=.venv/Scripts # Windows (Git Bash)
+  step "lint"
+  .githooks/lint.sh || failed+=(lint)
+  step "Python unit tests (common/rea_suite/test_*.py)"
+  PYTHONPATH="$ROOT/common${PYTHONPATH:+:$PYTHONPATH}" \
+    "$venv/python" -m unittest discover -s common/rea_suite -t common || failed+=(python)
+  step "Node unit tests (common/*.test.mjs)"
+  node --test common/*.test.mjs || failed+=(node)
+  if ((${#failed[@]})); then
+    printf '\n\033[1;31mcheck failed: %s\033[0m\n' "${failed[*]}"
+    return 1
+  fi
+  printf '\n\033[1;32mcheck passed\033[0m\n'
 }
 
 CACHES=(uv npm nuget gradle) # in .runtime/cache (common/env.sh)
@@ -588,6 +611,7 @@ case "$cmd" in
   tools) rea-tools "${args[@]}" ;;
   clean) cmd_clean "${args[@]}" ;;
   lint) exec .githooks/lint.sh "${args[@]}" ;;
+  check) cmd_check ;;
   -h | --help | help | "") usage ;;
   *) echo "unknown command: $cmd" >&2; usage; exit 2 ;;
 esac

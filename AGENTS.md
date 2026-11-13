@@ -36,7 +36,9 @@ installation.
   liblzo2 and pure-Python paths are the case in point). Not for a one-off helper that will not
   grow (the owner, 2026-11-13; the platform's rule, master-server's CLAUDE.md).
 * **Verified by running, or not verified.** Say what ran (command and result) and what did not.
-  The Windows scripts are untested until someone runs them on Windows; say so.
+  The Windows scripts are untested until someone runs them on Windows; say so. The gate before
+  a push is `rea-suite check` (lint and every unit test, as CI's `check.yml` runs it) and
+  `rea-suite doctor`; a red one is not pushed.
 * **Samples, captures and analysis output never go into git.** They live in `work/` (ignored).
 * **Secrets never go into git.** gitleaks checks every commit and push (`.githooks`, enabled by
   `rea-suite setup`) and every push on the server (`.forgejo/workflows/gitleaks.yml`). Tokens go in
@@ -81,6 +83,10 @@ installation.
   for PowerShell 7 (`#Requires -Version 7`, started with `pwsh`, never Windows PowerShell 5.1),
   keep `$ErrorActionPreference = 'Stop'` and parse in `pwsh`.
 * `rea-suite lint` checks all of the above; the pre-commit hook runs it on staged files.
+* Tests are `unittest` modules beside the code (`common/rea_suite/test_*.py`) and `node --test`
+  files (`common/*.test.mjs`); `rea-suite check` runs them all. A test that needs a real tool or
+  sample is opt-in behind a `REA_*_INTEGRATION` or `REA_*_SAMPLE` switch. A package a test
+  imports goes in the `test` group of `pyproject.toml` too, so CI installs it.
 * Generated files (`tools/bin/*` launchers, `tools/state.json`) are never edited by hand.
 
 ## Reverse engineering with the suite

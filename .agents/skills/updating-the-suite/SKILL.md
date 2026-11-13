@@ -176,8 +176,7 @@ updated tool starts (`<tool> --version`), and `rea-tools rea-pins` is green. A n
 fixed or rolled back (`rea-tools use <tool> <old>`, `git checkout` of the lockfile) before you
 report.
 
-For workflow changes, run `rea-suite lint` and
-`uv run --no-sync python -m unittest rea_suite.test_analyze`. When an analysis engine,
+For workflow changes, run `rea-suite check` (lint and every unit test). When an analysis engine,
 command contract, cache or export behavior changes, also run the applicable real-provider
 smoke tests with benign fixtures: on Linux/macOS run
 `REA_ANALYZE_INTEGRATION=1 uv run --no-sync python -m unittest rea_suite.test_analyze`.

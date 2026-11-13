@@ -828,7 +828,7 @@ in about 3 minutes, no errors. Steps 3 and 4 were not run here.
 Keep the `.fidb` and the project in `work/` (ignored): they are derived from Microsoft's
 libraries and do not go into git.
 
-## Linting the suite's own code
+## Linting and testing the suite's own code
 
 `.githooks/lint.sh` runs ruff (format and lint) on the Python, shellcheck on every shell
 script and, where `pwsh` is installed, a parse check on the PowerShell scripts. Both
@@ -837,7 +837,14 @@ binary), so `uv.lock` pins them. It runs in three places:
 
 - `.githooks/pre-commit`: on the staged files, before the secret scan.
 - `rea-suite lint [file...]`: by hand, on every tracked file or the ones given.
-- `.forgejo/workflows/lint.yml`: on every push and pull request on the server (no `pwsh` there).
+- `rea-suite check`: lint, then every unit test: `unittest discover` over
+  `common/rea_suite/test_*.py` and `node --test` over `common/*.test.mjs`. The opt-in
+  integration tests (`REA_*_INTEGRATION`, `REA_*_SAMPLE`) skip unless their switch is set. It
+  is the gate before a push, with `rea-suite doctor`.
+- `.forgejo/workflows/check.yml`: `rea-suite check` on every pull request and every push but
+  one of docs alone (no `pwsh` there). It installs Python's `dev` and `test` groups only
+  (`uv sync --only-group dev --only-group test`): the `test` group lists what the tests import
+  beyond the standard library, so a test that needs another package adds it there.
 
 ## Keeping secrets out of the repository
 
