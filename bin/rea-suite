@@ -26,6 +26,14 @@
 #                                            (achievements, strings, presence), ... (--help)
 #   rea-suite xbox <command> <xbe>          original Xbox XBE without Ghidra: info, imports,
 #                                            image, symbols (XbSymbolDatabase), check (--help)
+#   rea-suite ps3 <command> ...             PS3 SELF/SPRX headers, ELF/PRX imports and exports
+#                                            with NIDs named, PARAM.SFO, NID lookup, census,
+#                                            decryption by your RPCS3, analyze into a Ghidra
+#                                            project of yours, check (component ps3; --help)
+#   rea-suite gamecube info|check <file>    GameCube/Wii DOL, REL or disc image (ISO; RVZ, WBFS,
+#                                            WIA with component gamecube) without Ghidra (--help)
+#   rea-suite psp info|nid|check <file>     PSP EBOOT.PBP, PRX/ELF with its NIDs, PARAM.SFO,
+#                                            ISO or CSO without Ghidra (--help)
 #   rea-suite functions <config> check|add|find|convert  a port's index of identified
 #                                            functions (no game bytes) and its gate; x86/x64 PE,
 #                                            Xbox 360 images (--help)
@@ -70,6 +78,7 @@
 #                                            argument only shows the sizes
 #
 #   --no-apt/--no-dnf/--no-pacman  skip system packages (no sudo); --no-brew  skip Homebrew (macOS)
+#   --no-build  no source builds of Ghidra extensions (= REA_TOOLS_NO_BUILD=1)
 set -euo pipefail
 
 # macOS: Homebrew's bash (platforms/macos/Brewfile), not the bundled 3.2
@@ -498,6 +507,24 @@ cmd_doctor() {
   else
     bad "ghidra-xbe" "$xbe"
   fi
+  local console out
+  for console in gamecube psp; do
+    components selected | grep -qx "$console" || continue
+    if out="$(uv run --offline --no-sync "common/rea_suite/$console.py" check 2>&1)"; then
+      ok "$console loader" "$out"
+    else
+      bad "$console loader" "$out"
+    fi
+  done
+
+  if components selected | grep -qx ps3; then
+    local ps3
+    if ps3="$(uv run --offline --no-sync common/rea_suite/ps3.py check 2>&1)"; then
+      ok "ps3" "${ps3//$'\n'/; }"
+    else
+      bad "ps3" "${ps3//$'\n'/; }"
+    fi
+  fi
 
   step "git"
   if [[ "$(git config core.hooksPath 2>/dev/null)" == .githooks ]]; then
@@ -586,6 +613,7 @@ args=()
 for arg in "$@"; do
   case "$arg" in
     --no-apt | --no-dnf | --no-pacman | --no-brew) SYSTEM=0 ;;
+    --no-build) export REA_TOOLS_NO_BUILD=1 ;; # no Ghidra extension source builds (AGENTS.md)
     *) args+=("$arg") ;;
   esac
 done
@@ -601,7 +629,10 @@ case "$cmd" in
   analyze) uv run --offline --no-sync common/rea_suite/analyze.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   playstation) uv run --offline --no-sync common/rea_suite/playstation.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   xbox) uv run --offline --no-sync common/rea_suite/xbox.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
+  ps3) uv run --offline --no-sync common/rea_suite/ps3.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   xbox360) uv run --offline --no-sync common/rea_suite/xbox360.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
+  gamecube) uv run --offline --no-sync common/rea_suite/gamecube.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
+  psp) uv run --offline --no-sync common/rea_suite/psp.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   functions) uv run --offline --no-sync common/rea_suite/functions.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   steamstub) uv run --offline --no-sync common/rea_suite/steamstub.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   frida) uv run --offline --no-sync common/rea_suite/frida_run.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;

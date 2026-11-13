@@ -16,6 +16,10 @@ From an original game to what a port, a decompilation or a recompilation needs.
 - [XBOX360.md](XBOX360.md): an Xbox 360 game (PowerPC XEX), with Call of Duty 3's lessons.
 - [PS1.md](PS1.md): a PlayStation game (R3000A, PS-X EXE and overlays).
 - [PS2.md](PS2.md): a PlayStation 2 game (R5900 EE, IOP modules, VUs).
+- [GAMECUBE-WII.md](GAMECUBE-WII.md): a GameCube or Wii game (PowerPC 750 with paired singles, DOL and
+  RELs, disc images), with Dolphin as the oracle.
+- [PSP.md](PSP.md): a PSP game (Allegrex MIPS with the VFPU, PRX modules and NIDs, EBOOT.PBP, UMD
+  images), with PPSSPP as the oracle.
 
 ## Tools
 

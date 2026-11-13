@@ -53,6 +53,9 @@ diec = "rea_suite.diec:main"
 # angr pins old arpy/unicorn versions; CLI tools that clash with it go in
 # common/uv-tools.txt (isolated environments) instead of here.
 angr = ["angr>=10"]
+# GameCube/Wii disc images in every container, Wii partitions decrypted (rea-suite gamecube;
+# component gamecube). Alpha, so pinned exactly; dtk reads discs with the same Rust crate.
+gamecube = ["nod-rs==2.0.0a12"]
 # Linters for this repository's own code (.githooks/lint.sh, `rea-suite lint`)
 dev = [
     "ruff>=0.8",

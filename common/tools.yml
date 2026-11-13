@@ -14,6 +14,8 @@
 # the active version. Launchers are generated in tools/bin/ (on PATH via .envrc).
 #
 # github:      owner/repo; `version` is `latest` or an exact release tag
+#              or `{linux, macos, windows}`: a repository per platform (RPCS3)
+# version-env: a variable that, when set (run or .env), replaces `version` (`latest`, a tag)
 # assets:      per-platform regex (linux, macos, windows) matched against release asset
 #              names; macOS means Apple Silicon. A .dmg is unpacked to its .app bundles.
 # strip:       leading path components to drop when extracting
@@ -139,6 +141,32 @@ tools:
         component: playstation
         github: chaoticgd/ghidra-emotionengine-reloaded
         asset: '^ghidra_{ghidra}_PUBLIC_\d+_ghidra-emotionengine-reloaded\.zip$'
+      # PS3 ELF/PRX: import and export tables named from its NID list, the TOC (r2) set from the
+      # OPDs, LV2 syscalls named (component ps3, docs/PS3.md). No release for Ghidra 12.1.4
+      # (its newest, 1.0111, stops at 12.1.2), so a source build; the repository has no license.
+      ps3ghidrascripts:
+        component: ps3
+        github: clienthax/Ps3GhidraScripts
+        asset: '^ghidra_{ghidra}_PUBLIC_\d+_Ps3GhidraScripts\.zip$'
+        build: true
+      # GameCube/Wii DOL, REL, apploader and RAM dump loader with the Gekko/Broadway language
+      # (paired singles); component gamecube, docs/GAMECUBE-WII.md. No release has a 12.1.4 build
+      # (1.3.1 is for 12.1, which 12.1.4 refuses), and 1.3.1's build.gradle calls Project.exec(),
+      # which the Gradle 9 of Ghidra 12.1.4 removed. Pinned to the commit that moved to
+      # providers.exec (2026-11-11), built for the installed Ghidra; checked with a DOL import
+      # (2026-11-13). Move it with the Ghidra pin. --no-build / REA_TOOLS_NO_BUILD skips it.
+      gamecube:
+        component: gamecube
+        github: Cuyler36/Ghidra-GameCube-Loader
+        commit: bc17469a6e37c260b07e8c46f0c9bde2bd3e97dc
+        build: true
+      # PSP Allegrex processor: VFPU, PSP relocations, PPSSPP .sym scripts (component psp,
+      # docs/PSP.md). REA's PSP profile (6.8.0 and 6.9.0) uses it from Extensions/ghidra-allegrex.
+      # Not pinned: v21.4 is the newest release with a 12.1.4 build; v21.5 and later are 12.2 only.
+      allegrex:
+        component: psp
+        github: kotcrab/ghidra-allegrex
+        asset: '^ghidra_{ghidra}_PUBLIC_\d+_ghidra-allegrex\.zip$'
       # .NET Native AOT analysis; rea uses its jar (REA_GHIDRA_NATIVEAOT_JAR)
       nativeaot:
         github: Washi1337/ghidra-nativeaot
@@ -234,6 +262,72 @@ tools:
       windows:
         objdiff-cli: objdiff-cli-windows-x86_64.exe
         objdiff: objdiff-windows-x86_64.exe
+
+  # --- component: gamecube ---
+
+  # GameCube/Wii emulator with a GDB stub (General.GDBPort) and DolphinTool (convert, verify,
+  # extract). Pinned to 2609b, the release docs/GAMECUBE-WII.md was read at (2026-11-13); no
+  # GitHub releases, so a direct download. Linux uses the distribution's dolphin-emu (apt), which
+  # has dolphin-tool and dolphin-emu-nogui; the macOS app has no DolphinTool.
+  dolphin:
+    url:
+      macos: https://dl.dolphin-emu.org/releases/2609b/dolphin-2609b-universal.dmg
+      windows: https://dl.dolphin-emu.org/releases/2609b/dolphin-2609b-x64.7z
+    version: '2609b'
+    strip: 1
+    bin:
+      macos:
+        dolphin: Dolphin.app/Contents/MacOS/Dolphin
+      windows:
+        dolphin: Dolphin.exe
+        dolphin-tool: DolphinTool.exe
+
+  # decomp-toolkit: splits a DOL and its RELs into objects for a matching decompilation, with
+  # symbol and split files; dtk-template is the project layout around it.
+  dtk:
+    github: encounter/decomp-toolkit
+    version: latest
+    assets:
+      linux: '^dtk-linux-x86_64$'
+      macos: '^dtk-macos-arm64$'
+      windows: '^dtk-windows-x86_64\.exe$'
+    bin:
+      linux:
+        dtk: dtk-linux-x86_64
+      macos:
+        dtk: dtk-macos-arm64
+      windows:
+        dtk: dtk-windows-x86_64.exe
+
+  # --- component: psp ---
+
+  # PSP emulator with a debugger (GUI), the WebSocket debugger API (subprotocol
+  # debugger.ppsspp.org) and .sym export. Pinned to v1.20.4, the tag docs/PSP.md read
+  # Core/Debugger/WebSocket at (2026-11-13); move it after reading that again.
+  ppsspp:
+    github: hrydgard/ppsspp
+    version: v1.20.4
+    assets:
+      linux: '^PPSSPP-v[\d.]+-anylinux-x86_64\.AppImage$'
+      macos: '^PPSSPPSDL-macOS-v[\d.]+\.zip$'
+      windows: '^PPSSPP-v[\d.]+-Windows-x64\.zip$'
+    bin:
+      linux:
+        ppsspp: {path: 'PPSSPP-*.AppImage', env: {APPIMAGE_EXTRACT_AND_RUN: '1'}}
+      macos:
+        ppsspp: PPSSPPSDL.app/Contents/MacOS/PPSSPPSDL
+      windows:
+        ppsspp: PPSSPPWindows64.exe
+
+  # PPSSPP's source at the tag of the build above: the HLE tables (Core/HLE/*.cpp) that
+  # `rea-suite psp info` names firmware imports from. Data only, never built. Move it with ppsspp.
+  ppsspp-source:
+    version: v1.20.4
+    url:
+      linux: &ppsspp-source https://github.com/hrydgard/ppsspp/archive/refs/tags/v1.20.4.tar.gz
+      macos: *ppsspp-source
+      windows: *ppsspp-source
+    strip: 1
 
   # Original upstream publishes Windows CLI binaries; Linux/macOS builds are not configured.
   xgdtool:
@@ -755,6 +849,55 @@ tools:
         xemu: xemu.app/Contents/MacOS/xemu
       windows:
         xemu: xemu.exe
+
+  # --- component: ps3 ---
+
+  # PS3 emulator and debugger (GPL-2): `rea-suite ps3 decrypt` (--decrypt, headless), the GDB
+  # stub (PPU threads), PINE/IPC memory access, logs. A rolling release, published per platform
+  # in a repository of its own, with the same tag (build-<commit>) in each. Pinned to the build
+  # docs/PS3.md was checked with (2026-11-13); REA_RPCS3_BUILD (run or .env) chooses another:
+  # `latest` or a tag. Move the pin with rpcs3-source below, same commit. Firmware is the
+  # player's own (rpcs3 --installfw PS3UPDAT.PUP).
+  rpcs3:
+    github:
+      linux: RPCS3/rpcs3-binaries-linux
+      macos: RPCS3/rpcs3-binaries-mac-arm64
+      windows: RPCS3/rpcs3-binaries-win
+    version: build-9b8974d32e73c897a5fcd6bdf69413ca7e436b01
+    version-env: REA_RPCS3_BUILD
+    assets:
+      linux: '^rpcs3-v[\d.]+-\d+-\w+_linux64\.AppImage$'
+      macos: '^rpcs3-v[\d.]+-\d+-\w+_macos_aarch64\.7z$'
+      windows: '^rpcs3-v[\d.]+-\d+-\w+_win64_msvc\.7z$'
+    bin:
+      linux:
+        rpcs3: {path: 'rpcs3-*.AppImage', env: {APPIMAGE_EXTRACT_AND_RUN: '1'}}
+      macos:
+        rpcs3: RPCS3.app/Contents/MacOS/rpcs3
+      windows:
+        rpcs3: rpcs3.exe
+
+  # RPCS3's source at the commit of the build above: the names `rea-suite ps3` hashes into NIDs
+  # (REG_FUNC registrations, PPUFunction.cpp's tables). Data only, never built.
+  rpcs3-source:
+    version: 9b8974d32e73c897a5fcd6bdf69413ca7e436b01
+    url:
+      linux: &rpcs3-source https://github.com/RPCS3/rpcs3/archive/9b8974d32e73c897a5fcd6bdf69413ca7e436b01.tar.gz
+      macos: *rpcs3-source
+      windows: *rpcs3-source
+    strip: 1
+
+  # PS3 static recompilation toolkit (MIT): the Python pipeline (ELF/PRX and fSELF readers, PPU
+  # and SPU disassemblers and lifters, SPU image extraction, NID tools) and the runtime library
+  # per platform. Run its scripts with `uv run python tools/ps3recomp/current/tools/<script>.py`.
+  ps3recomp:
+    github: sp00nznet/ps3recomp
+    version: latest
+    assets:
+      linux: '^ps3recomp-v[\d.]+-linux-x64\.zip$'
+      macos: '^ps3recomp-v[\d.]+-mac-arm64\.zip$'
+      windows: '^ps3recomp-v[\d.]+-win-x64\.zip$'
+    strip: 1
 
   # --- component: steam ---
 

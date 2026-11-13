@@ -92,6 +92,10 @@ components:
     uv-tools: ['splat64[mips]']
     tools: [objdiff]
 
+  ps3:
+    description: PS3 - RPCS3 with its debugger, GDB stub and decryption (rea-suite ps3, docs/PS3.md), the NID names from RPCS3's source, ps3recomp's pipeline, and the PS3 ELF scripts for Ghidra
+    tools: [rpcs3, rpcs3-source, ps3recomp]
+
   game-archives:
     description: Game archives and Xbox discs (extract-xiso, ZArchive; Windows also XGDTool and QuickBMS); ZArchive builds from source on Linux/macOS
     # System zstd headers/library are required for native ZArchive builds.
@@ -102,3 +106,14 @@ components:
   xbox:
     description: Original Xbox (2001) games - xemu with QEMU's GDB stub (rea-suite xbox, docs/XBOX-CLASSIC.md) and extract-xiso; the XBE loader for Ghidra is always installed
     tools: [xemu, extract-xiso]
+
+  gamecube:
+    description: GameCube and Wii - Dolphin with its GDB stub and DolphinTool (Linux from the distribution), dtk (decomp-toolkit; it also reads and extracts disc images in every format), nod-rs for rea-suite gamecube's RVZ/WBFS/WIA images, and the GameCube loader for Ghidra (built from source)
+    # The Debian and Ubuntu name (Ubuntu 26.04 carries 2512); Fedora and Arch names not checked.
+    apt: [dolphin-emu]
+    uv-groups: [gamecube]
+    tools: [dolphin, dtk]
+
+  psp:
+    description: PSP - PPSSPP with its WebSocket debugger, its source's HLE tables to name NIDs (rea-suite psp), and ghidra-allegrex for Ghidra, which REA's PSP profile uses
+    tools: [ppsspp, ppsspp-source]
