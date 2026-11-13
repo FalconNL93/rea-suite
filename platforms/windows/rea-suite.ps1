@@ -11,6 +11,7 @@
     .\platforms\windows\rea-suite.ps1 playstation [options]  # prepare PS1/PS2 projects
     .\platforms\windows\rea-suite.ps1 xbox360 <command> [options]  # Xbox 360 XEX/PE in your Ghidra project
     .\platforms\windows\rea-suite.ps1 xbox info|imports|image|symbols|check <xbe>  # original Xbox XBE without Ghidra
+    .\platforms\windows\rea-suite.ps1 ps3 info|imports|nids|census|decrypt|analyze|check ...  # PS3 SELF/ELF/PRX, NIDs, your RPCS3, Ghidra
     .\platforms\windows\rea-suite.ps1 gamecube info|check <file>  # GameCube/Wii DOL, REL or disc image without Ghidra
     .\platforms\windows\rea-suite.ps1 psp info|nid|check <file>  # PSP EBOOT.PBP, PRX with NIDs, PARAM.SFO, ISO, CSO
     .\platforms\windows\rea-suite.ps1 functions <config> check|add|find|convert  # a port's function index and gate
@@ -36,7 +37,7 @@
 #>
 #Requires -Version 7
 param(
-    [Parameter(Position = 0)][ValidateSet('setup', 'select', 'winget', 'update', 'reinstall', 'agents', 'analyze', 'playstation', 'xbox', 'xbox360', 'gamecube', 'psp', 'functions', 'steamstub', 'pe', 'rmdp', 'yetibig', 'le', 'frida', 'dosbox', 'pad', 'run', 'doctor', 'status', 'tools', 'clean', 'lint', 'check')][string]$Command = 'setup',
+    [Parameter(Position = 0)][ValidateSet('setup', 'select', 'winget', 'update', 'reinstall', 'agents', 'analyze', 'playstation', 'xbox', 'xbox360', 'ps3', 'gamecube', 'psp', 'functions', 'steamstub', 'pe', 'rmdp', 'yetibig', 'le', 'frida', 'dosbox', 'pad', 'run', 'doctor', 'status', 'tools', 'clean', 'lint', 'check')][string]$Command = 'setup',
     [Parameter(Position = 1, ValueFromRemainingArguments)][string[]]$Rest = @()
 )
 $ErrorActionPreference = 'Stop'
@@ -167,6 +168,10 @@ function Doctor {
         $out = uv run --offline --no-sync common\rea_suite\$console.py check
         if ($LASTEXITCODE) { Bad "$console loader" "$out" } else { Ok "$console loader" "$out" }
     }
+    if ((Components selected) -contains 'ps3') {
+        $ps3 = (uv run --offline --no-sync common\rea_suite\ps3.py check) -join '; '
+        if ($LASTEXITCODE) { Bad 'ps3' "$ps3" } else { Ok 'ps3' "$ps3" }
+    }
     Step 'system (winget)'
     foreach ($p in Winget-Ids) {
         winget list --id $p --exact --accept-source-agreements *> $null
@@ -221,6 +226,7 @@ switch ($Command) {
     'agents' { Agents register @Rest }
     'playstation' { & uv run --offline --no-sync common\rea_suite\playstation.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'xbox' { & uv run --offline --no-sync common\rea_suite\xbox.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
+    'ps3' { & uv run --offline --no-sync common\rea_suite\ps3.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'xbox360' { & uv run --offline --no-sync common\rea_suite\xbox360.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'gamecube' { & uv run --offline --no-sync common\rea_suite\gamecube.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'psp' { & uv run --offline --no-sync common\rea_suite\psp.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }

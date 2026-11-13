@@ -1,4 +1,4 @@
-"""The one way the suite runs Ghidra's analyzeHeadless (rea-ghidra, xbox360, xbox, playstation).
+"""The one way the suite runs Ghidra's analyzeHeadless (rea-ghidra, xbox360, xbox, playstation, ps3).
 
 Every run is bounded and named:
 

@@ -92,6 +92,40 @@ class AppDistrib(unittest.TestCase):
                 self.assertIn(platform, tool.appdistrib["channels"])
 
 
+RPCS3_ASSETS = {
+    "linux": ("RPCS3/rpcs3-binaries-linux", "rpcs3-v0.0.43-20583-9b8974d3_linux64.AppImage"),
+    "macos": (
+        "RPCS3/rpcs3-binaries-mac-arm64",
+        "rpcs3-v0.0.43-20583-9b8974d3_macos_aarch64.7z",
+    ),
+    "windows": ("RPCS3/rpcs3-binaries-win", "rpcs3-v0.0.43-20583-9b8974d3_win64_msvc.7z"),
+}
+
+
+class Rpcs3Builds(unittest.TestCase):
+    """RPCS3 publishes a repository per platform with the same tag; REA_RPCS3_BUILD moves the pin."""
+
+    def test_a_repository_and_an_asset_per_platform(self) -> None:
+        for platform, (repo, name) in RPCS3_ASSETS.items():
+            with (
+                patch.object(cli, "PLATFORM", platform),
+                patch.dict(os.environ, {"REA_RPCS3_BUILD": ""}),
+            ):
+                tool = cli.load_tools()["rpcs3"]
+                self.assertEqual(tool.github, repo)
+                self.assertTrue(tool.version.startswith("build-"))
+                others = [{"name": n} for _, n in RPCS3_ASSETS.values()]
+                self.assertEqual(
+                    cli.pick_assets(tool, {"tag_name": "x", "assets": others}), [{"name": name}]
+                )
+
+    def test_the_setting_replaces_the_pin(self) -> None:
+        with patch.dict(os.environ, {"REA_RPCS3_BUILD": "latest"}):
+            self.assertEqual(cli.load_tools()["rpcs3"].version, "latest")
+        with patch.dict(os.environ, {"REA_RPCS3_BUILD": " build-abc "}):
+            self.assertEqual(cli.load_tools()["rpcs3"].version, "build-abc")
+
+
 class ComponentUvTools(unittest.TestCase):
     def test_decomp_brings_splat_in_an_environment_of_its_own(self) -> None:
         with patch.dict(os.environ, {components.KEY: "decomp"}):
