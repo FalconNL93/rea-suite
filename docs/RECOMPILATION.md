@@ -10,8 +10,7 @@ findings go to its own repository.
 What lies around this page:
 
 - The routes from an original to what a recompilation needs: [DOS-GAMES.md](DOS-GAMES.md),
-  [XBOX-CLASSIC.md](XBOX-CLASSIC.md), [PS1.md](PS1.md), [PS2.md](PS2.md); the Xbox 360 lane is the
-  README's "Console games and disc images".
+  [XBOX-CLASSIC.md](XBOX-CLASSIC.md), [PS1.md](PS1.md), [PS2.md](PS2.md), [XBOX360.md](XBOX360.md).
 - The suite's port tools: [PORT-TOOLS.md](PORT-TOOLS.md).
 - The runtime our x86 ports are recompiled onto: winrt (games/winrt), and its research on x87 in other
   translators (`docs/2026-11-05-x87-translation-research.md`) and on what other runtimes have

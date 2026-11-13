@@ -9,7 +9,7 @@ traps; nothing about a particular game belongs on this page.
 
 What lies around this page:
 
-- The Xbox 360 lane, for comparison: the README's "Console games and disc images" (`rea-suite xbox360`)
+- The Xbox 360 route, for comparison: [XBOX360.md](XBOX360.md) (`rea-suite xbox360`)
   and [GAME-ARCHIVES.md](GAME-ARCHIVES.md) (extract-xiso, XGDTool).
 - The DOS route, [DOS-GAMES.md](DOS-GAMES.md): the same shape for another x86 target, recompiled onto
   the same runtime.
