@@ -29,6 +29,12 @@ installation.
   `platforms/macos/bootstrap.sh` and `bootstrap.ps1`; `common/env.sh` and `env.ps1`; a tool in
   `tools.yml` gets `linux`, `macos` and `windows` assets where upstream publishes them. Where a
   platform cannot have it, the README says so.
+* **Behind an interface of our own where it pays.** A third-party tool or library, another
+  project's code, or a part likely to grow (an analysis provider, a format reader, a decompressor,
+  an emulator driver) is reached through an interface of the suite's own with one implementation,
+  so a second one is added or the first replaced without touching its callers (`lzo1x.py`'s
+  liblzo2 and pure-Python paths are the case in point). Not for a one-off helper that will not
+  grow (the owner, 2026-11-13; the platform's rule, master-server's CLAUDE.md).
 * **Verified by running, or not verified.** Say what ran (command and result) and what did not.
   The Windows scripts are untested until someone runs them on Windows; say so.
 * **Samples, captures and analysis output never go into git.** They live in `work/` (ignored).
