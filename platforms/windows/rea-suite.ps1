@@ -42,6 +42,8 @@ $Root = (Resolve-Path "$PSScriptRoot\..\..").Path
 $CallerCwd = (Get-Location).Path
 Set-Location $Root
 . "$PSScriptRoot\env.ps1"
+# this checkout's rea_suite, also when its .venv is shared with another checkout (counterpart of bin/rea-suite)
+$env:PYTHONPATH = "$Root\common" + $(if ($env:PYTHONPATH) { ";$env:PYTHONPATH" } else { '' })
 $Node = (Get-Content .node-version -Raw).Trim()
 
 function Step($msg) { Write-Host "`n==> $msg" -ForegroundColor Blue }
@@ -249,7 +251,6 @@ switch ($Command) {
         $failed = @()
         Step 'lint'; bash .githooks/lint.sh; if ($LASTEXITCODE) { $failed += 'lint' }
         Step 'Python unit tests (common/rea_suite/test_*.py)'
-        $env:PYTHONPATH = "$Root\common" + $(if ($env:PYTHONPATH) { ";$env:PYTHONPATH" } else { '' })
         & .venv\Scripts\python.exe -m unittest discover -s common/rea_suite -t common; if ($LASTEXITCODE) { $failed += 'python' }
         Step 'Node unit tests (common/*.test.mjs)'
         fnm exec --using=$Node -- node --test (Get-ChildItem common\*.test.mjs).FullName; if ($LASTEXITCODE) { $failed += 'node' }

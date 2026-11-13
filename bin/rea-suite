@@ -82,6 +82,9 @@ export REA_SUITE_ROOT="$ROOT"
 source "$REA_SUITE_ROOT/common/box.sh" # immutable host: on inside the distrobox
 # shellcheck source=common/env.sh disable=SC1091
 source common/env.sh
+# this checkout's rea_suite for the tools below, also when its .venv is shared with another
+# checkout (a worktree): the installed package points at the checkout that made the .venv
+export PYTHONPATH="$ROOT/common${PYTHONPATH:+:$PYTHONPATH}"
 
 case "$(uname -s)" in
   Darwin) OS=macos ;;
@@ -312,16 +315,13 @@ cmd_reinstall() {
 }
 
 # lint, then the Python and Node unit tests; all of them run, the exit says whether any failed.
-# PYTHONPATH puts this checkout's rea_suite first: a .venv shared with another checkout (a
-# worktree) would otherwise import that checkout's copy in a test's child process.
 cmd_check() {
   local failed=() venv=.venv/bin
   [[ -d "$venv" ]] || venv=.venv/Scripts # Windows (Git Bash)
   step "lint"
   .githooks/lint.sh || failed+=(lint)
   step "Python unit tests (common/rea_suite/test_*.py)"
-  PYTHONPATH="$ROOT/common${PYTHONPATH:+:$PYTHONPATH}" \
-    "$venv/python" -m unittest discover -s common/rea_suite -t common || failed+=(python)
+  "$venv/python" -m unittest discover -s common/rea_suite -t common || failed+=(python)
   step "Node unit tests (common/*.test.mjs)"
   node --test common/*.test.mjs || failed+=(node)
   if ((${#failed[@]})); then
