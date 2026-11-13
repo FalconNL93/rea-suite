@@ -1,6 +1,6 @@
 """NID names for Sony's firmware imports, whatever the console: the interface a name source
-implements, and the table built from one. A console module (rea-suite psp) brings its own source
-and its own hash; this module only holds the shape they share.
+implements, and the table built from one. A console module (rea-suite psp, ps3) brings its own
+source and its own hash; this module only holds the shape they share.
 """
 
 from __future__ import annotations

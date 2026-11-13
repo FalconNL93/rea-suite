@@ -32,12 +32,13 @@ import struct
 import subprocess
 import sys
 import tempfile
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
-from rea_suite import ghidra_headless
+from rea_suite import ghidra_headless, nids
+from rea_suite.nids import NidEntry
 
 ROOT = Path(__file__).resolve().parents[2]  # this checkout: tools/ is beside common/
 
@@ -390,21 +391,8 @@ def read_sfo(data: bytes) -> dict:
 # --- NIDs ---------------------------------------------------------------------------------------
 
 
-@dataclass(frozen=True)
-class NidEntry:
-    nid: int
-    module: str
-    name: str
-    kind: str  # "function" or "variable"
-    hashed: bool  # the NID is the hash of the name (else a table lists it)
-
-
-class NidSource(Protocol):
+class NidSource(nids.NidSource, Protocol):
     """Where NID and LV2 syscall names come from; one implementation today (RPCS3's source)."""
-
-    def describe(self) -> str: ...
-
-    def entries(self) -> Iterable[NidEntry]: ...
 
     def syscalls(self) -> dict[int, str]: ...
 
@@ -461,21 +449,12 @@ class Rpcs3Source:
                     yield NidEntry(value, module, name, kind, nid(name) == value)
 
 
-class NidTable:
-    def __init__(self, source: NidSource):
-        self.source = source
-        self.syscalls = source.syscalls()
-        self.by_nid: dict[int, list[NidEntry]] = {}
-        for e in source.entries():
-            rows = self.by_nid.setdefault(e.nid, [])
-            if e not in rows:
-                rows.append(e)
+class NidTable(nids.NidTable):
+    """The shared table (nids.py), plus the LV2 syscall names the PS3's source gives."""
 
-    def name(self, value: int, module: str | None = None) -> str:
-        rows = self.by_nid.get(value, [])
-        if module is not None:
-            rows = [r for r in rows if r.module == module] or rows
-        return rows[0].name if rows else ""
+    def __init__(self, source: NidSource):
+        super().__init__(source)
+        self.syscalls = source.syscalls()
 
 
 def default_source(explicit: Path | None) -> NidSource:
