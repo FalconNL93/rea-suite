@@ -23,7 +23,8 @@
 #   rea-suite xbox360 <command> [options]   Xbox 360 XEX or PE image in a Ghidra project of yours:
 #                                            analyze, decomp, xrefs, functions, check, and
 #                                            Ghidra-free info, extract, imports, refs, spa
-#                                            (achievements, strings, presence), ... (--help)
+#                                            (achievements, strings, presence), disc (a game's
+#                                            .zar or disc image: info, list, extract) (--help)
 #   rea-suite xbox <command> <xbe>          original Xbox XBE without Ghidra: info, imports,
 #                                            image, symbols (XbSymbolDatabase), check (--help)
 #   rea-suite ps3 <command> ...             PS3 SELF/SPRX headers, ELF/PRX imports and exports
@@ -41,6 +42,9 @@
 #   rea-suite pe <command> <exe> ...        PE scans without a project: MSVC RTTI classes and
 #                                            vtables, references, callers, strings, disassembly,
 #                                            resources; containing functions on x86 (--help)
+#   rea-suite zar info|list|extract <archive> ...  ZArchive .zar/.wua (Xenia's 360 games,
+#                                            Cemu's Wii U games): files listed, the ones named
+#                                            extracted, no build needed (--help)
 #   rea-suite rmdp list|extract|find|inner <index.bin> ...  Remedy packages (Alan Wake,
 #                                            Remastered, American Nightmare, Quantum Break,
 #                                            Control): list, extract, search, level containers
@@ -640,6 +644,7 @@ case "$cmd" in
   pad) uv run --offline --no-sync common/rea_suite/vigem_pad.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   run) uv run --offline --no-sync common/rea_suite/run_harness.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   pe) uv run --offline --no-sync common/rea_suite/pe.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
+  zar) uv run --offline --no-sync common/rea_suite/zar.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   rmdp) uv run --offline --no-sync common/rea_suite/rmdp.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   yetibig) uv run --offline --no-sync common/rea_suite/yetibig.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   le) uv run --offline --no-sync common/rea_suite/le.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;

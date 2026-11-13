@@ -339,7 +339,9 @@ tools:
       windows:
         XGDTool: 'XGDTool-*-CLI.exe'
 
-  # Windows release binary; native Linux/macOS source builds need zstd development files.
+  # Windows release binary; native Linux/macOS source builds need zstd development files. v0.1.2
+  # (2022) is the newest release; master's later commits add CI and stream input, no format change.
+  # Built and round-tripped on Linux x86_64, 2026-11-13. Reading is rea-suite zar's (zar.py).
   zarchive:
     github: Exzap/ZArchive
     version: latest

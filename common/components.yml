@@ -97,7 +97,7 @@ components:
     tools: [rpcs3, rpcs3-source, ps3recomp]
 
   game-archives:
-    description: Game archives and Xbox discs (extract-xiso, ZArchive; Windows also XGDTool and QuickBMS); ZArchive builds from source on Linux/macOS
+    description: Game archives and Xbox discs (extract-xiso, ZArchive's zarchive to create .zar files; Windows also XGDTool and QuickBMS); zarchive builds from source on Linux/macOS. Reading a .zar needs none of it (rea-suite zar)
     # System zstd headers/library are required for native ZArchive builds.
     apt: [libzstd-dev]
     brew: [zstd]

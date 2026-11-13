@@ -14,6 +14,13 @@ person or an import gave is kept and reported); the other commands open the proj
 first repairs the register save/restore helpers (common/ghidra_scripts/XenonHelpers.java) and
 reports what Ghidra could not decode. Ghidra's logs go to DIR/logs/.
 
+A game as it arrives, without extracting all of it: a .zar (Xenia's ZArchive), or a disc image (a
+Redump XGD2/XGD3 ISO or an XISO, the XDVDFS partition found by itself):
+
+  rea-suite xbox360 disc info    <game> [-o JSON]      container, partition, default.xex's title id
+  rea-suite xbox360 disc list    <game> [-o TSV]       size and path of every file
+  rea-suite xbox360 disc extract <game> [path...] -o DIR   default.xex, a folder, or everything
+
 Without Ghidra, on an XEX, its extracted PE image, or a raw memory dump (--base):
 
   rea-suite xbox360 info    <xex> [-o JSON]           headers, security info, import libraries
@@ -42,7 +49,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from rea_suite import ghidra_headless, ppc, spa, spa_out, xex
+from rea_suite import containers, ghidra_headless, ppc, spa, spa_out, xdvdfs, xex, zar
 
 # XEXLoaderWV's own choice; Ghidra's PE opinions know only little-endian PowerPC (0x01f0/0x01f1).
 LANGUAGE = "PowerPC:BE:64:A2ALT-32addr"
@@ -570,6 +577,43 @@ def spa_command(args: argparse.Namespace) -> int:
     return spa_out.run(path, options, args.format)
 
 
+def open_game(path: Path) -> containers.Container:
+    """A .zar by its footer, else a disc image by its XDVDFS volume descriptor."""
+    if path.is_dir():
+        raise ValueError(
+            "a folder: an extracted game needs no reading; a Games on Demand package needs"
+            " converting first (docs/XBOX360.md, step 1)"
+        )
+    return zar.ZarArchive(path) if zar.is_zar(path) else xdvdfs.XdvdfsImage(path)
+
+
+def disc_extra(game: containers.Container) -> dict:
+    """The executables, and default.xex's execution info: the title id names the game."""
+    tree = game.tree()
+    found: dict = {
+        "executables": [
+            e.path for e in tree.entries if e.path.lower().endswith((".xex", ".xexp", ".dll"))
+        ]
+    }
+    entry = containers.find(tree, "default.xex")
+    if entry is None:
+        return found
+    try:
+        headers = xex.parse(b"".join(game.read(entry)))["headers"]
+        found["default_xex"] = headers.get("EXECUTION_INFO", {"error": "no execution info"})
+    except ValueError as exc:
+        found["default_xex"] = {"error": str(exc)}
+    return found
+
+
+def disc(args: argparse.Namespace) -> int:
+    game = open_game((args.caller_cwd / args.file).resolve())
+    try:
+        return containers.run(game, args, disc_extra(game) if args.action == "info" else None)
+    finally:
+        game.close()
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         prog="rea-suite xbox360",
@@ -628,8 +672,12 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--lang", default="en-US", help="the declarations' language (default en-US)")
     s.add_argument("--game", help="the declarations' game id (default: the title id)")
     s.add_argument("--sdk", type=Path, help=f"master-sdk checkout (default ${spa_out.SDK_ENV})")
+    d = sub.add_parser("disc", help="a game's .zar or disc image: info, list, extract")
+    containers.add_actions(d.add_subparsers(dest="action", required=True), "game")
     args = p.parse_args(argv)
     try:
+        if args.command == "disc":
+            return disc(args)
         if args.command == "spa":
             return spa_command(args)
         if args.command in STATIC:

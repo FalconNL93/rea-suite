@@ -10,7 +10,8 @@ What lies around this page:
 
 - The original Xbox, for comparison: [XBOX-CLASSIC.md](XBOX-CLASSIC.md) (x86, so it goes onto winrt
   instead).
-- Disc and container tools: [GAME-ARCHIVES.md](GAME-ARCHIVES.md) (extract-xiso, XGDTool, ZArchive).
+- Disc and container tools: [GAME-ARCHIVES.md](GAME-ARCHIVES.md) (`rea-suite zar`, extract-xiso, XGDTool,
+  ZArchive).
 - What XenonRecomp, Unleashed Recompiled and rexglue-sdk solved, and how:
   [RECOMPILATION.md](RECOMPILATION.md).
 - The port's platform work (the master, the SDK, the port checklist): master-server's docs/PORTING.md,
@@ -18,26 +19,38 @@ What lies around this page:
 
 Install: XEXLoaderWV, the XEX loader for Ghidra, is always installed with Ghidra (pinned in
 `common/tools.yml`, built from source for 12.1.4); `rea-suite doctor` checks that it loads
-(`rea-suite xbox360 check`). Component `game-archives` brings extract-xiso.
+(`rea-suite xbox360 check`). Reading a game's .zar or disc image needs nothing more; component
+`game-archives` brings extract-xiso and zarchive for unpacking whole or packing.
 
-## 1. The disc image, unpacked as data
+## 1. From your .zar (or disc image) to default.xex
+
+A game usually arrives as a Xenia `.zar` (a ZArchive; [GAME-ARCHIVES.md](GAME-ARCHIVES.md)) or a disc
+image (a Redump XGD2/XGD3 ISO, or an XISO of the game partition). `rea-suite xbox360 disc` reads both
+the same way, without unpacking the rest of the game:
 
 ```sh
-mkdir -p ~/Games/<game>/disc
-sha256sum game.iso
-extract-xiso -x -d ~/Games/<game>/disc game.iso
-sha256sum ~/Games/<game>/disc/default.xex
+rea-suite xbox360 disc info game.zar            # container, executables, default.xex's title id
+rea-suite xbox360 disc list game.zar > files.tsv
+rea-suite xbox360 disc extract game.zar default.xex -o ~/Games/<game>/disc
+rea-suite xbox360 spa ~/Games/<game>/disc/default.xex --out ~/Games/<game>/spa
+sha256sum game.zar ~/Games/<game>/disc/default.xex
 ```
 
-- extract-xiso finds the game partition by itself: it tries the XGD2 offset (0x0FD90000), then XGD3's
-  (0x02080000), then XGD1's (`extract-xiso.c`).
-- A Games on Demand package or another container needs XGDTool first (Windows only, dormant upstream;
-  [GAME-ARCHIVES.md](GAME-ARCHIVES.md)). Project 1944's launcher also takes a GoD folder
-  (`415607E1\00007000` for CoD3).
+The same commands take `game.iso`. For the whole data tree, `extract` without a path, or the upstream
+tools: `zarchive game.zar <folder>`, `extract-xiso -x -d <folder> game.iso` (component
+`game-archives`).
+
+- The disc image's game partition is found by itself: its volume descriptor (sector 32, starting with
+  `MICROSOFT*XBOX*MEDIA`) is looked for at offset 0 (an XISO), then at XGD2's 0x0FD90000, XGD3's
+  0x02080000 and XGD1's 0x18300000, as extract-xiso and xdvdfs do. `info` says which (`layout`).
+- `info`'s `default_xex.title_id` names the game (Condemned: `534507D2`); `executables` lists every
+  `*.xex` and `*.dll`, `$SystemUpdate/` included, which a port ignores.
+- A Games on Demand package needs XGDTool first (Windows only, dormant upstream): `--zar` makes the .zar
+  Xenia and this step read ([GAME-ARCHIVES.md](GAME-ARCHIVES.md) has what else was looked at).
+  Project 1944's launcher also takes a GoD folder (`415607E1\00007000` for CoD3).
 - The disc holds `default.xex`, often further executables (CoD3: `codmp_xenonf.xex` for multiplayer) and
-  DLLs (CoD3: 15 level DLLs under `sp/`), the data, movies and `$SystemUpdate/`, which a port ignores.
-  Look for every `*.xex` and `*.dll`.
-- Record the image's hash and each executable's hash in the port's docs.
+  DLLs (CoD3: 15 level DLLs under `sp/`), the data, movies and `$SystemUpdate/`.
+- Record the container's hash and each executable's hash in the port's docs.
 
 *Feeds:* the executables for steps 2 and 3, the data tree the port's file layer serves.
 
@@ -228,8 +241,10 @@ The recompiled-games list (2026-11-12) has two more CoD3 ports, and the CoD3 por
 
 ## Tests
 
-`uv run --no-sync python -m unittest rea_suite.test_xex rea_suite.test_xbox360 rea_suite.test_spa` in
-`common/` (synthetic samples); opt-in with Ghidra: `REA_XBOX360_INTEGRATION=1` (a synthetic PE) and
+`uv run --no-sync python -m unittest rea_suite.test_xex rea_suite.test_xbox360 rea_suite.test_spa
+rea_suite.test_containers` in `common/` (synthetic samples; `test_containers` builds .zar files and
+XGD1/2/3 disc images); `REA_XBOX360_DISC_SAMPLE=<.zar or image>` runs `disc info` on a real game,
+read-only. Opt-in with Ghidra: `REA_XBOX360_INTEGRATION=1` (a synthetic PE) and
 `REA_XBOX360_SAMPLE=<file>` with `REA_XBOX360_ADDRESS=<hex>` (a real executable, read-only).
 XEXLoaderWV is pinned in `common/tools.yml`; `rea-suite tools reinstall ghidra` puts it back when doctor
 reports it missing. Its newest release is built for Ghidra 12.1.3 and none exists for 12.2 yet
@@ -257,7 +272,10 @@ reports it missing. Its newest release is built for Ghidra 12.1.3 and none exist
 
 - CoD3: `~/Dev/reverse-engineering/cod3/port` docs `00-overview.md`, `01-binary-analysis.md`,
   `02-prior-art.md`; the fork's `docs/xbox360-titles.md`; master-server's docs/PORTING.md, "Lessons".
-- extract-xiso: `extract-xiso.c` at HEAD (the XGD1, XGD2 and XGD3 offsets).
+- extract-xiso: `extract-xiso.c` at HEAD (the XGD1, XGD2 and XGD3 offsets); xdvdfs:
+  `xdvdfs-core/src/blockdev/offset.rs` (the same three).
+- ZArchive: `include/zarchive/zarchivecommon.h`, `src/zarchivereader.cpp` and `src/zarchivewriter.cpp`
+  at master (2025-08-30).
 - XenonRecomp and rexglue-sdk: their `commits.atom` and `releases.atom` feeds.
 - Xenia: `xenia-project/xenia` and `xenia-canary/xenia-canary` `commits.atom`.
 - The CoD3 ports: their READMEs, LICENSE files and the GitHub API's license field;

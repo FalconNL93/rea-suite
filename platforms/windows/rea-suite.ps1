@@ -9,7 +9,7 @@
     .\platforms\windows\rea-suite.ps1 update --ai    # an agent checks compatibility, proposes the plan, applies it
     .\platforms\windows\rea-suite.ps1 agents [agent...]  # rea MCP + REA skill for every detected agent
     .\platforms\windows\rea-suite.ps1 playstation [options]  # prepare PS1/PS2 projects
-    .\platforms\windows\rea-suite.ps1 xbox360 <command> [options]  # Xbox 360 XEX/PE in your Ghidra project; spa: achievements, presence
+    .\platforms\windows\rea-suite.ps1 xbox360 <command> [options]  # Xbox 360 XEX/PE in your Ghidra project; spa: achievements, presence; disc: a .zar or disc image
     .\platforms\windows\rea-suite.ps1 xbox info|imports|image|symbols|check <xbe>  # original Xbox XBE without Ghidra
     .\platforms\windows\rea-suite.ps1 ps3 info|imports|nids|census|decrypt|analyze|check ...  # PS3 SELF/ELF/PRX, NIDs, your RPCS3, Ghidra
     .\platforms\windows\rea-suite.ps1 gamecube info|check <file>  # GameCube/Wii DOL, REL or disc image without Ghidra
@@ -17,6 +17,7 @@
     .\platforms\windows\rea-suite.ps1 functions <config> check|add|find|convert  # a port's function index and gate
     .\platforms\windows\rea-suite.ps1 steamstub <exe>...  # SteamStub DRM signs
     .\platforms\windows\rea-suite.ps1 pe <command> <exe> ...  # PE scans: RTTI, references, callers, strings, disasm, resources
+    .\platforms\windows\rea-suite.ps1 zar info|list|extract <archive> ...  # ZArchive .zar/.wua: list, extract the files named
     .\platforms\windows\rea-suite.ps1 rmdp list|extract|find|inner <index.bin> ...  # Remedy packages
     .\platforms\windows\rea-suite.ps1 yetibig info|list|blob|diff|refs|check <Yeti.big> ...  # YETI engine archives (Lost: Via Domus, GRAW)
     .\platforms\windows\rea-suite.ps1 le info|dump-object|dump-image|services <exe> ...  # LE/LX executables (DOS extenders)
@@ -37,7 +38,7 @@
 #>
 #Requires -Version 7
 param(
-    [Parameter(Position = 0)][ValidateSet('setup', 'select', 'winget', 'update', 'reinstall', 'agents', 'analyze', 'playstation', 'xbox', 'xbox360', 'ps3', 'gamecube', 'psp', 'functions', 'steamstub', 'pe', 'rmdp', 'yetibig', 'le', 'frida', 'dosbox', 'pad', 'run', 'doctor', 'status', 'tools', 'clean', 'lint', 'check')][string]$Command = 'setup',
+    [Parameter(Position = 0)][ValidateSet('setup', 'select', 'winget', 'update', 'reinstall', 'agents', 'analyze', 'playstation', 'xbox', 'xbox360', 'ps3', 'gamecube', 'psp', 'functions', 'steamstub', 'pe', 'zar', 'rmdp', 'yetibig', 'le', 'frida', 'dosbox', 'pad', 'run', 'doctor', 'status', 'tools', 'clean', 'lint', 'check')][string]$Command = 'setup',
     [Parameter(Position = 1, ValueFromRemainingArguments)][string[]]$Rest = @()
 )
 $ErrorActionPreference = 'Stop'
@@ -237,6 +238,7 @@ switch ($Command) {
     'pad' { & uv run --offline --no-sync common\rea_suite\vigem_pad.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'run' { & uv run --offline --no-sync common\rea_suite\run_harness.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'pe' { & uv run --offline --no-sync common\rea_suite\pe.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
+    'zar' { & uv run --offline --no-sync common\rea_suite\zar.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'rmdp' { & uv run --offline --no-sync common\rea_suite\rmdp.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'yetibig' { & uv run --offline --no-sync common\rea_suite\yetibig.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'le' { & uv run --offline --no-sync common\rea_suite\le.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
