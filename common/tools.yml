@@ -140,12 +140,15 @@ tools:
         github: chaoticgd/ghidra-emotionengine-reloaded
         asset: '^ghidra_{ghidra}_PUBLIC_\d+_ghidra-emotionengine-reloaded\.zip$'
       # GameCube/Wii DOL, REL, apploader and RAM dump loader with the Gekko/Broadway language
-      # (paired singles); component gamecube, docs/GAMECUBE-WII.md. Upstream's newest build (1.3.1)
-      # is for Ghidra 12.1, which 12.1.4 refuses, so its source is built for the installed Ghidra.
+      # (paired singles); component gamecube, docs/GAMECUBE-WII.md. No release has a 12.1.4 build
+      # (1.3.1 is for 12.1, which 12.1.4 refuses), and 1.3.1's build.gradle calls Project.exec(),
+      # which the Gradle 9 of Ghidra 12.1.4 removed. Pinned to the commit that moved to
+      # providers.exec (2026-11-11), built for the installed Ghidra; checked with a DOL import
+      # (2026-11-13). Move it with the Ghidra pin. --no-build / REA_TOOLS_NO_BUILD skips it.
       gamecube:
         component: gamecube
         github: Cuyler36/Ghidra-GameCube-Loader
-        asset: '^GameCubeLoader-.*-Ghidra_{ghidra}\.zip$'
+        commit: bc17469a6e37c260b07e8c46f0c9bde2bd3e97dc
         build: true
       # PSP Allegrex processor: VFPU, PSP relocations, PPSSPP .sym scripts (component psp,
       # docs/PSP.md). REA's PSP profile (6.8.0 and 6.9.0) uses it from Extensions/ghidra-allegrex.
@@ -305,6 +308,16 @@ tools:
         ppsspp: PPSSPPSDL.app/Contents/MacOS/PPSSPPSDL
       windows:
         ppsspp: PPSSPPWindows64.exe
+
+  # PPSSPP's source at the tag of the build above: the HLE tables (Core/HLE/*.cpp) that
+  # `rea-suite psp info` names firmware imports from. Data only, never built. Move it with ppsspp.
+  ppsspp-source:
+    version: v1.20.4
+    url:
+      linux: &ppsspp-source https://github.com/hrydgard/ppsspp/archive/refs/tags/v1.20.4.tar.gz
+      macos: *ppsspp-source
+      windows: *ppsspp-source
+    strip: 1
 
   # Original upstream publishes Windows CLI binaries; Linux/macOS builds are not configured.
   xgdtool:

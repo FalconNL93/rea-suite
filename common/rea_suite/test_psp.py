@@ -18,6 +18,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from rea_suite import extcheck, psp
+from rea_suite.nids import NidTable
 
 SEGMENT_AT = 0x100  # file offset of the one loaded segment, which starts at address 0
 CTRL = "sceCtrlReadBufferPositive"
@@ -286,6 +287,81 @@ class Containers(unittest.TestCase):
             self.assertRaisesRegex(ValueError, "not a PSP game UMD"),
         ):
             psp.info(written(tmp, "x.iso", image))
+
+
+HLE_CTRL = """
+static const HLEFunction sceCtrl[] =
+{
+	{0X3A622550, &WrapI_UU<sceCtrlPeekBufferPositive>,      "sceCtrlPeekBufferPositive",        'i', "xx"},
+	{0X1F803938, &WrapI_UU<sceCtrlReadBufferPositive>,      "sceCtrlReadBufferPositive",        'i', "xx"},
+	{0XA68FD260, nullptr,                                   "sceCtrlClearRapidFire",            '?', ""  },
+};
+
+void Register_sceCtrl() {
+	RegisterHLEModule("sceCtrl", ARRAY_SIZE(sceCtrl), sceCtrl);
+	RegisterHLEModule("sceCtrl_driver", ARRAY_SIZE(sceCtrl), sceCtrl);
+}
+"""
+
+
+def ppsspp_tree(tmp: str) -> Path:
+    """The part of a PPSSPP source tree the NID source reads."""
+    hle = Path(tmp) / "Core" / "HLE"
+    hle.mkdir(parents=True)
+    (hle / "HLETables.cpp").write_text("// registry\n")
+    (hle / "sceCtrl.cpp").write_text(HLE_CTRL)
+    return Path(tmp)
+
+
+class Names(unittest.TestCase):
+    def test_ppsspp_tables_give_each_nid_its_name_and_libraries(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            table = NidTable(psp.PpssppSource(ppsspp_tree(tmp)))
+        self.assertEqual(table.name(0x1F803938), CTRL)
+        self.assertEqual(
+            [e.module for e in table.by_nid[0x1F803938]], ["sceCtrl", "sceCtrl_driver"]
+        )
+        self.assertTrue(table.by_nid[0x1F803938][0].hashed)
+        self.assertEqual(table.name(0xA68FD260), "sceCtrlClearRapidFire")
+
+    def test_info_names_imports_from_the_source_and_your_list_wins(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = psp.PpssppSource(ppsspp_tree(tmp))
+            names = psp.load_names(None, source)
+            self.assertEqual(psp.module(prx(), names)["imports"][0]["functions"][0]["name"], CTRL)
+            (Path(tmp) / "mine.txt").write_text("sceSomethingUnlisted\n")
+            names = psp.load_names(Path(tmp) / "mine.txt", source)
+        found = psp.module(prx(), names)
+        self.assertEqual(found["unnamed_imports"], 0)
+
+    def test_a_folder_without_ppsspp_source_is_refused_and_none_installed_is_no_source(self):
+        with tempfile.TemporaryDirectory() as tmp, self.assertRaisesRegex(ValueError, "no PPSSPP"):
+            psp.PpssppSource(Path(tmp))
+        with (
+            patch.dict(os.environ, {"REA_PSP_NID_SOURCE": ""}),
+            patch.object(psp, "ROOT", Path("/nonexistent")),
+        ):
+            self.assertIsNone(psp.default_source(None))
+
+    def test_the_command_says_where_the_names_came_from(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            written(tmp, "EBOOT.PBP", pbp(prx()))
+            tree = ppsspp_tree(tmp + "/src")
+            psp.main(
+                [
+                    "--caller-cwd",
+                    tmp,
+                    "info",
+                    "EBOOT.PBP",
+                    "--nid-source",
+                    str(tree),
+                    "-o",
+                    "o.json",
+                ]
+            )
+            found = json.loads((Path(tmp) / "o.json").read_text())
+        self.assertEqual(found["data_psp"]["imports"][0]["functions"][0]["name"], CTRL)
+        self.assertTrue(found["nid_names"].startswith("PPSSPP source at "))
 
 
 class Command(unittest.TestCase):

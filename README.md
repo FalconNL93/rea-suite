@@ -172,7 +172,7 @@ REA_SUITE_COMPONENTS="build steam"
 | `game-archives` | no | extract-xiso, ZArchive; Windows also XGDTool and QuickBMS ([platform limits](docs/GAME-ARCHIVES.md)) |
 | `xbox` | no | original Xbox games: xemu with QEMU's GDB stub, extract-xiso ([route](docs/XBOX-CLASSIC.md)) |
 | `gamecube` | no | GameCube and Wii games: Dolphin with its GDB stub, dtk, nod-rs for `rea-suite gamecube`, the GameCube loader for Ghidra (built from source) ([route](docs/GAMECUBE-WII.md)) |
-| `psp` | no | PSP games: PPSSPP with its WebSocket debugger, ghidra-allegrex, which REA's PSP profile uses ([route](docs/PSP.md)) |
+| `psp` | no | PSP games: PPSSPP with its WebSocket debugger, its source's HLE tables to name NIDs, ghidra-allegrex, which REA's PSP profile uses ([route](docs/PSP.md)) |
 | `vm` | no | QEMU + OVMF (Linux) or VirtualBox (Windows); UTM on macOS |
 
 Change it with `rea-suite select` (menu, then setup), by editing `.env`, or per run
@@ -289,7 +289,7 @@ GameCube and Wii: [the route](docs/GAMECUBE-WII.md); PSP: [the route](docs/PSP.m
 rea-suite gamecube info game.rvz     # header, region, apploader date, main DOL, file table (RVZ: component gamecube)
 rea-suite gamecube info main.dol     # sections, entry, bss, SDK banners; a .rel gives its sections and imports
 rea-suite psp info EBOOT.PBP         # sections, PARAM.SFO, the module: info, imports and exports by NID
-rea-suite psp info game.iso --names names.txt   # a UMD (ISO or CSO); NIDs named from your list of names
+rea-suite psp info game.iso --names names.txt   # a UMD (ISO or CSO); NIDs named from PPSSPP's tables and your list
 rea-suite psp nid sceCtrlReadBufferPositive     # a NID is the SHA-1 prefix of the name
 ```
 
@@ -615,7 +615,7 @@ been run on macOS arm64 and Linux x86_64 (WSL2, 2026-11-03); Windows execution r
 | `rea-suite dosbox` | A DOS program in DOSBox-X, headless: the INT 21h, 31h (DPMI), 33h and 10h calls it makes with registers, mode and decoded arguments (file names, DPMI real-mode calls), entries into real-mode callbacks, and DOSBox-X's own log (INT 21h, file operations, port E9h text) as JSON lines; memory dumps and pokes at a trigger (an interrupt, a file open, a time, an input item, the exit) and scripted keys, mouse positions and clicks for unattended runs; named memory regions at sync points as a sequence file, and `compare`, which finds the first difference from a port's run of the same input ([port tools](docs/PORT-TOOLS.md#dos-programs-rea-suite-dosbox)) | this repo |
 | `rea-suite xbox` | Original Xbox XBEs from the file alone: headers, title, XDK library versions, kernel imports by name, the flat image as loaded, the XDK functions XbSymbolDatabase finds ([route](docs/XBOX-CLASSIC.md)) | this repo |
 | `rea-suite gamecube` | GameCube and Wii files from the file alone: a DOL's sections, entry and SDK banners, a REL's sections and imported modules, a disc image's header, main DOL and file table (ISO here; RVZ, WIA, WBFS, CISO, GCZ and Wii partitions through nod-rs, component `gamecube`) ([route](docs/GAMECUBE-WII.md)) | this repo |
-| `rea-suite psp` | PSP files from the file alone: EBOOT.PBP sections and PARAM.SFO, a PRX's or ELF's module info with its imports and exports by NID (named from your own list of names), an encrypted module's outer header, the same from an ISO or CSO ([route](docs/PSP.md)) | this repo |
+| `rea-suite psp` | PSP files from the file alone: EBOOT.PBP sections and PARAM.SFO, a PRX's or ELF's module info with its imports and exports by NID (named from PPSSPP's HLE tables, tool `ppsspp-source`, and your own list), an encrypted module's outer header, the same from an ISO or CSO ([route](docs/PSP.md)) | this repo |
 | `rea-suite pad` | A virtual Xbox 360 pad pressing buttons on a schedule, for testing a game's pad input without a person (ViGEm; Windows only, component `porting` for the driver) ([port tools](docs/PORT-TOOLS.md#virtual-pad-rea-suite-pad-windows)) | this repo |
 | `rea-suite run` | One bounded, observed run of a Windows program or game: arguments, environment and working folder, a script of steps (waits, scan-code keys, clicks, text, pad presses, captures) sent only while its window is verified in front, captures (PrintWindow, the screen as fallback), message boxes recorded and answered, modules, child processes and endpoints sampled, the install folder proven unchanged, WM_CLOSE then a kill of the whole job, a JSON report (Windows, and WSL through pwsh.exe) ([port tools](docs/PORT-TOOLS.md#run-harness-rea-suite-run-windows)) | this repo |
 | `rea-suite pe` | PE scans from the file alone, no project: the image's directories; a port's declared patch sites checked by hash and bytes; MSVC RTTI classes with vtables, slots and bases; references to an address or string; callers; strings a code range loads; every call site of an import DLL's functions; a game's option registry; disassembly with imports and names noted, a mnemonic histogram; resources decoded (dialogs, menus, strings, version) and icons exported; containing functions on x86 from a function table or heuristics ([port tools](docs/PORT-TOOLS.md)) | this repo |
@@ -886,7 +886,7 @@ absolute paths to extension JARs must follow the preserved module directory.
 | Kaiju (CERT/CC) | Function hashing across binaries, OOAnalyzer C++ class recovery | prebuilt or built (Z3 from its release, as upstream's CI does) |
 | ghidra_psx_ldr | PS-X EXE and PSX GTE support (component `playstation`) | exact-version prebuilt |
 | Emotion Engine: Reloaded | PS2 R5900/MMI/VU0 macro support (component `playstation`) | exact-version prebuilt |
-| GameCube loader | GameCube and Wii DOL, REL, apploader and RAM dumps; the Gekko/Broadway language with paired singles (component `gamecube`; checked by doctor) | built from source (the newest release is for Ghidra 12.1) |
+| GameCube loader | GameCube and Wii DOL, REL, apploader and RAM dumps; the Gekko/Broadway language with paired singles (component `gamecube`; checked by doctor) | built from a pinned commit (no release builds for 12.1.4, and 1.3.1's build needs the old Gradle) |
 | ghidra-allegrex | PSP Allegrex with the VFPU and PSP relocations; REA's PSP profile uses it (component `psp`; checked by doctor) | exact-version prebuilt (v21.4 for 12.1.4) |
 | XEXLoaderWV | Load Xbox 360 XEX executables (`rea-suite xbox360`; pinned, checked by doctor) | prebuilt or built |
 | ghidra-xbe | Load original Xbox XBE executables: kernel imports by ordinal, XDK library functions named by its XbSymbolDatabase CLI (`rea-ghidra`, `rea-suite xbox`; checked by doctor) | prebuilt only (no license file upstream; its build fetches its own Ghidra) |
@@ -912,6 +912,7 @@ rea-suite tools update ghidra                   # new Ghidra + extensions
 rea-suite tools use ghidra Ghidra_12.1.4_build  # roll back
 rea-suite tools status ghidra                   # which extensions each source provided
 REA_TOOLS_NO_BUILD=1 rea-suite update           # only prebuilt extensions, no source builds
+rea-suite setup --no-build                      # the same for setup and update
 ```
 
 Projects opened in a newer Ghidra are upgraded and no longer open in older ones.

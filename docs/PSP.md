@@ -6,8 +6,8 @@ step says what its output decides and feeds next. No port has taken this route y
 steps were checked on synthetic files, and ghidra-allegrex on a synthetic PRX, not on a retail game.
 The first port adds its own traps.
 
-Install: component `psp` (`rea-suite select`, then `rea-suite setup`). It brings PPSSPP v1.20.4 and the
-ghidra-allegrex extension. Add component `decomp` for splat and objdiff in step 6.
+Install: component `psp` (`rea-suite select`, then `rea-suite setup`). It brings PPSSPP v1.20.4, its source's HLE
+tables (tool `ppsspp-source`, data only) for naming NIDs, and the ghidra-allegrex extension. Add component `decomp` for splat and objdiff in step 6.
 
 What lies around this page: the PS1 and PS2 routes ([PS1.md](PS1.md), [PS2.md](PS2.md)), the
 recompilers ([RECOMPILATION.md](RECOMPILATION.md)).
@@ -82,10 +82,12 @@ rea-suite psp nid sceCtrlReadBufferPositive           # 0x1f803938
   **imports** (libstub: one entry per firmware library, `sceCtrl`, `sceGe_user`, `IoFileMgrForUser`,
   each with a list of NIDs and an 8-byte stub per function that the loader fills in).
 - **NIDs**: a NID is the first four bytes of the SHA-1 of the function's name, little endian
-  (`module_start` is `0xD632ACDB`). `--names` takes a file of candidate names, one per line, hashes them
-  and names the NIDs that match; `info` names the module's own exports itself. Names that do not hash to
-  a NID were randomized by later firmware; they need a NID table (pspsdk's stubs, PPSSPP's
-  `Core/HLE/` tables, the psp-re resources).
+  (`module_start` is `0xD632ACDB`). `info` names imports from PPSSPP's HLE tables: tool `ppsspp-source`
+  (component `psp`) is PPSSPP's source at the same tag as the emulator, read as data from
+  `Core/HLE/*.cpp`, never built. At v1.20.4 that is 1,619 NIDs in 103 libraries, 1,714 of the 1,874 rows
+  the SHA-1 of their name; the rest are randomized NIDs only a table can name. `--nid-source DIR` or
+  `REA_PSP_NID_SOURCE` points at another tree. `--names` adds a file of candidate names, one per line,
+  hashed and preferred over the table. The output's `nid_names` says which source named them.
 - `unnamed_imports` in the output is the number of imported functions still without a name: the size of
   the firmware edge a port answers.
 
@@ -134,7 +136,11 @@ ppsspp ~/Games/<game>/game.iso       # the GUI debugger: Debug menu, disassembly
   which PPSSPP logs.
 - **Privacy trap**: while that web server runs, PPSSPP reports your local IP address and port to
   `report.ppsspp.org` every nine minutes (`RegisterServer` in `Core/WebServer.cpp`), so its phone apps
-  can find it. Block it at the firewall if that matters to you.
+  can find it. No setting turns that off in v1.20.4: the call is unconditional once the server starts
+  (`ReportingHost` only governs compatibility reports). So the suite does not start PPSSPP with the
+  debugger on: today it does not start PPSSPP at all, and the WebSocket back end to come keeps
+  `RemoteDebuggerOnStartup` off and needs your choice to turn it on. When you turn it on, block
+  `report.ppsspp.org` at your firewall or hosts file if that matters to you.
 - **Headless**: `PPSSPPHeadless` (the `headless/` target) runs without a window and takes
   `--debugger=PORT`, `--timeout`, `--screenshot`, `--root`; it is a source build only, not in the
   releases.
@@ -178,7 +184,7 @@ What a recompilation of a PSP game needs:
 - **VFPU prefixes** change the next instruction's operands; decompiled vector code ignores them.
 - **Kernel modules** (attribute `0x1000`) load at `0x88000000`; some need the type B relocation option on
   import (ghidra-allegrex's README).
-- **PPSSPP's web server talks to report.ppsspp.org** (step 5).
+- **PPSSPP's web server talks to report.ppsspp.org**, and no setting stops it (step 5).
 
 ## Outputs, kept where they belong
 
@@ -192,7 +198,6 @@ What a recompilation of a PSP game needs:
 ## Still missing
 
 - A WebSocket back end for the suite's oracle format (PPSSPP has no GDB stub).
-- A NID name table in the suite; today `--names` takes your own list.
 - CSO v2 and ZSO in `rea-suite psp`.
 - A run of REA's PSP profile on a PSPDEV-built ELF with the extension installed.
 

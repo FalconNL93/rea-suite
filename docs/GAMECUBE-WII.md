@@ -3,7 +3,8 @@
 How to take a GameCube or Wii game from your disc image to what a port, a decompilation or a static
 recompilation needs, with the suite's tools in the order they are used. Each step says what its output
 decides and feeds next. No port has taken this route yet (2026-11-13). The steps were checked on
-synthetic files, not on a retail game; the first port adds its own traps. Nothing about a particular
+synthetic files (the loader with a synthetic DOL), not on a retail game; the first port adds its own
+traps. Nothing about a particular
 game belongs on this page.
 
 Install: component `gamecube` (`rea-suite select`, then `rea-suite setup`). It brings Dolphin (Linux:
@@ -94,18 +95,29 @@ The code of a GameCube or Wii game lives in up to three kinds of file:
 ## 3. Ghidra, and REA
 
 ```sh
-rea-ghidra analyze --project <port>/re/ghidra --name <port> ~/Games/<game>/disc/sys/main.dol
+# headless: the loader's map prompt needs a window, so name the loader and turn autoloading off
+analyzeHeadless <port>/re/ghidra <port> -import ~/Games/<game>/disc/sys/main.dol \
+  -loader GameCubeLoader -loader-autoloadMaps false
 rea-ghidra functions --project <port>/re/ghidra main.dol > functions.tsv
 rea-ghidra decomp --project <port>/re/ghidra main.dol 0x80003100
 ```
 
 - **The GameCube loader** (Cuyler36/Ghidra-GameCube-Loader, Apache-2.0) loads DOLs, RELs, apploaders
   and RAM dumps, adds the `PowerPC:BE:32:Gekko_Broadway` language with the paired-single instructions,
-  imports symbol maps and demangles CodeWarrior names. Its newest release (1.3.1, 2026-05-24) is built for
-  Ghidra 12.1, and Ghidra 12.1.4 refuses an extension built for another version. The suite builds it from
-  the release's source for the installed Ghidra (tools.yml, `build: true`). `rea-suite gamecube check`
-  (doctor runs it when the component is selected) checks the files are in place; that build has not run
-  here yet.
+  maps the hardware registers (`CP`, `PE`, `VI`, `PI`, `DSP`, `DI`, `SI`, `EXI`, `AI` at `0xCC000000`)
+  and the OS globals, imports symbol maps and demangles CodeWarrior names. No release has a Ghidra
+  12.1.4 build (1.3.1 is for 12.1, which 12.1.4 refuses), and 1.3.1's `build.gradle` calls
+  `Project.exec()`, which the Gradle 9.7.1 of Ghidra 12.1.4 no longer has. The suite builds commit
+  `bc17469` (2026-11-11, which moved to `providers.exec`) for the installed Ghidra on `rea-suite setup`;
+  `rea-suite setup --no-build` (or `REA_TOOLS_NO_BUILD=1`) skips it. `rea-suite gamecube check`
+  (doctor runs it when the component is selected) checks the files. Checked 2026-11-13: built with the suite's JDK 21 and
+  Ghidra 12.1.4, it imported a synthetic DOL as "Nintendo GameCube/Wii Binary (Executable)" and decoded
+  `ps_add f1,f2,f3` and `psq_l f0,0x0(r3),0x0,GQR0`.
+- **Headless trap**: the loader asks in a dialog for a symbol map when none sits beside the DOL
+  (`main.map` next to `main.dol` loads by itself), and for a REL's load address. Headless, that dialog
+  fails the import with `HeadlessException`. Pass `-loader GameCubeLoader -loader-autoloadMaps false`
+  for a DOL. A REL may ask for its addresses and a map too (`RELProgramBuilder`); not run headless
+  here. `rea-ghidra analyze` does not pass loader options yet, so use `analyzeHeadless` as above.
 - **REA** opens a DOL itself since 6.8.0, when told the format: `open_binary` with `format:
   "gamecube-dol"` (a DOL is never detected on its own). It maps the text and data sections at their
   addresses with stock Ghidra `PowerPC:BE:32:default`, so paired singles are not decoded unless
@@ -229,7 +241,7 @@ What a recompilation of a GameCube or Wii game needs, whichever recompiler is us
 
 ## Still missing
 
-- A built GameCube loader verified in the suite's Ghidra (needs the source build, step 3).
+- Loader options in `rea-ghidra analyze`, so a DOL imports headless through the suite's runner.
 - A GDB back end for the suite's oracle format, for Dolphin and the other GDB stubs.
 - An RSO reader in `rea-suite gamecube`; dtk covers it today.
 - DSP ADPCM and GX texture converters.

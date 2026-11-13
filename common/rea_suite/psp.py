@@ -2,13 +2,15 @@
 with its imported and exported NIDs, and the same from a UMD image (ISO or CSO). Ghidra analysis
 is `rea-ghidra analyze` with ghidra-allegrex (component `psp`); the route is docs/PSP.md.
 
-  rea-suite psp info  <file> [--names FILE] [-o JSON]   EBOOT.PBP, PRX/ELF, PARAM.SFO, ISO or CSO
+  rea-suite psp info  <file> [--names FILE] [--nid-source DIR] [-o JSON]
+                                                        EBOOT.PBP, PRX/ELF, PARAM.SFO, ISO or CSO
   rea-suite psp nid   <name>...                         the NID of a function name
   rea-suite psp check                                   ghidra-allegrex in place for this Ghidra
 
 An encrypted module (`~PSP`, as retail games ship) shows its outer header only: decrypt your own
 copy first (docs/PSP.md, step 2). A NID is the first four bytes of the SHA-1 of the function's
-name, little endian; `--names` names the NIDs from a list of candidate names, one per line.
+name, little endian. Imports are named from PPSSPP's HLE tables (tool `ppsspp-source`, component
+`psp`, pinned with PPSSPP), and from `--names`, a list of candidate names, one per line.
 """
 
 from __future__ import annotations
@@ -17,6 +19,8 @@ import argparse
 import hashlib
 import itertools
 import json
+import os
+import re
 import struct
 import sys
 import zlib
@@ -25,6 +29,7 @@ from pathlib import Path
 from typing import Protocol
 
 from rea_suite import extcheck
+from rea_suite.nids import NidEntry, NidSource, NidTable
 
 PBP_MAGIC = b"\0PBP"
 PBP_SECTIONS = [
@@ -70,6 +75,7 @@ EXTENSION_FILES = [
     "data/languages/allegrex.cspec",
 ]
 FIX = "select component psp, then rea-suite setup"
+ROOT = Path(__file__).resolve().parents[2]
 MAX_ENTRIES = 4096
 
 
@@ -450,11 +456,64 @@ def info(path: Path, names: dict[int, str] | None = None) -> dict:
     return executable(data, names)
 
 
-def load_names(path: Path | None) -> dict[int, str]:
-    if path is None:
-        return {}
-    lines = (line.strip() for line in path.read_text().splitlines())
-    return {nid(line): line for line in lines if line and not line.startswith("#")}
+# --- NID names ------------------------------------------------------------------
+
+
+class PpssppSource:
+    """PPSSPP's HLE tables (`Core/HLE/*.cpp`): every firmware function it implements or stubs,
+    as `{0xNID, &Wrap..., "name", ...}` rows in an `HLEFunction` array that `RegisterHLEModule`
+    registers under its library's name. Data only; never built."""
+
+    TABLE = re.compile(r"HLEFunction\s+(\w+)\s*\[\]\s*=")
+    ENTRY = re.compile(r'\{\s*0[xX]([0-9A-Fa-f]{8})\s*,[^"{}]*?"([^"]+)"')
+    REGISTER = re.compile(r'RegisterHLEModule\(\s*"([^"]+)"\s*,[^;]*?,\s*(\w+)\s*\)')
+
+    def __init__(self, root: Path):
+        self.root = root
+        self.hle = root / "Core" / "HLE"
+        if not (self.hle / "HLETables.cpp").is_file():
+            raise ValueError(f"{root} holds no PPSSPP source (Core/HLE/HLETables.cpp)")
+
+    def describe(self) -> str:
+        return f"PPSSPP source at {self.root}"
+
+    def entries(self):
+        for path in sorted(self.hle.glob("*.cpp")):
+            text = path.read_text(errors="replace")
+            libraries: dict[str, list[str]] = {}
+            for library, table in self.REGISTER.findall(text):
+                libraries.setdefault(table, []).append(library)
+            for match in self.TABLE.finditer(text):
+                end = text.find("};", match.end())
+                block = text[match.end() : end if end >= 0 else len(text)]
+                for library in libraries.get(match[1], [match[1]]):
+                    for value, name in self.ENTRY.findall(block):
+                        number = int(value, 16)
+                        yield NidEntry(number, library, name, "function", nid(name) == number)
+
+
+def default_source(explicit: Path | None) -> NidSource | None:
+    """`--nid-source`, else REA_PSP_NID_SOURCE, else the installed tool; None when there is none."""
+    root = explicit or (
+        Path(os.environ["REA_PSP_NID_SOURCE"]) if os.environ.get("REA_PSP_NID_SOURCE") else None
+    )
+    if root is None:
+        root = ROOT / "tools" / "ppsspp-source" / "current"
+        if not root.exists():
+            return None
+    return PpssppSource(root)
+
+
+def load_names(path: Path | None, source: NidSource | None = None) -> dict[int, str]:
+    """NID -> name: the source's table, then your own candidate names, which win."""
+    names: dict[int, str] = {}
+    if source is not None:
+        table = NidTable(source)
+        names = {value: table.name(value) for value in table.by_nid}
+    if path is not None:
+        lines = (line.strip() for line in path.read_text().splitlines())
+        names.update({nid(line): line for line in lines if line and not line.startswith("#")})
+    return names
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -468,6 +527,9 @@ def main(argv: list[str] | None = None) -> int:
     q = sub.add_parser("info", help="EBOOT.PBP, PRX/ELF, PARAM.SFO, ISO or CSO as JSON")
     q.add_argument("file", type=Path)
     q.add_argument("--names", type=Path, help="candidate function names, one per line")
+    q.add_argument(
+        "--nid-source", type=Path, help="a PPSSPP source tree (default: tool ppsspp-source)"
+    )
     q.add_argument("-o", "--output", type=Path)
     q = sub.add_parser("nid", help="the NID of each function name")
     q.add_argument("name", nargs="+")
@@ -480,8 +542,14 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{hex32(nid(name))}\t{name}")
         return 0
     try:
-        names = load_names(args.names and (args.caller_cwd / args.names).resolve())
+        source = default_source(args.nid_source and (args.caller_cwd / args.nid_source).resolve())
+        names = load_names(args.names and (args.caller_cwd / args.names).resolve(), source)
         found = info((args.caller_cwd / args.file).resolve(), names)
+        found["nid_names"] = (
+            source.describe()
+            if source
+            else ("PPSSPP's tables not installed (component psp); module and --names names only")
+        )
     except (OSError, ValueError, struct.error, zlib.error) as exc:
         p.exit(1, f"psp: {exc}\n")
     out = json.dumps(found, indent=1) + "\n"

@@ -41,6 +41,8 @@ param(
 $ErrorActionPreference = 'Stop'
 $Root = (Resolve-Path "$PSScriptRoot\..\..").Path
 $CallerCwd = (Get-Location).Path
+# --no-build: no source builds of Ghidra extensions (as REA_TOOLS_NO_BUILD=1)
+if ($Rest -contains '--no-build') { $env:REA_TOOLS_NO_BUILD = '1'; $Rest = @($Rest | Where-Object { $_ -ne '--no-build' }) }
 Set-Location $Root
 . "$PSScriptRoot\env.ps1"
 $Node = (Get-Content .node-version -Raw).Trim()

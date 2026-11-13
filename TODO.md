@@ -63,12 +63,13 @@ with the reason when it is dropped.
 
 - **GameCube, Wii and PSP, from the routes' first drafts** (2026-11-13; docs/GAMECUBE-WII.md,
   docs/PSP.md; ghidra-allegrex joined component `psp`):
-  - The GameCube loader's source build for Ghidra 12.1.4 has not run; run `rea-suite setup` with the
-    component and `rea-suite gamecube check`, then import a DOL with it.
+  - `rea-ghidra analyze` passes no loader options, so a DOL import headless hits the GameCube
+    loader's map dialog; it needs `-loader GameCubeLoader -loader-autoloadMaps false` (the Ghidra
+    runner on branch gaps is the place).
   - Oracle back ends for the suite's region format: GDB (Dolphin, and the other GDB stubs) and
-    PPSSPP's WebSocket API (no GDB stub there).
-  - A PSP NID name table (pspsdk's stubs or PPSSPP's HLE tables, read at a pinned version) so
-    `rea-suite psp info` names imports without a list of your own.
+    PPSSPP's WebSocket API (no GDB stub there). The WebSocket one starts PPSSPP's web server, which
+    reports the local IP to report.ppsspp.org with no setting to stop it (docs/PSP.md, step 5).
+  - nids.py holds the NID interface psp.py uses; ps3.py's own copy (branch ps3) folds into it.
   - CSO v2, ZSO and RSO readers; DSP ADPCM and GX texture converters.
 
 - **Original Xbox, from the route's first draft** (2026-11-12; the route is docs/XBOX-CLASSIC.md):

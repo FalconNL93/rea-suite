@@ -111,5 +111,5 @@ components:
     tools: [dolphin, dtk]
 
   psp:
-    description: PSP - PPSSPP with its WebSocket debugger, and ghidra-allegrex for Ghidra, which REA's PSP profile uses (rea-suite psp)
-    tools: [ppsspp]
+    description: PSP - PPSSPP with its WebSocket debugger, its source's HLE tables to name NIDs (rea-suite psp), and ghidra-allegrex for Ghidra, which REA's PSP profile uses
+    tools: [ppsspp, ppsspp-source]
