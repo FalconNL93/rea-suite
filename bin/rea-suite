@@ -464,6 +464,9 @@ cmd_doctor() {
     bad "node_modules" "rea-agents missing or not matching package-lock; run rea-suite setup"
   fi
 
+  if version="$(ia --version 2>&1)"; then ok "ia" "internetarchive $version"
+  else bad "ia" "the Internet Archive CLI does not start; run uv sync --locked"; fi
+
   if components values playwright | grep -qx chromium; then
     if [[ -x "${REA_BROWSER_EXECUTABLE:-}" ]]; then ok "chromium" "$REA_BROWSER_EXECUTABLE"
     else bad "chromium" "missing (component browser); run rea-suite setup"; fi

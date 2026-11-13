@@ -524,6 +524,7 @@ been run on macOS arm64 and Linux x86_64 (WSL2, 2026-11-03); Windows execution r
 
 | Tool | What it is for | Source |
 | --- | --- | --- |
+| Internet Archive CLI (`ia`) | Search archive.org and fetch preserved game builds, manuals and patches (`ia search`, `ia metadata`, `ia download`; `upload` too). `ia configure` stores your archive.org credentials in your own config (`~/.config/internetarchive/ia.ini`, `%APPDATA%` on Windows), never in this repository; downloads go in `work/` | pip `internetarchive` |
 | SteamCMD | Download game builds and specific depots/versions from Steam (component `steam`) | Valve download |
 | Steamless | Strip SteamStub DRM from executables before analysis (Windows; component `steam`) | tools.yml |
 | Wine, winedbg | Run the original Windows game on Linux and trace its API calls, file and registry access (`WINEDEBUG=+relay`); 32-bit games run through Wine's WoW64, no i386 multiarch needed (component `porting`; not on macOS, see [Porting old games](#porting-old-games)) | apt |

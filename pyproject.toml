@@ -27,6 +27,9 @@ dependencies = [
     "objection>=1.12",
     # Binary diffing on top of Ghidra/pyghidra (CLI: ghidriff)
     "ghidriff>=1",
+    # Internet Archive CLI (`ia`: search, metadata, download, upload) for preserved game builds,
+    # manuals and patches on archive.org; `ia configure` keeps credentials in the user's own config
+    "internetarchive>=5",
     # AES for decrypting Xbox 360 XEX images (rea-suite xbox360; also a mitmproxy dependency)
     "cryptography>=44",
     # Original Xbox XBE headers, sections, libraries and kernel imports (rea-suite xbox)
