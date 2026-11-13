@@ -1,22 +1,7 @@
 #!/usr/bin/env bash
-# Headless Ghidra for one binary: analyze once, then query the project.
-#
-#   rea-ghidra analyze   [options] <binary>             import + auto-analysis (once)
-#   rea-ghidra decomp    [options] <binary> <addr>...   decompile the functions containing the addresses
-#   rea-ghidra xrefs     [options] <binary> <text>...   decompile functions referencing strings with the text
-#   rea-ghidra functions [options] <binary>             TSV: entry, size, name, thunk, callers
-#
-#   --project DIR  a Ghidra project folder of your own (a port's); default
-#                  work/ghidra/<binary name>/ (REA_GHIDRA_PROJECTS overrides work/ghidra)
-#   --name NAME    the project's name: default the folder's one .gpr, else the binary's name
-#   -o FILE        write the output there instead of stdout
-#   --force        analyze: run the auto-analysis again on the program in the project; its
-#                  names, types and comments stay (it is never imported again over them)
-#
-# The queries open the project read-only; with --project, <binary> may be the program's name
-# alone. Ghidra's logs go to <project>/logs/. Scripts: common/ghidra_scripts/.
-# The decompiler's limit per function is REA's setting REA_GHIDRA_DECOMPILE_TIMEOUT_SECONDS
-# (default in common/env.sh, yours in .env).
+# Headless Ghidra for one binary: analyze once, then query the project (rea-ghidra --help).
+# The work is common/rea_suite/rea_ghidra.py, which runs Ghidra through ghidra_headless.py:
+# a time limit, a heap cap and a refused dotted project path for every run.
 set -euo pipefail
 # macOS: Homebrew's bash (platforms/macos/Brewfile), not the bundled 3.2
 ((BASH_VERSINFO[0] >= 4)) || exec /opt/homebrew/bin/bash "$0" "$@"
@@ -27,95 +12,7 @@ export REA_SUITE_ROOT="$ROOT"
 source "$REA_SUITE_ROOT/common/box.sh" # immutable host: on inside the distrobox
 # shellcheck source=common/env.sh disable=SC1091
 source "$ROOT/common/env.sh"
-
-usage() { sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; }
-die() { echo "rea-ghidra: $*" >&2; exit 1; }
-
-cmd="${1:-}"
-[[ -n "$cmd" && "$cmd" != -h && "$cmd" != --help ]] || { usage; exit 0; }
-shift
-case "$cmd" in analyze | decomp | xrefs | functions) ;; *) usage >&2; exit 2 ;; esac
-force=0 project="" name="" output="" rest=()
-while (($#)); do # options anywhere; after -- everything is an argument
-  case "$1" in
-    --force) force=1; shift ;;
-    --project) project="${2:?--project needs a folder}"; shift 2 ;;
-    --name) name="${2:?--name needs a name}"; shift 2 ;;
-    -o | --output) output="${2:?-o needs a file}"; shift 2 ;;
-    --) shift; rest+=("$@"); break ;;
-    -*) die "unknown option: $1 (put -- before a text that starts with -)" ;;
-    *) rest+=("$1"); shift ;;
-  esac
-done
-set -- "${rest[@]}"
-binary="${1:-}"
-[[ -n "$binary" ]] || die "missing <binary>"
-shift
-[[ -x "$GHIDRA_INSTALL_DIR/support/analyzeHeadless" ]] || die "Ghidra missing; run rea-suite setup"
-((force == 0)) || [[ "$cmd" == analyze ]] || die "--force is for analyze"
-
-program="$(basename "$binary")"
-if [[ -n "$project" ]]; then
-  mkdir -p "$project"
-  project="$(cd "$project" && pwd)"
-  if [[ -z "$name" ]]; then
-    shopt -s nullglob
-    gprs=("$project"/*.gpr)
-    shopt -u nullglob
-    if ((${#gprs[@]} == 1)); then
-      name="$(basename "${gprs[0]}" .gpr)"
-    elif ((${#gprs[@]} > 1)); then
-      die "$project holds several projects; pass --name"
-    fi
-  fi
-else
-  project="${REA_GHIDRA_PROJECTS:-$ROOT/work/ghidra}/$program"
-fi
-name="${name:-$program}"
-mkdir -p "$project/logs"
-headless=("$GHIDRA_INSTALL_DIR/support/analyzeHeadless" "$project" "$name")
-
-imported() { # the program is in the project's index (read without Ghidra)
-  grep -qF ":$program:" "$project/$name.rep/idata/~index.dat" 2>/dev/null
-}
-
-analyze() {
-  local log="$project/logs/analyze.log"
-  # Kaiju types zero-filled variables after data as Alignment, which hangs the decompiler
-  local repair=(-scriptPath "$ROOT/common/ghidra_scripts" -postScript ClearDataAlignment.java)
-  if imported; then
-    ((force)) || return 0
-    echo "rea-ghidra: analyzing $program again, its names kept (log: $log)" >&2
-    "${headless[@]}" -process "$program" "${repair[@]}" >"$log" 2>&1 ||
-      die "analysis failed; see $log"
-    return 0
-  fi
-  [[ -f "$binary" ]] || die "no such file: $binary (and no program $program in $project)"
-  echo "rea-ghidra: analyzing $program (once; log: $log)" >&2
-  "${headless[@]}" -import "$(readlink -f "$binary")" "${repair[@]}" >"$log" 2>&1 ||
-    die "analysis failed; see $log"
-}
-
-run_script() { # script.java args...
-  local script="$1" out log="$project/logs/${1%.java}.log"
-  shift
-  analyze
-  out="$(mktemp)"
-  "${headless[@]}" -process "$program" -noanalysis -readOnly \
-    -scriptPath "$ROOT/common/ghidra_scripts" -postScript "$script" "$out" "$@" \
-    >"$log" 2>&1 || { rm -f "$out"; die "$script failed; see $log"; }
-  if [[ -n "$output" ]]; then
-    mkdir -p "$(dirname "$output")"
-    cp "$out" "$output"
-  else
-    cat "$out"
-  fi
-  rm -f "$out"
-}
-
-case "$cmd" in
-  analyze) analyze ;;
-  decomp) (($#)) || die "decomp needs addresses"; run_script DecompileAt.java "$@" ;;
-  xrefs) (($#)) || die "xrefs needs texts"; run_script DecompileXrefs.java "$@" ;;
-  functions) run_script ExportFunctions.java ;;
-esac
+# this checkout's rea_suite, also when its .venv is shared with another checkout
+export PYTHONPATH="$ROOT/common${PYTHONPATH:+:$PYTHONPATH}"
+exec uv run --project "$ROOT" --offline --no-sync python -m rea_suite.rea_ghidra \
+  --caller-cwd "$PWD" "$@"

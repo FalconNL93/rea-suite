@@ -28,6 +28,9 @@ from pathlib import Path
 
 import xbe as pyxbe
 
+from rea_suite import ghidra_headless
+from rea_suite.text import decoded, printable
+
 MAGIC = 0x48454258  # "XBEH"
 # The entry point and the kernel thunk table are stored XORed with a key per build kind.
 KEYS = {
@@ -76,7 +79,7 @@ class Xbe:
     def cstring(self, address: int) -> str:
         start = self.offset(address)
         end = self.data.find(b"\0", start, start + 256)
-        return self.data[start : end if end >= 0 else start + 256].decode("ascii", "replace")
+        return decoded(self.data[start : end if end >= 0 else start + 256], "ascii")
 
     def unscramble(self) -> tuple[str, int, int]:
         """The build kind whose key puts both the entry point and the thunk table in the image."""
@@ -101,7 +104,7 @@ class Xbe:
             lib = pyxbe.XbeLibraryVersion.from_buffer_copy(raw)
             found.append(
                 {
-                    "name": lib.name.decode("ascii", "replace"),
+                    "name": decoded(lib.name, "ascii"),
                     "version": f"{lib.ver_major}.{lib.ver_minor}.{lib.ver_build}",
                     "qfe": lib.qfeversion,
                     "debug": bool(lib.debug_build),
@@ -166,7 +169,7 @@ def info(x: Xbe) -> dict:
         "timestamp": datetime.fromtimestamp(head.timestamp, UTC).isoformat(),
         "init_flags": flags(int(head.init_flags), pyxbe.XbeImageHeader.InitFlags),
         "title": {
-            "name": bytes(cert.title_name).decode("utf-16-le", "replace").split("\0")[0],
+            "name": printable(bytes(cert.title_name).decode("utf-16-le", "replace").split("\0")[0]),
             "id": title_id(cert.title_id),
             "id_hex": f"0x{cert.title_id:08X}",
             "version": f"0x{cert.version:08x}",
@@ -268,11 +271,19 @@ def check(install: Path) -> int:
     if not sample.is_file():
         print(f"{sample.name} missing from {EXTENSION}; run {FIX}")
         return 1
-    runner = install / "support" / ("analyzeHeadless.bat" if os.name == "nt" else "analyzeHeadless")
+    runner = ghidra_headless.AnalyzeHeadless(install)
     with tempfile.TemporaryDirectory() as tmp:
-        command = [str(runner), tmp, "probe", "-import", str(sample), "-noanalysis", "-readOnly"]
-        result = subprocess.run(command, capture_output=True, text=True, timeout=300, check=False)
-    if f"Using Loader: {LOADER_NAME}" not in result.stdout + result.stderr:
+        command = runner.command(
+            Path(tmp), "probe", "-import", str(sample), "-noanalysis", "-readOnly"
+        )
+        log = Path(tmp) / "probe.log"
+        try:
+            runner.run(command, log, 300, check=False)
+        except ghidra_headless.GhidraError as exc:
+            print(exc)
+            return 1
+        text = log.read_text(errors="replace") if log.is_file() else ""
+    if f"Using Loader: {LOADER_NAME}" not in text:
         print(
             f"Ghidra {ghidra_version(install)} did not load {sample.name} with {EXTENSION}; run {FIX}"
         )

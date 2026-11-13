@@ -64,6 +64,9 @@
 #   rea-suite tools <args...>               tools.yml manager (= rea-tools)
 #   rea-suite lint [file...]                ruff, shellcheck and a PowerShell parse check on
 #                                            this repository (.githooks/lint.sh)
+#   rea-suite check                         the gate before a push and in CI: lint, then every
+#                                            unit test (Python, Node); the opt-in integration
+#                                            tests run only when their switches are set
 #   rea-suite clean [caches|builds|tools|all]  free disk space: download caches (uv, npm,
 #                                            NuGet, Gradle), source builds (.runtime/build)
 #                                            and inactive tool versions; without an
@@ -84,6 +87,9 @@ export REA_SUITE_ROOT="$ROOT"
 source "$REA_SUITE_ROOT/common/box.sh" # immutable host: on inside the distrobox
 # shellcheck source=common/env.sh disable=SC1091
 source common/env.sh
+# this checkout's rea_suite for the tools below, also when its .venv is shared with another
+# checkout (a worktree): the installed package points at the checkout that made the .venv
+export PYTHONPATH="$ROOT/common${PYTHONPATH:+:$PYTHONPATH}"
 
 case "$(uname -s)" in
   Darwin) OS=macos ;;
@@ -313,6 +319,23 @@ cmd_reinstall() {
   done
 }
 
+# lint, then the Python and Node unit tests; all of them run, the exit says whether any failed.
+cmd_check() {
+  local failed=() venv=.venv/bin
+  [[ -d "$venv" ]] || venv=.venv/Scripts # Windows (Git Bash)
+  step "lint"
+  .githooks/lint.sh || failed+=(lint)
+  step "Python unit tests (common/rea_suite/test_*.py)"
+  "$venv/python" -m unittest discover -s common/rea_suite -t common || failed+=(python)
+  step "Node unit tests (common/*.test.mjs)"
+  node --test common/*.test.mjs || failed+=(node)
+  if ((${#failed[@]})); then
+    printf '\n\033[1;31mcheck failed: %s\033[0m\n' "${failed[*]}"
+    return 1
+  fi
+  printf '\n\033[1;32mcheck passed\033[0m\n'
+}
+
 CACHES=(uv npm nuget gradle) # in .runtime/cache (common/env.sh)
 
 cmd_clean() {
@@ -445,6 +468,9 @@ cmd_doctor() {
   else
     bad "node_modules" "rea-agents missing or not matching package-lock; run rea-suite setup"
   fi
+
+  if version="$(ia --version 2>&1)"; then ok "ia" "internetarchive $version"
+  else bad "ia" "the Internet Archive CLI does not start; run uv sync --locked"; fi
 
   if components values playwright | grep -qx chromium; then
     if [[ -x "${REA_BROWSER_EXECUTABLE:-}" ]]; then ok "chromium" "$REA_BROWSER_EXECUTABLE"
@@ -605,6 +631,7 @@ case "$cmd" in
   tools) rea-tools "${args[@]}" ;;
   clean) cmd_clean "${args[@]}" ;;
   lint) exec .githooks/lint.sh "${args[@]}" ;;
+  check) cmd_check ;;
   -h | --help | help | "") usage ;;
   *) echo "unknown command: $cmd" >&2; usage; exit 2 ;;
 esac

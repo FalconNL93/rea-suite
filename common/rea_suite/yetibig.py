@@ -30,6 +30,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from rea_suite import lzo1x
+from rea_suite.text import decoded
 
 HEADER = 0x268
 VERSION = 0x57  # the loader refuses anything older
@@ -141,7 +142,7 @@ def read_archive(path: Path) -> Archive:
             raise ValueError(f"the table of {count} entries runs past the file")
         table = f.read(ENTRY * count)
     field08, field14 = struct.unpack_from("<I8xI", head, 0x08)
-    root = head[0x36:0x68].split(b"\0", 1)[0].decode("latin-1")
+    root = decoded(head[0x36:0x68].split(b"\0", 1)[0], "latin-1")
     classes = list(struct.unpack_from("<256H", head, 0x68))
     data_length = file_size - HEADER - ENTRY * count
     entries = []

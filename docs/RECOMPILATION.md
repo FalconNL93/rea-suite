@@ -10,8 +10,7 @@ findings go to its own repository.
 What lies around this page:
 
 - The routes from an original to what a recompilation needs: [DOS-GAMES.md](DOS-GAMES.md),
-  [XBOX-CLASSIC.md](XBOX-CLASSIC.md), [PS1.md](PS1.md), [PS2.md](PS2.md); the Xbox 360 lane is the
-  README's "Console games and disc images".
+  [XBOX-CLASSIC.md](XBOX-CLASSIC.md), [PS1.md](PS1.md), [PS2.md](PS2.md), [XBOX360.md](XBOX360.md).
 - The suite's port tools: [PORT-TOOLS.md](PORT-TOOLS.md).
 - The runtime our x86 ports are recompiled onto: winrt (games/winrt), and its research on x87 in other
   translators (`docs/2026-11-05-x87-translation-research.md`) and on what other runtimes have
@@ -25,9 +24,9 @@ What lies around this page:
 | DOS, 16-bit MZ | pcrecomp's `recomp16`; OpenDUNE as the model of converting to C | the same, plus segments everywhere | DOSBox-X |
 | Windows 9x, 32-bit PE (MSVC 4-7) | winrt; pcrecomp `lift32`; Fallout-NV-MacOS for the P-code lifter | Win32 and DirectX at the import table; MFC and the CRT either recompiled or kept | Windows or Wine; Unicorn per function |
 | Original Xbox (x86 XBE) | [xboxrecomp](https://github.com/sp00nznet/xboxrecomp) | kernel ordinals; the XDK's Direct3D 8, DirectSound and XAPI at their entry points, or the NV2A push buffer | xemu |
-| Xbox 360 (PowerPC XEX) | [rexglue-sdk](https://github.com/rexglue/rexglue-sdk) (our fork: games/rexglue-sdk); [XenonRecomp](https://github.com/hedge-dev/XenonRecomp) | kernel and XAM in HLE; the GPU either emulated (Xenos, rexglue) or replaced at the game's Direct3D (Unleashed) | Xenia, Xenia Canary |
+| Xbox 360 (PowerPC XEX) | [rexglue-sdk](https://github.com/rexglue/rexglue-sdk) (our fork: games/rexglue-sdk); [XenonRecomp](https://github.com/hedge-dev/XenonRecomp) as the reference design | kernel and XAM in HLE; the GPU either emulated (Xenos, rexglue) or replaced at the game's Direct3D (Unleashed) | Xenia Canary (Xenia's master branch has had no commit since 2026-02) |
 | N64 (MIPS) | [N64Recomp](https://github.com/N64Recomp/N64Recomp) and N64ModernRuntime | libultra (threads, messages, VI, audio), RSP microcode recompiled, a renderer (RT64) | a decompilation's ELF, an emulator |
-| PS1 (R3000A) | [psxrecomp](https://github.com/mstan/psxrecomp) (noncommercial license), [RecompOne](https://github.com/flafmg/RecompOne) (MIT, C#) | the BIOS (recompiled, with an HLE tier), GPU, SPU, CD-ROM; or the PsyQ libraries | PCSX-Redux, Beetle |
+| PS1 (R3000A) | [psxrecomp](https://github.com/RetroPortingToolKit/psxrecomp) (noncommercial license), [RecompOne](https://github.com/BlackLabelHQ/RecompOne) (MIT, C#) | the BIOS (recompiled, with an HLE tier), GPU, SPU, CD-ROM; or the PsyQ libraries | PCSX-Redux, Beetle |
 | PS2 (R5900 EE, IOP, VUs) | [PS2Recomp](https://github.com/ran-j/PS2Recomp) | EE syscalls and SDK functions bound by name or address; IOP modules run; VU1 interpreted | PCSX2 |
 | GameCube and Wii (PowerPC 750, paired singles) | [DolRecomp](https://github.com/ExpansionPak/DolRecomp) (GPL-3.0, CPU only: DOLs and RELs to C or LLVM); [WiiCompiled](https://github.com/patchzyy/WiiCompiled) (GPL-3.0, one game, on aurora's GX layer); route: [GAMECUBE-WII.md](GAMECUBE-WII.md) | the SDK linked into the game (GX, DVD, PAD, CARD) replaced by name; IOS IPC on the Wii; DSP microcode | Dolphin |
 | PSP (Allegrex MIPS, VFPU) | [psprecomp](https://github.com/sp00nznet/psprecomp) (MIT, early; its README lists three other PSP recompilers); route: [PSP.md](PSP.md) | firmware imports by NID; GE display lists; the Media Engine's codecs | PPSSPP |
@@ -101,7 +100,10 @@ The model the others copied.
 
 [XenonRecomp](https://github.com/hedge-dev/XenonRecomp) (MIT), [XenosRecomp](https://github.com/hedge-dev/XenosRecomp)
 (MIT, shaders to HLSL), [Unleashed Recompiled](https://github.com/hedge-dev/UnleashedRecomp) (GPL-3.0). The
-best-written document on a console recompiler; read its README whole.
+best-written document on a console recompiler; read its README whole. Read it as the reference design, not
+the maintained tool: XenonRecomp's last commit was 2025-08-04 and Unleashed's last release v1.0.3
+(2025-04-05). The live line is rexglue-sdk below, which the recompiled-games list counts under most new
+Xbox 360 ports (checked 2026-11-13).
 
 - **Endianness**: values are little-endian in registers; loads and stores swap. Loads and stores are
   `volatile` so clang cannot reorder them. Vector registers are reversed as a whole 16 bytes, so lane
@@ -137,7 +139,8 @@ best-written document on a console recompiler; read its README whole.
 ### rexglue-sdk (Xbox 360)
 
 [rexglue-sdk](https://github.com/rexglue/rexglue-sdk) (BSD-3-Clause, with Xenia's BSD code); our ports use
-the fork games/rexglue-sdk.
+the fork games/rexglue-sdk. Read at v0.10.0; the newest release is v0.10.1 (2026-11-06), with nightlies
+0.11.0-dev up to 2026-11-11 (checked 2026-11-13). The fork's pin is the port's business.
 
 - XenonRecomp's translation ideas inside Xenia's runtime: the kernel, XAM and XBDM in C++, and Xenia's
   GPU emulation (the Xenos command processor, D3D12 and Vulkan back ends) kept. The game's own Direct3D
@@ -186,8 +189,9 @@ Traps it records:
 
 ### psxrecomp (PS1)
 
-[psxrecomp](https://github.com/mstan/psxrecomp), PolyForm Noncommercial 1.0.0: read for ideas, take no
-code into a port that might be sold. A dozen games in its README, each its own repository with the
+[psxrecomp](https://github.com/RetroPortingToolKit/psxrecomp) (moved from mstan/psxrecomp), PolyForm
+Noncommercial 1.0.0: read for ideas, take no code into a port that might be sold. It ships alpha releases
+now (v0.3.7-alpha, 2026-11-07: a Windows x86_64 CLI, a source zip, SHA256SUMS) and nightlies. A dozen games in its README, each its own repository with the
 framework as a submodule.
 
 - **Three tiers**: the executable and the BIOS recompiled ahead of time; overlays captured when the
@@ -206,7 +210,7 @@ framework as a submodule.
 
 ### RecompOne (PS1, to C#)
 
-[RecompOne](https://github.com/flafmg/RecompOne) (MIT). MIPS to C# against a `CpuContext` and a memory
+[RecompOne](https://github.com/BlackLabelHQ/RecompOne) (MIT; moved from flafmg/RecompOne, no releases). MIPS to C# against a `CpuContext` and a memory
 interface, with a runtime that answers BIOS calls, MMIO, GPU commands and CD-ROM without Sony files.
 Small and readable; the wiki has the port guide.
 
@@ -226,6 +230,36 @@ Small and readable; the wiki has the port guide.
 - Its iteration loop: minimal config, fix hard stops first, temporary returns only to classify, promote
   them to real implementations, move per-game hacks into overrides, retest from a cold boot.
 - `.recomp.json` at a project's root describes it to trackers.
+
+### XboxXBERecomp (original Xbox)
+
+[XboxXBERecomp](https://github.com/TGP482/XboxXBERecomp) (TGP482, MIT, no releases, last commit
+2026-11-08). The second XBE recompiler beside xboxrecomp, proven on several retail games (see
+[XBOX-CLASSIC.md](XBOX-CLASSIC.md), step 6). x86 to C++ ahead of time; the kernel and the XDK libraries
+(Direct3D 8, DirectSound, XAPI, XNet) answered at their API on Windows; Direct3D 12 and XAudio2; Windows
+x64 only.
+
+- **XDK signatures per build** (`xbe_symbols`): lengths and hashes of the library functions with their
+  addresses masked, never library code, kept per XDK build in `xdk/<build>/signatures.toml`. A miss is
+  listed and becomes a trapping stub. This is the shape an XDK FunctionID set should have.
+- **No game code in a release**: the recompiled code is built on the player's PC from the player's own
+  XBE, with a bundled recompiler, Clang and LLD.
+
+### Recompilers for platforms without a route here
+
+Read as references when a route for their platform starts. Status and licenses checked 2026-11-13
+(releases, last commits and LICENSE files at HEAD).
+
+| Recompiler | Platform | License | Status |
+|---|---|---|---|
+| [DolRecomp](https://github.com/ExpansionPak/DolRecomp) | GameCube, Wii; Wii U RPX early | GPL-3.0 | no releases, last commit 2026-10-10. CPU only (DOL, REL, RPX to C or LLVM); the runtime is the host's (ModernGekko-Template). Eternal Darkness, Sunshine and Wind Waker ports use it |
+| [WiiCompiled](https://github.com/patchzyy/Wiicompiled) | Wii | GPL-3.0 | v0.9.4 (2026-11-10), Windows, Linux and macOS builds. The translation runs locally against the user's disc; Mario Kart Wii first, several Wii ports since |
+| [psprecomp](https://github.com/sp00nznet/psprecomp) | PSP (Allegrex) | MIT | v0.5.0 (2026-10-23), early: no game renders on it yet (the tracker) |
+| [snesrecomp](https://github.com/RetroPortingToolKit/snesrecomp) | SNES (65816) | PolyForm Noncommercial 1.0.0 | v0.3.0-alpha (2026-10-14), beta by its README; PPU and audio still emulated. Super Mario World, Super Metroid, A Link to the Past and Mega Man X ports |
+| [ndsrecomp](https://github.com/RetroPortingToolKit/ndsrecomp) | Nintendo DS (ARM9, ARM7) | its own scope notice: PolyForm Noncommercial for most of it, MIT for the runner and oracle trees | v0.6.11 (2026-11-01), "very early pre-alpha" by its README. Metroid Prime Hunters port |
+
+psxrecomp, snesrecomp and ndsrecomp are RetroPortingToolKit's (mstan's projects, joined into one group);
+its shared runtime, netplay and launcher pieces are not covered here.
 
 ## Static recompilers for x86 PC and DOS
 
@@ -297,6 +331,19 @@ the exception machinery (`_EH_prolog`, `__CxxFrameHandler`, `_except_handler3`).
 - [ps3recomp](https://github.com/sp00nznet/ps3recomp) (MIT): PS3 runtime libraries; xboxrecomp's
   conformance method comes from it (check the decoder against the SDK's objdump, check the lifter by
   compiling a C corpus, running both sides and requiring bit-exact results).
+- **Win32 peers of winrt** (checked 2026-11-13; game-specific, so maps rather than tools):
+  [cricket07-browser](https://github.com/Dhaiwat10/cricket07-browser) (MIT, no releases): EA Sports
+  Cricket 07, every x86 function to C, then WebAssembly, Direct3D 8 on WebGPU.
+  [nfsu2-web](https://github.com/th0mk/nfsu2-web) (MIT, no releases): NFS Underground 2 to WebAssembly,
+  Direct3D 9 on WebGPU, built on NFSU2Recomp.
+  [NFSU2Recomp](https://github.com/TalhaMudo/NFSU2Recomp) (all rights reserved, v2.6-2026.11.08): x86
+  to ARM64 for Apple silicon, Direct3D 9 on Metal.
+  [nfsu2-recompiled](https://github.com/codepdbh/nfsu2-recompiled) (no license file, v0.14.14,
+  2026-11-10): a pcrecomp fork, x86 to C for Android, DXVK on Vulkan.
+  [Skyrim_Android](https://github.com/ttom795/Skyrim_Android) (no license file, 0.30.6, 2026-11-05):
+  TESV.exe x86 to arm64, Direct3D 9 on Vulkan.
+  [source-recomp](https://github.com/kanapitsas/source-recomp) (GPL-3.0, no releases; was
+  portal2-recomp, which redirects): Portal 2's Linux x86 ELF to ARM64 for macOS and iOS.
 - Trackers: [recompiled-games-list](https://github.com/wangxiaoxiang5599/recompiled-games-list) (CC BY 4.0,
   JSON and CSV, checked daily; 277 static recompilations on 2026-11-11), [recomp.fyi](https://recomp.fyi).
 
@@ -466,10 +513,10 @@ in the tables above.
 |---|---|
 | [N64Recomp](https://github.com/N64Recomp/N64Recomp), [N64ModernRuntime](https://github.com/N64Recomp/N64ModernRuntime), [Zelda64Recomp](https://github.com/Zelda64Recomp/Zelda64Recomp) | READMEs, `src/analysis.cpp`, `src/config.cpp`, the runtime's source layout |
 | [XenonRecomp](https://github.com/hedge-dev/XenonRecomp), [UnleashedRecomp](https://github.com/hedge-dev/UnleashedRecomp) | READMEs; Unleashed's `kernel/imports.cpp`, `gpu/video.cpp`, `install/` |
-| [rexglue-sdk](https://github.com/rexglue/rexglue-sdk) v0.10.0 | README, LICENSE, `src/codegen/`, `include/rex/hook.h` |
+| [rexglue-sdk](https://github.com/rexglue/rexglue-sdk) v0.10.0 (v0.10.1 is newest, 2026-11-13) | README, LICENSE, `src/codegen/`, `include/rex/hook.h` |
 | [xboxrecomp](https://github.com/sp00nznet/xboxrecomp) v0.17.0 | README, `docs/technical/` |
-| [psxrecomp](https://github.com/mstan/psxrecomp) | README, `docs/EXECUTION_MODEL.md`, `FUNCTION_DISCOVERY.md`, `FRAME_RATE.md`, `ORIGINAL_DISC_POLICY.md` |
-| [RecompOne](https://github.com/flafmg/RecompOne), [PS2Recomp](https://github.com/ran-j/PS2Recomp) | READMEs; PS2Recomp's `ps2xIOP/README.md`, `ps2xRuntime/` |
+| [psxrecomp](https://github.com/RetroPortingToolKit/psxrecomp) | README, `docs/EXECUTION_MODEL.md`, `FUNCTION_DISCOVERY.md`, `FRAME_RATE.md`, `ORIGINAL_DISC_POLICY.md` |
+| [RecompOne](https://github.com/BlackLabelHQ/RecompOne), [PS2Recomp](https://github.com/ran-j/PS2Recomp) | READMEs; PS2Recomp's `ps2xIOP/README.md`, `ps2xRuntime/` |
 | [pcrecomp](https://github.com/sp00nznet/pcrecomp), [themepark-recomp](https://github.com/sp00nznet/themepark-recomp) | READMEs, `docs/DOS32.md`, `HYBRID.md`, `PHILOSOPHY.md`, `PROJECTS.md`; themepark's `docs/pacing.md` |
 | [Fallout-NV-MacOS](https://github.com/thetheoryofR/Fallout-NV-MacOS), [max-payne-recomp](https://github.com/aldotoa/max-payne-recomp) | READMEs, `docs/DESIGN.md`, `docs/m6-emu-removal.md` |
 | [box64](https://github.com/ptitSeb/box64), [FEX](https://github.com/FEX-Emu/FEX) | `docs/USAGE.md`; `FEXCore/Source/Interface/Config/Config.json.in` |

@@ -6,24 +6,11 @@ Ghidra: a headless import that proves the loader works goes through the suite's 
 
 from __future__ import annotations
 
-import os
 import re
 from pathlib import Path
 
-
-def ghidra_install() -> Path:
-    install = os.environ.get("GHIDRA_INSTALL_DIR")
-    if not install:
-        raise ValueError("GHIDRA_INSTALL_DIR missing; run through rea-suite")
-    return Path(install)
-
-
-def ghidra_version(install: Path) -> str:
-    props = (install / "Ghidra" / "application.properties").read_text()
-    match = re.search(r"^application\.version=(.+)$", props, re.MULTILINE)
-    if not match:
-        raise ValueError(f"no application.version in {install}")
-    return match[1].strip()
+from rea_suite.ghidra import ghidra_version
+from rea_suite.ghidra_headless import install_dir
 
 
 def problem(install: Path, directory: str, required: list[str], fix: str) -> str | None:
@@ -49,9 +36,9 @@ def problem(install: Path, directory: str, required: list[str], fix: str) -> str
 def check(directory: str, required: list[str], fix: str, what: str) -> int:
     """Print the outcome as doctor shows it; 0 when the extension is in place."""
     try:
-        install = ghidra_install()
+        install = install_dir()
         found = problem(install, directory, required, fix)
-    except (OSError, ValueError) as exc:
+    except (OSError, ValueError, AttributeError) as exc:  # AttributeError: no application.version
         print(exc)
         return 1
     if found:

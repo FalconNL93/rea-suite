@@ -5,13 +5,14 @@ Personal reverse engineering workbench: [REA](https://github.com/morluto/rea)
 on Linux/WSL, macOS (Apple Silicon) and Windows so that everything stays updatable
 from one place.
 Rules for contributors and agents: `AGENTS.md`.
+Every document, one line each: [docs/README.md](docs/README.md).
 
 ## Layout
 
 ```
 activate, activate.ps1  load the environment without direnv
 .envrc                  direnv entry point -> common/env.sh (+ .env)
-.githooks/              pre-commit (lint + gitleaks) and pre-push (gitleaks) hooks, lint.sh
+.githooks/              pre-commit (lint + gitleaks), commit-msg (commit style), pre-push (gitleaks), lint.sh
 .forgejo/workflows/     server-side gitleaks scan and lint
 .env.example            copy to .env: component selection, GITHUB_TOKEN
 .node-version           Node for fnm (rea-agents has a strict engines range; 24 because the Playwright
@@ -37,7 +38,7 @@ platforms/
   windows/              bootstrap.ps1, rea-suite.ps1, rea.ps1 (= bin/rea), env.ps1, winget list,
                         run-harness.ps1 (the engine of `rea-suite run`)
 AGENTS.md               rules for contributors and agents (CLAUDE.md imports it)
-TODO.md                 tools still to add, each with why
+TODO.md                 points to the work queue (Forgejo issues, mirrored in docs/work/)
 .agents/skills/         process skills for agents working on this repository
                         (.claude/skills links here for Claude Code)
 .devcontainer/          Ubuntu 26.04 container running the Linux bootstrap
@@ -299,61 +300,7 @@ Tests: `uv run --no-sync python -m unittest rea_suite.test_gamecube rea_suite.te
 (synthetic DOL, REL, ISO, PBP, PRX and CSO); opt-in `REA_GAMECUBE_SAMPLE` and `REA_PSP_SAMPLE` (a real
 file, read-only).
 
-Xbox 360: `rea-suite xbox360` runs the suite's Ghidra headless on an XEX (by its `XEX2` magic,
-through the XEXLoaderWV extension) or on the PE image extracted from one (COFF machine 0x01f2),
-both as `PowerPC:BE:64:A2ALT-32addr` (big-endian 64-bit with Altivec, 32-bit addresses). REA
-itself does not open either (its PowerPC lane is ELF32 only). The Ghidra project is yours: pass
-its folder; the suite keeps nothing in `work/`.
-
-```sh
-rea-suite xbox360 analyze game/default.xex --project re/ghidra-project --name game  # once
-rea-suite xbox360 decomp --project re/ghidra-project -o out.c 0x82514710 0x8234e2e8
-rea-suite xbox360 xrefs --project re/ghidra-project "connect"   # functions using strings
-rea-suite xbox360 functions --project re/ghidra-project -o functions.tsv
-rea-suite xbox360 names --project re/ghidra-project --program mp --from re/functions.tsv --where game=mp
-rea-suite xbox360 check                     # XEXLoaderWV installed and loading (doctor runs it)
-```
-
-`names` writes a port's map into the project (the porting rule "map the whole unit once": the names in the
-port's docs and in its Ghidra project): a TSV whose header names `address` and `name`, `what` or `comment` the
-plate comment, filtered by `--where column=value`. A name Ghidra gave (`FUN_...`) is replaced; one a person or an
-import gave, and a different plate comment, are kept and reported (`kept`), so running it again changes nothing
-(`same`); `-o` writes the per-entry report. It needs `--program` when the project holds several. `--functions`
-says the map lists functions: where Ghidra found none and the code disassembles, one is created before it is
-named (reported `created`), else the name goes on a label. Not read-only, it also saves the helpers' repair (as `analyze` does).
-The queries open the project read-only and take `--program` when it holds more than one; Ghidra's
-logs go to `<project>/logs/`. `common/ghidra_scripts/XenonHelpers.java` runs before analysis
-and before every query: it finds the register save/restore helpers (`__savegprlr_*`,
-`__restgprlr_*`, `__savefpr_*`, `__restfpr_*`, `__savevmx_*`, `__restvmx_*`) by their instruction
-pattern, names them and gives them a call-fixup without effect, so Ghidra's "Non-Returning
-Functions - Discovered" analyzer leaves them alone. Without it they are marked non-returning and
-every caller is cut off after its prologue; projects analyzed before are repaired in memory.
-An image extracted from an XEX is laid out as loaded while its section table still gives the
-linker's file offsets: `analyze` imports a copy whose section table matches. Each command ends with
-`Limit:` lines: instructions Ghidra cannot decode (VMX128 is missing from Ghidra's PowerPC
-language; disassembly and decompiles stop there), and for a PE image the XEX import names it lacks.
-
-Without Ghidra, on an XEX, its extracted image or a raw dump (`--base`, default 0x82000000):
-
-| Command | Gives |
-| --- | --- |
-| `info <xex>` | the XEX2 headers as JSON: format, execution info, libraries, resources, security info |
-| `extract <xex> -o image.bin` | the decrypted (retail or devkit key) image as loaded; basic compression only |
-| `imports <xex>` | import thunks with their names (Xenia's export tables, `common/rea_suite/data/`) |
-| `icon <xex> -o title.png\|.ico` | the dashboard title image from the title's XDBF resource |
-| `pdata <image> [address...]` | the `.pdata` function table, or the functions containing the addresses |
-| `callers <image> <address>...` | `b`/`bl` instructions to the addresses |
-| `refs <image> <text\|0xaddr>...` | `lis` + `addi`/load/store pairs building the address of a string or value, which Ghidra often leaves unresolved on 360 code |
-| `rtti <image> <Class>...` | MSVC RTTI: type descriptor, complete object locators, vtables |
-| `helpers <image>` | the save/restore helpers' first entries, as XenonRecomp's config keys |
-| `disasm <image> <address> [count]` | Capstone disassembly; undecoded words are marked (VMX128) |
-
-`extract` refuses LZX-compressed XEX files (normal and delta compression) with that reason;
-`analyze` reads them through XEXLoaderWV. XEXLoaderWV is pinned in `common/tools.yml`;
-`rea-suite tools reinstall ghidra` puts it back when doctor reports it missing. Tests:
-`uv run --no-sync python -m unittest rea_suite.test_xex rea_suite.test_xbox360` in `common/`
-(synthetic samples); opt-in with Ghidra: `REA_XBOX360_INTEGRATION=1` (a synthetic PE) and
-`REA_XBOX360_SAMPLE=<file>` with `REA_XBOX360_ADDRESS=<hex>` (a real executable, read-only).
+Xbox 360: [the route](docs/XBOX360.md) from the disc image to a recompilation, with `rea-suite xbox360`.
 
 ## Offline analysis projects
 
@@ -598,6 +545,7 @@ been run on macOS arm64 and Linux x86_64 (WSL2, 2026-11-03); Windows execution r
 
 | Tool | What it is for | Source |
 | --- | --- | --- |
+| Internet Archive CLI (`ia`) | Search archive.org and fetch preserved game builds, manuals and patches (`ia search`, `ia metadata`, `ia download`; `upload` too). `ia configure` stores your archive.org credentials in your own config (`~/.config/internetarchive/ia.ini`, `%APPDATA%` on Windows), never in this repository; downloads go in `work/` | pip `internetarchive` |
 | SteamCMD | Download game builds and specific depots/versions from Steam (component `steam`) | Valve download |
 | Steamless | Strip SteamStub DRM from executables before analysis (Windows; component `steam`) | tools.yml |
 | Wine, winedbg | Run the original Windows game on Linux and trace its API calls, file and registry access (`WINEDEBUG=+relay`); 32-bit games run through Wine's WoW64, no i386 multiarch needed (component `porting`; not on macOS, see [Porting old games](#porting-old-games)) | apt |
@@ -851,7 +799,7 @@ in about 3 minutes, no errors. Steps 3 and 4 were not run here.
 Keep the `.fidb` and the project in `work/` (ignored): they are derived from Microsoft's
 libraries and do not go into git.
 
-## Linting the suite's own code
+## Linting and testing the suite's own code
 
 `.githooks/lint.sh` runs ruff (format and lint) on the Python, shellcheck on every shell
 script and, where `pwsh` is installed, a parse check on the PowerShell scripts. Both
@@ -860,7 +808,14 @@ binary), so `uv.lock` pins them. It runs in three places:
 
 - `.githooks/pre-commit`: on the staged files, before the secret scan.
 - `rea-suite lint [file...]`: by hand, on every tracked file or the ones given.
-- `.forgejo/workflows/lint.yml`: on every push and pull request on the server (no `pwsh` there).
+- `rea-suite check`: lint, then every unit test: `unittest discover` over
+  `common/rea_suite/test_*.py` and `node --test` over `common/*.test.mjs`. The opt-in
+  integration tests (`REA_*_INTEGRATION`, `REA_*_SAMPLE`) skip unless their switch is set. It
+  is the gate before a push, with `rea-suite doctor`.
+- `.forgejo/workflows/check.yml`: `rea-suite check` on every pull request and every push but
+  one of docs alone (no `pwsh` there). It installs Python's `dev` and `test` groups only
+  (`uv sync --only-group dev --only-group test`): the `test` group lists what the tests import
+  beyond the standard library, so a test that needs another package adds it there.
 
 ## Keeping secrets out of the repository
 
@@ -873,6 +828,15 @@ gitleaks (from `tools.yml`) runs in three places with the same config (`.gitleak
 `rea-suite setup` enables the hooks (`git config core.hooksPath .githooks`); `rea-suite doctor`
 checks that they are on. Findings are shown redacted (rule, file, line). Tokens belong in `.env`
 (ignored); a false positive gets an allowlist entry with its reason in `.gitleaks.toml`.
+
+## Commit messages
+
+`.githooks/commit-msg` holds every commit to the platform's shared style: a Conventional Commits
+subject (`type(scope): imperative description`, at most 72 characters), a blank line before the
+body, no AI attribution, no emoji, US English. It is a byte copy of games/ci-images'
+`.githooks/commit-msg`, the one every game repository copies; a change goes there first and is
+copied here. The same `core.hooksPath` enables it beside the gitleaks hooks, which it does not
+replace: they run on their own hooks (`pre-commit`, `pre-push`).
 
 ## Ghidra and its extensions
 
@@ -917,6 +881,12 @@ rea-suite setup --no-build                      # the same for setup and update
 
 Projects opened in a newer Ghidra are upgraded and no longer open in older ones.
 
+Ghidra 12.2 (2026-10-22) needs JDK 25 and saves programs that "may not be usable by an earlier Ghidra
+version" (its WhatsNew.md). The owner's decision (2026-11-13): stay on 12.1.4 until REA pins 12.2 (6.9.0
+still pins 12.1.4) and the Xbox loaders have 12.2 builds (ghidra-xbe and XEXLoaderWV had none on
+2026-11-13; ghidra_psx_ldr 2026.11.08 and Emotion Engine: Reloaded v2.1.39 do), then move every port's
+project at once.
+
 ### Headless Ghidra from the shell
 
 ```sh
@@ -926,6 +896,7 @@ rea-ghidra decomp    work/target.exe 0x401000 0x4020a0 > out.c
 rea-ghidra xrefs     work/target.exe "license" "serial" > out.c
 ```
 
+On Windows the same commands run as `bin\rea-ghidra.cmd` (`platforms\windows\rea-ghidra.ps1`).
 Projects live in `work/ghidra/<binary name>/`, logs in its `logs/`. The scripts are in
 `common/ghidra_scripts/` (taken over from the rogue-spear port). A port keeps its own project
 with `--project DIR` (and `--name`, default the folder's one `.gpr`); the queries then take the
@@ -957,6 +928,13 @@ project folder. This is the x86/x64 PE counterpart of `rea-suite xbox360 analyze
   (default in `common/env.sh`), which also bounds REA, otherwise without a limit; a function past
   it says so in the output. A program REA analyzed itself keeps the Alignment
   ([known issues](docs/REA-KNOWN-ISSUES.md), item 15): decompile those functions with `rea-ghidra`.
+- **Every run is bounded** (`common/rea_suite/ghidra_headless.py`, which `rea-suite xbox360`, `xbox`
+  and `playstation` use too): `REA_GHIDRA_IMPORT_TIMEOUT_SECONDS` (default 3600) limits one
+  `analyzeHeadless` run, after which it and its children are stopped and the error names the log;
+  `REA_GHIDRA_MAXMEM` (default 4G) caps Ghidra's heap. Ghidra refuses a project path with a
+  component that starts with `.` ("Path element starting with '.' is not permitted"), so a
+  project in a worktree under `.claude/` is refused up front: use `--project` elsewhere or
+  `REA_GHIDRA_PROJECTS`.
 - **One process per project.** Ghidra locks a project for a whole run, so a second agent's
   read-only queries fail with "locked by another process". Give parallel agents a copy of the
   project each, or a route that needs none (`rea-suite pe`, or `rea-suite le dump-image` and Rizin).
@@ -964,8 +942,8 @@ project folder. This is the x86/x64 PE counterpart of `rea-suite xbox360 analyze
   decompiles nothing. Use an array (`"${addrs[@]}"`) or `${=addrs}`.
 REA's own Ghidra provider gives up on a first import after 330 s by default, too short for a large
 game; raise `REA_GHIDRA_STARTUP_TIMEOUT_MS` first ([known issues](docs/REA-KNOWN-ISSUES.md), item 9).
-Tests: `uv run --no-sync python -m unittest rea_suite.test_rea_ghidra` in `common/` (a stand-in
-for `analyzeHeadless`).
+Tests: `uv run --no-sync python -m unittest rea_suite.test_rea_ghidra rea_suite.test_ghidra_headless`
+in `common/` (a stand-in for `analyzeHeadless`).
 
 ## Build toolchains
 
@@ -1068,7 +1046,7 @@ Notes:
 - **Ghidra MCP plugins** (GhidraMCP, ghidra-mcp, GhidrAssistMCP), **jadx-ai-mcp**:
   overlap with REA; pick at most one if needed.
 - **BinExport/BinDiff**: last binary releases target old Ghidra; ghidriff covers diffing
-  for now (see `TODO.md`).
+  for now (issue [#4](https://git.falcon-net.nl/FalconNL93/rea-suite/issues/4)).
 - **Ghidrathon** (archived; PyGhidra is built in), **efiSeek** (gone; firmware-utils),
   **frida-dexdump**, **fridump**, **de4dot**, **API Monitor**: unmaintained.
 - **rz-ghidra for the rizin CLI**: needs a shared Rizin build; Cutter bundles it.

@@ -56,7 +56,7 @@ A pinned tool moves to exactly the version the target rea-agents verifies, never
   go missing holds Ghidra back, unless the user accepts losing it.
   `xexloaderwv` is pinned (`version:`): move it to the release for the new Ghidra (or keep the
   pin to build its source), then `rea-suite xbox360 check` and the opt-in Xbox 360 tests
-  (README, "Console games and disc images") before committing.
+  (docs/XBOX360.md, "Tests") before committing.
 - **Python**: `uv lock --upgrade --dry-run` shows what moves. Watch majors of the packages REA
   drives (pwntools, mitmproxy, frida-tools/objection) and the angr group's pins. frida-server
   follows the frida package by itself (`version: pip:frida`).
@@ -176,8 +176,7 @@ updated tool starts (`<tool> --version`), and `rea-tools rea-pins` is green. A n
 fixed or rolled back (`rea-tools use <tool> <old>`, `git checkout` of the lockfile) before you
 report.
 
-For workflow changes, run `rea-suite lint` and
-`uv run --no-sync python -m unittest rea_suite.test_analyze`. When an analysis engine,
+For workflow changes, run `rea-suite check` (lint and every unit test). When an analysis engine,
 command contract, cache or export behavior changes, also run the applicable real-provider
 smoke tests with benign fixtures: on Linux/macOS run
 `REA_ANALYZE_INTEGRATION=1 uv run --no-sync python -m unittest rea_suite.test_analyze`.

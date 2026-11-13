@@ -143,9 +143,9 @@ What a recompilation of a PS1 executable needs, whichever recompiler is used:
   root counters, interrupts. A port answers them at a layer, or answers the PsyQ libraries at their
   API edge (`libgpu`, `libcd`, `libspu`) so the hardware is never reached; the signatures of step 3
   name that edge.
-- **Recompilers**: [psxrecomp](https://github.com/mstan/psxrecomp) (to C, PolyForm Noncommercial) and
-  [RecompOne](https://github.com/flafmg/RecompOne) (to C#, MIT). Both are source only and are taken by
-  a port as its own dependency; the suite does not build them. What each solves and how (overlays
+- **Recompilers**: [psxrecomp](https://github.com/RetroPortingToolKit/psxrecomp) (to C, PolyForm Noncommercial;
+  alpha releases with a Windows CLI since v0.3.x, 2026-11) and [RecompOne](https://github.com/BlackLabelHQ/RecompOne)
+  (to C#, MIT; source only). Both are taken by a port as its own dependency; the suite does not build them. What each solves and how (overlays
   captured and compiled at run time, the BIOS recompiled, frame rate above the guest's VBlank) is in
   [RECOMPILATION.md](RECOMPILATION.md).
 
@@ -175,4 +175,5 @@ mkpsxiso work/game/disc.xml -o work/patched.bin -c work/patched.cue
 - A PS1 profile in REA (open_binary refuses PS-X EXEs): [REA #6746](https://github.com/morluto/rea/issues/6746).
 - An overlay import in `rea-suite playstation` (each overlay at a given load address into the same
   Ghidra project); today it imports the boot executable only.
-- armips, maspsx, m2c and asm-differ as installed tools: none has a release; see TODO.md.
+- armips, maspsx, m2c and asm-differ as installed tools: none has a release for every platform (armips:
+  Windows x86 only; maspsx: none of its own); see issue [#17](https://git.falcon-net.nl/FalconNL93/rea-suite/issues/17).

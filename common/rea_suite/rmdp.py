@@ -29,6 +29,8 @@ import zlib
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from rea_suite.text import decoded, printable
+
 NULL = {4: 0xFFFFFFFF, 8: 0xFFFFFFFFFFFFFFFF}
 
 
@@ -174,7 +176,7 @@ def read_package(index: Path) -> Package:
     names_at = 0x0D if version == 2 else 0x15
     names_size = struct.unpack_from(order + "I", raw, names_at)[0]
     base_raw = raw[names_at + 4 : names_at + 4 + 128]
-    base = base_raw.split(b"\0", 1)[0].decode("utf-8", "replace")
+    base = decoded(base_raw.split(b"\0", 1)[0], "utf-8")
 
     def link_reader(lay: Layout):
         fmt = order + ("I" if lay.link == 4 else "Q")
@@ -212,9 +214,7 @@ def read_package(index: Path) -> Package:
         text = names[offset : names.index(b"\0", offset)]
         stored = struct.unpack_from(order + "I", raw, at)[0]
         if stored != name_checksum(text):
-            package.warnings.append(
-                f"{kind} {text.decode('utf-8', 'replace')}: name checksum differs"
-            )
+            package.warnings.append(f"{kind} {decoded(text, 'utf-8')}: name checksum differs")
         return text.decode("utf-8")
 
     seen_folders: set[int] = set()
@@ -357,7 +357,7 @@ def cmd_list(args, package: Package) -> int:
         )
     else:
         for e in rows:
-            print(f"{e.size:>12}  {e.offset:#014x}  {e.crc:08x}  {e.path}")
+            print(f"{e.size:>12}  {e.offset:#014x}  {e.crc:08x}  {printable(e.path)}")
         print(
             f"{len(rows)} of {len(package.files)} files; version {package.version} ({package.layout}, "
             f"{'big' if package.big_endian else 'little'}-endian), base {package.base_path!r}",
@@ -379,7 +379,7 @@ def cmd_extract(args, package: Package) -> int:
         for e in rows:
             content = read_file(data, e)
             if args.check and zlib.crc32(content) & 0xFFFFFFFF != e.crc:
-                print(f"crc differs: {e.path}", file=sys.stderr)
+                print(f"crc differs: {printable(e.path)}", file=sys.stderr)
                 bad += 1
             target = out.joinpath(*[safe_name(part) for part in e.path.split("/")])
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -415,7 +415,7 @@ def cmd_find(args, package: Package) -> int:
                             shown = ", ".join(f"{o:#x}" for o in found[:8]) + (
                                 " ..." if len(found) > 8 else ""
                             )
-                            print(f"{e.path}:{name}  {len(found)}x  {shown}")
+                            print(f"{printable(e.path)}:{printable(name)}  {len(found)}x  {shown}")
                     continue
             offsets = []
             done = 0
@@ -437,7 +437,7 @@ def cmd_find(args, package: Package) -> int:
                 shown = ", ".join(f"{o:#x}" for o in offsets[:8]) + (
                     " ..." if len(offsets) > 8 else ""
                 )
-                print(f"{e.path}  {len(offsets)}x  {shown}")
+                print(f"{printable(e.path)}  {len(offsets)}x  {shown}")
     print(f"{hits} of {len(rows)} files hold it", file=sys.stderr)
     return 0 if hits else 1
 

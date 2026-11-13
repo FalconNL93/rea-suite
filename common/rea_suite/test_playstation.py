@@ -154,11 +154,11 @@ class ProjectTests(unittest.TestCase):
 
     def test_import_failure_recorded(self):
         (self.disc / "boot").write_bytes(elf())
-        error = subprocess.CalledProcessError(1, "analyzeHeadless")
+        error = playstation.ghidra_headless.GhidraError("Ghidra exited with 1; see ghidra.log")
         with (
             patch.dict("os.environ", {"GHIDRA_INSTALL_DIR": str(self.root)}),
-            patch.object(playstation, "run", side_effect=error),
-            self.assertRaises(subprocess.CalledProcessError),
+            patch.object(playstation.ghidra_headless.AnalyzeHeadless, "run", side_effect=error),
+            self.assertRaisesRegex(ValueError, "exited with 1"),
         ):
             playstation.prepare(self.args(ghidra=True))
         manifest = json.loads((self.root / "project/project.json").read_text())

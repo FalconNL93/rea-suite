@@ -30,12 +30,13 @@
     .\platforms\windows\rea-suite.ps1 tools <rea-tools args>
     .\platforms\windows\rea-suite.ps1 clean [caches|builds|tools|all]   # no argument: show sizes only
     .\platforms\windows\rea-suite.ps1 lint [file...]             # ruff, shellcheck, PowerShell parse (Git Bash)
+    .\platforms\windows\rea-suite.ps1 check            # lint, then every unit test (Python, Node); the gate before a push
 .NOTES
     Not tested on Windows yet.
 #>
 #Requires -Version 7
 param(
-    [Parameter(Position = 0)][ValidateSet('setup', 'select', 'winget', 'update', 'reinstall', 'agents', 'analyze', 'playstation', 'xbox', 'xbox360', 'gamecube', 'psp', 'functions', 'steamstub', 'pe', 'rmdp', 'yetibig', 'le', 'frida', 'dosbox', 'pad', 'run', 'doctor', 'status', 'tools', 'clean', 'lint')][string]$Command = 'setup',
+    [Parameter(Position = 0)][ValidateSet('setup', 'select', 'winget', 'update', 'reinstall', 'agents', 'analyze', 'playstation', 'xbox', 'xbox360', 'gamecube', 'psp', 'functions', 'steamstub', 'pe', 'rmdp', 'yetibig', 'le', 'frida', 'dosbox', 'pad', 'run', 'doctor', 'status', 'tools', 'clean', 'lint', 'check')][string]$Command = 'setup',
     [Parameter(Position = 1, ValueFromRemainingArguments)][string[]]$Rest = @()
 )
 $ErrorActionPreference = 'Stop'
@@ -45,6 +46,8 @@ $CallerCwd = (Get-Location).Path
 if ($Rest -contains '--no-build') { $env:REA_TOOLS_NO_BUILD = '1'; $Rest = @($Rest | Where-Object { $_ -ne '--no-build' }) }
 Set-Location $Root
 . "$PSScriptRoot\env.ps1"
+# this checkout's rea_suite, also when its .venv is shared with another checkout (counterpart of bin/rea-suite)
+$env:PYTHONPATH = "$Root\common" + $(if ($env:PYTHONPATH) { ";$env:PYTHONPATH" } else { '' })
 $Node = (Get-Content .node-version -Raw).Trim()
 
 function Step($msg) { Write-Host "`n==> $msg" -ForegroundColor Blue }
@@ -146,6 +149,7 @@ function Doctor {
     $groups = "$(Components uv-args)".Split(' ', [StringSplitOptions]::RemoveEmptyEntries)
     uv sync --check --quiet @groups 2>$null; if ($LASTEXITCODE) { Bad '.venv' "out of sync with uv.lock; run uv sync --locked$(if ($groups) { ' ' + ($groups -join ' ') })" } else { Ok '.venv' 'in sync with uv.lock' }
     npm ls rea-agents --depth=0 *> $null; if ($LASTEXITCODE) { Bad 'node_modules' 'run rea-suite.ps1 setup' } else { Ok 'node_modules' 'rea-agents installed' }
+    $ia = & uv run --offline --no-sync ia --version 2>&1; if ($LASTEXITCODE) { Bad 'ia' 'the Internet Archive CLI does not start; run uv sync --locked' } else { Ok 'ia' "internetarchive $ia" }
     if ((Components values playwright) -contains 'chromium') {
         if ($env:REA_BROWSER_EXECUTABLE -and (Test-Path $env:REA_BROWSER_EXECUTABLE)) { Ok 'chromium' $env:REA_BROWSER_EXECUTABLE }
         else { Bad 'chromium' 'missing (component browser); run rea-suite.ps1 setup' }
@@ -255,6 +259,17 @@ switch ($Command) {
     }
     'tools' { Invoke-Checked uv run rea-tools @Rest }
     'lint' { Invoke-Checked bash .githooks/lint.sh @Rest }
+    'check' {
+        # counterpart of bin/rea-suite check: every part runs, the exit says whether any failed
+        $failed = @()
+        Step 'lint'; bash .githooks/lint.sh; if ($LASTEXITCODE) { $failed += 'lint' }
+        Step 'Python unit tests (common/rea_suite/test_*.py)'
+        & .venv\Scripts\python.exe -m unittest discover -s common/rea_suite -t common; if ($LASTEXITCODE) { $failed += 'python' }
+        Step 'Node unit tests (common/*.test.mjs)'
+        fnm exec --using=$Node -- node --test (Get-ChildItem common\*.test.mjs).FullName; if ($LASTEXITCODE) { $failed += 'node' }
+        if ($failed) { Write-Host "`ncheck failed: $($failed -join ' ')" -ForegroundColor Red; exit 1 }
+        Write-Host "`ncheck passed" -ForegroundColor Green
+    }
     'clean' {
         $caches = 'uv', 'npm', 'nuget', 'gradle' | ForEach-Object { "$env:REA_RUNTIME\cache\$_" }
         if (-not $Rest) {
