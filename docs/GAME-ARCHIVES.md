@@ -1,6 +1,6 @@
 # Game archives and Xbox discs
 
-Checked: **2026-11-03**. Enable **game-archives** in `rea-suite select`; keep your existing
+Checked: **2026-11-13**. Enable **game-archives** in `rea-suite select`; keep your existing
 components selected. Selection runs setup. These are command-line tools, not new REA MCP providers.
 
 | Tool | Purpose | Linux x86_64 | macOS ARM | Windows x64 |
@@ -17,7 +17,8 @@ component. Source builds run when you request setup; `REA_TOOLS_NO_BUILD=1` leav
 It builds ZArchive v0.1.2 (C++20; zstd found through CMake config or pkg-config). This source-build
 path has not been executed on any host.
 
-XGDTool's only release (v1.0.0, 2024) provides Windows binaries. Its Linux build needs git
+XGDTool's only release (v1.0.0, 2024) provides Windows binaries. It is dormant: no commit since
+2024-08-13 (ZArchive's last is 2025-08-30; checked 2026-11-13). Its Linux build needs git
 submodules, configure-time downloads and wxWidgets even for the CLI, which the suite's CMake builder
 does not provide. QuickBMS 0.12.0 is also published for Linux (static 32-bit x86) and macOS
 (x86_64, Rosetta 2); neither is configured until it has run on those hosts.

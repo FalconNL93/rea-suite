@@ -891,6 +891,12 @@ REA_TOOLS_NO_BUILD=1 rea-suite update           # only prebuilt extensions, no s
 
 Projects opened in a newer Ghidra are upgraded and no longer open in older ones.
 
+Ghidra 12.2 (2026-10-22) needs JDK 25 and saves programs that "may not be usable by an earlier Ghidra
+version" (its WhatsNew.md). The owner's decision (2026-11-13): stay on 12.1.4 until REA pins 12.2 (6.9.0
+still pins 12.1.4) and the Xbox loaders have 12.2 builds (ghidra-xbe and XEXLoaderWV had none on
+2026-11-13; ghidra_psx_ldr 2026.11.08 and Emotion Engine: Reloaded v2.1.39 do), then move every port's
+project at once.
+
 ### Headless Ghidra from the shell
 
 ```sh
