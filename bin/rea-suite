@@ -628,7 +628,10 @@ done
 
 case "$cmd" in
   setup) cmd_setup ;;
-  select) components select && cmd_setup ;;
+  select)
+    # --help shows the usage, never runs select and setup (a dn-ttk report, 2026-11-14).
+    if [[ " ${args[*]} " == *" --help "* || " ${args[*]} " == *" -h "* ]]; then usage; exit 0; fi
+    components select && cmd_setup ;;
   update) if [[ " ${args[*]} " == *" --ai "* ]]; then cmd_update_ai; else cmd_update; fi ;;
   reinstall) cmd_reinstall "${args[@]}" ;;
   status) cmd_status ;;
