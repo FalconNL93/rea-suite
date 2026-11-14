@@ -134,6 +134,14 @@ class ComponentUvTools(unittest.TestCase):
                 components.main(["values", "uv-tools"])
         self.assertEqual(out.getvalue().split(), ["splat64[mips]"])
 
+    def test_components_without_uv_tools_print_no_empty_spec(self) -> None:
+        # An empty line reached `uv tool install` and stopped setup ("Empty field is not allowed for PEP508").
+        with patch.dict(os.environ, {components.KEY: "build"}):
+            out = io.StringIO()
+            with patch("sys.stdout", out):
+                components.main(["values", "uv-tools"])
+        self.assertEqual(out.getvalue(), "")
+
     def test_both_scripts_install_and_check_components_uv_tools(self) -> None:
         shell = (ROOT / "bin" / "rea-suite").read_text()
         self.assertIn("components values uv-tools", shell)

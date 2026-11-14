@@ -180,13 +180,19 @@ def main(argv: list[str] | None = None) -> None:
                 f'cask "{p.removeprefix("cask:")}"' if p.startswith("cask:") else f'brew "{p}"'
                 for p in packages
             ]
-        print("\n".join(packages))
+        emit(packages)
     elif args.command == "values":
-        print("\n".join(v for n in selected() for v in components[n].get(args.key, [])))
+        emit([v for n in selected() for v in components[n].get(args.key, [])])
     elif args.command == "uv-args":
         print(
             " ".join(f"--group {g}" for n in selected() for g in components[n].get("uv-groups", []))
         )
+
+
+def emit(lines: list[str]) -> None:
+    """One line each and nothing for none: an empty list printed as "" reached `uv tool install` as a spec."""
+    for line in lines:
+        print(line)
 
 
 if __name__ == "__main__":
