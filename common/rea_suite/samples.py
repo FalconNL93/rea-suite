@@ -790,12 +790,33 @@ def program_census() -> tuple[bytes, dict[str, int]]:
     emit(b"\x6a\x01\x6a\x07\x8b\x11\x51")  # push 1; push 7; mov edx, [ecx]; push ecx
     emit(b"\xff\x92" + u32(0xE4), "c_setrenderstate")  # IDirect3DDevice9::SetRenderState
     emit(b"\xc3")
+    vtable = base + rdata + 0x40
+    fn("f_make")  # a constructor: the object's vtable, then a virtual call on it
+    emit(b"\x56\x8b\x74\x24\x08")  # push esi; mov esi, [esp+8]
+    emit(b"\xc7\x06" + u32(vtable))  # mov dword ptr [esi], vtable
+    emit(b"\xa1" + u32(g["g_di"]) + b"\x50")  # mov eax, [g_di]; push eax
+    emit(b"\x8b\x16\x8b\xce")  # mov edx, [esi]; mov ecx, esi
+    emit(b"\xff\x52\x04", "c_virtual")  # call [edx+4]: slot 1, the class's own method
+    emit(b"\x5e\xc2\x04\x00")
     fn("f_unknown")
     emit(b"\x8b\x44\x24\x04\x8b\x08\x50")  # mov eax, [esp+4]; mov ecx, [eax]; push eax
     emit(b"\xff\x51\x08", "c_unknown")  # call [ecx+8]: no interface known
     emit(b"\xc2\x04\x00")  # ret 4
+    # the class's methods, which the function table leaves out (reached through the vtable)
+    fn("v_m0")
+    emit(b"\xc3")
+    fn("v_m1")  # thiscall (IDirectInput8A*): the device into this+8
+    emit(b"\x8b\x44\x24\x04\x56\x8b\xf1\x8d\x56\x08")  # mov eax, [esp+4]; push esi; ...
+    emit(b"\x6a\x00\x52\x6a\x00\x8b\x08\x50")  # punk, lplpDevice, rguid; this
+    emit(b"\xff\x51\x0c", "c_m1_createdevice")  # IDirectInput8A::CreateDevice
+    emit(b"\x5e\xc2\x04\x00")
+    fn("v_m2")  # thiscall: the device in this+8
+    emit(b"\x8b\x49\x08\x6a\x00\x6a\x00\x6a\x00\x8b\x01\x51")
+    emit(b"\xff\x50\x38", "c_m2_getobjectinfo")  # IDirectInputDevice8A::GetObjectInfo
+    emit(b"\xc3")
     data = bytearray(0x100) + imports
     _put(data, 0, IID_IDIRECTINPUT8A)
+    _put(data, 0x40, struct.pack("<3I", at["v_m0"], at["v_m1"], at["v_m2"]))
     image = pe(
         [(".text", bytes(code[:pos])), (".rdata", bytes(data)), (".data", bytes(0x40))],
         base=base,

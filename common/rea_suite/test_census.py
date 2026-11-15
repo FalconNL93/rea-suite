@@ -145,7 +145,19 @@ class StaticCensus(unittest.TestCase):
             ("NxActor", 17): "c_createshape",  # a method's return
             ("IDirect3DDevice9", 57): "c_setrenderstate",  # a field reached through EDI
         }
-        self.assertEqual(set(sites), set(expect))
+        # through a constructor's vtable: a virtual call made direct, a field of the class
+        self.assertEqual(
+            [s["call"] for s in sites[("IDirectInput8A", 3)]],
+            [self.call("c_dicreatedevice"), self.call("c_m1_createdevice")],
+        )
+        self.assertEqual(
+            [s["call"] for s in sites[("IDirectInputDevice8A", 14)]],
+            [self.call("c_getobjectinfo"), self.call("c_m2_getobjectinfo")],
+        )
+        del expect[("IDirectInput8A", 3)], expect[("IDirectInputDevice8A", 14)]
+        self.assertEqual(
+            set(sites), set(expect) | {("IDirectInput8A", 3), ("IDirectInputDevice8A", 14)}
+        )
         self.assertEqual(
             [s["call"] for s in sites[("IDirect3D9", 16)]],
             [self.call("c_createdevice"), self.call("c_rend_createdevice")],
@@ -169,7 +181,24 @@ class StaticCensus(unittest.TestCase):
         )
         self.assertEqual(len(imports), 4)
         coverage = self.doc["coverage"]
-        self.assertEqual((coverage["resolved"], coverage["unresolved"]), (10, 1))
+        self.assertEqual((coverage["resolved"], coverage["unresolved"]), (12, 1))
+
+    def test_a_run_seeds_what_the_code_alone_cannot_tie(self) -> None:
+        data, at = samples.program_census()
+        image = Image(data)
+        starts = {v - image.base: k for k, v in at.items() if k.startswith("f_")}
+        run = doc("runtime", [{"name": "IDirect3DDevice9", "methods": [
+            {"slot": 2, "name": "Release", "sites": [{"return": f"{at['c_unknown'] + 3:#x}", "count": 1}]}]}])  # fmt: skip
+        seeded = census.static_census(image, pefunctions.Functions(image, starts), seeds=[run])
+        sites = {
+            (i["name"], m["slot"]): m["sites"] for i in seeded["interfaces"] for m in i["methods"]
+        }
+        self.assertEqual(sites[("IDirect3DDevice9", 2)][0]["call"], self.call("c_unknown"))
+        self.assertEqual(seeded["coverage"]["unresolved"], 0)
+        with self.assertRaises(census.CensusError):
+            census.static_census(
+                image, pefunctions.Functions(image, starts), seeds=[doc("static", [])]
+            )
 
     def test_the_document_reads_back(self) -> None:
         census.check(json.loads(json.dumps(self.doc)))

@@ -173,6 +173,21 @@ Checked 2026-11-10 on a 61 MB x64 retail executable: 1,089 imports, 43,209 sites
 second; for its 42 EOS imports the sites agree exactly with the call map that port had built by
 hand with REA and Rizin.
 
+### Interface methods a game calls: `census`
+
+```sh
+rea-suite pe census game/Game.exe --functions re/functions.tsv --out work/census.static.json
+rea-suite pe census game/Game.exe --functions re/functions.tsv --seed work/game.runtime.json --out work/census.seeded.json
+rea-suite census diff work/game.runtime.json.answers.json work/game.runtime.json work/census.static.json
+```
+
+Every COM and PhysX 2.x method a 32-bit game calls through a vtable (Direct3D 9, D3DX 9,
+DirectInput 8, DirectSound, PhysX 2.6.4), by interface and slot, with its call sites and how many
+indirect calls it left unresolved, as rea-census/1 JSON. `census diff` joins it with a runtime's
+census-mode run (winrt) and that runtime's answers: the methods still to answer, all at once. The
+shape, the slot tables, what it follows and misses, and the Lost: Via Domus pilot are in
+[census.md](census.md).
+
 ### A game's option registry
 
 Many engines register their settings (command-line switches, config keys, console variables)

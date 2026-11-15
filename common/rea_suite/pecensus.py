@@ -3,24 +3,36 @@
 Each function is walked forward once per pass, in address order, with a small abstract state:
 registers and stack slots hold values such as "the interface IDirect3DDevice9", "its vtable",
 "method 118 of it", "the dword in global 0x9f3c10", "field 0x1c of this", "what 0x4f0000
-returned", "parameter 1". A state reaching a forward branch target is merged there (what both
-sides agree on); a backward branch is not followed.
+returned", "parameter 1", "an object of the class whose vtable is 0x7b98f0". A state reaching a
+forward branch target, a jump table's cases included, is merged there (what both sides agree on;
+objects of known classes become "one of these classes"); a backward branch is not followed.
 
-What a function learns outlives it as facts, flow-insensitive and per image: the interface a
-global or an object field holds (a store of a typed value), a function's return, a parameter
-(from the calls that pass a typed value), the object `this` is (from the calls that pass one: a
-class's virtual methods, from RTTI, share one `this`), and an out-parameter a function writes.
-Passes repeat until no fact changes (at most --passes). Two facts that disagree on one place
-keep the common base interface, or none.
+What a function learns outlives it as facts, flow-insensitive and per image:
+- the interface a global, an object field or a parameter holds, by votes of the sites that store
+  it: the most sites win unless unrelated interfaces have half as many or more, and a call
+  through a slot the interface does not have rejects it there;
+- the object a register holds at a function's entry, from the callers that agree on one: `this`
+  in ECX, and any register under link-time code generation (Lost passes objects in EAX, ESI,
+  EDI);
+- an object's class, from the vtable its constructor stores at offset 0 (RTTI's, or a constant in
+  read-only data pointing at code); vtables stored into one object are one class, and a class's
+  methods share `this` and so its fields;
+- a function's return and its out-parameters.
+Passes repeat until no fact changes (at most --passes).
 
 Seeds: the factory imports and every method that hands out an interface, from the slot tables
 (census.Slots): its EAX, its out-parameters (a stack slot, a global or a field passed by
-address), and QueryInterface-shaped ones by their IID constant's bytes. A `call [reg+off]` or
-`jmp [reg+off]` whose reg holds a vtable is a call of slot off/4.
+address), QueryInterface-shaped ones by their IID constant's bytes, and an enumeration's context
+argument passed on to its callback. A `call [reg+off]` or `jmp [reg+off]` whose reg holds a
+vtable is a call of slot off/4; one on an object of known classes is a direct call of each
+class's method. Code reached as a callback, a vtable slot or a direct call that the function
+table leaves out is walked too. A runtime census given with --seed types the object of every
+call the run saw, and the walk spreads that like any other fact.
 
 What it misses: an object reached through an array or a container, a computed offset, a value
-kept in a register across a loop's back edge, a `this` that differs from call to call, code the
-function table does not cover. The coverage line counts the indirect calls left unresolved.
+kept in a register across a loop's back edge, an object whose class two callers disagree on, a
+virtual call on an object of an unknown class. The coverage line counts the indirect calls left
+unresolved, and `census diff` with a runtime census says how many of the run's calls it found.
 """
 
 from __future__ import annotations
@@ -207,6 +219,8 @@ class Tracer:
         self.indirect: dict[int, int] = {}  # unresolved call VA -> its function
         self.function = 0  # the VA of the function being walked
         self._starts: list[int] | None = None
+        self.discovered: set[int] = set()
+        self.seeds: dict[int, tuple[str, int]] = {}  # return VA -> (interface, slot) a run saw
 
     # -- set-up --
 
@@ -248,6 +262,7 @@ class Tracer:
         self.vtables[va] = slots
         for target in slots:
             self.owners[target].add(va)
+            self.discover(target)
         return bool(slots)
 
     def method_class(self, function: int) -> int | None:
@@ -446,6 +461,11 @@ class Tracer:
             if bv[0] == "sa":
                 state.slots[bv[1] + disp] = value
                 return
+            if bv is UNKNOWN and disp == 0 and value[0] == "addr" and self.vtable(value[1]):
+                # a vtable stored into an object nothing is known of (malloc's, operator new's):
+                # from here on the register holds an object of that class
+                state.regs[base] = ("o", frozenset({value[1]}))
+                return
             if bv is UNKNOWN or bv[0] in ("m", "imp", "vt", "t", "cvt", "dm"):
                 return
             if disp == 0 and value[0] == "addr" and bv[0] != "addr" and self.vtable(value[1]):
@@ -586,6 +606,10 @@ class Tracer:
             if esp[0] == "sa":
                 regs["esp"] = ("sa", esp[1] + 4)
             return state
+        if m == "and" and ops[0] == ("reg", "esp"):
+            return (
+                state  # an aligned frame: ESP's accesses stay relative to it, EBP keeps the entry's
+            )
         if m in ("add", "sub") and ops[0] == ("reg", "esp") and ops[1][0] == "imm":
             esp = regs.get("esp", UNKNOWN)
             if esp[0] == "sa":
@@ -700,6 +724,25 @@ class Tracer:
             for function in sorted(target[1])[1:]:
                 self.propagate(function, state)
             return self.direct_call(min(target[1]), state, following)
+        seeded = self.seeds.get(ret)
+        if (
+            seeded
+            and target[0] == "f"
+            and target[1][0] == "f"
+            and target[1][2] == 0
+            and target[2] % 4 == 0
+        ):
+            # a call the run saw: the object the vtable came from holds that interface
+            interface, slot = seeded
+            if target[2] // 4 == slot:
+                self.facts.set_type(self.canon(target[1][1]), interface)
+                method = self.record_method(
+                    ("m", interface, slot, "seeded by the run"), insn, ret, start
+                )
+                if method is not None:
+                    return self.effects(
+                        method, f"{interface}::{method.name}", state, following, method.pops
+                    )
         if op[0] == "reg" or (op[0] == "mem" and op[1] is not None):
             self.indirect[insn.address] = start
         return self.after_call(state, None, following, UNKNOWN)
@@ -776,6 +819,7 @@ class Tracer:
         """An enumeration's callback gets the caller's context argument as parameter param."""
         if function[0] != "addr" or not self.image.is_code(function[1] - self.image.base):
             return
+        self.discover(function[1])
         key = ("p", function[1], param)
         interface = self.type_of(context)
         if interface:
@@ -799,6 +843,7 @@ class Tracer:
 
     def propagate(self, target: int, state: State) -> None:
         """What a direct call tells its callee: its arguments, its entry registers."""
+        self.discover(target)
         pops = self.pops.get(target)
         if pops:
             for i, arg in enumerate(self.args(state, pops // 4)):
@@ -846,18 +891,26 @@ class Tracer:
     # -- passes --
 
     def run(self, passes: int) -> int:
-        entries = self.entries()
+        known = set(self.entries())
         done = 0
         for done in range(1, passes + 1):
             self.facts.changed = False
             self.method_sites.clear()
             self.import_sites.clear()
             self.indirect.clear()
-            for start in entries:
+            found = len(self.discovered)
+            for start in sorted(known | self.discovered):
                 self.walk(start)
-            if not self.facts.changed and done > 1:
+            if not self.facts.changed and done > 1 and len(self.discovered) == found:
                 break
         return done
+
+    def discover(self, va: int) -> None:
+        """Code reached as a callback, a vtable's slot or a direct call that the function table
+        does not list (Ghidra leaves a callback a label): walked as a function from the next
+        pass on."""
+        if self.image.base <= va and self.image.is_code(va - self.image.base):
+            self.discovered.add(va)
 
 
 def field_base(value: tuple, disp: int) -> tuple[tuple, int]:
@@ -915,12 +968,14 @@ def census(
     functions: pefunctions.Functions | None = None,
     unresolved_sites: bool = False,
     passes: int = 12,
+    seeds: list[dict] | None = None,
     producer: str = "rea-suite pe census",
 ) -> dict:
     """The rea-census/1 static document of image."""
     if image.pointer_size != 4:
         raise census_mod.CensusError("pe census reads 32-bit x86 images only")
     tracer = Tracer(image, slots, functions or pefunctions.of(image))
+    tracer.seeds = seed_sites(seeds or [], getattr(image, "path", None))
     tracer.classes()
     done = tracer.run(passes)
     interfaces: dict[str, dict[int, list[Site]]] = defaultdict(lambda: defaultdict(list))
@@ -964,7 +1019,7 @@ def census(
             "indirect_calls": resolved + unresolved,
             "resolved": resolved,
             "unresolved": unresolved,
-            "functions": len(tracer.entries()),
+            "functions": len(set(tracer.entries()) | tracer.discovered),
             "function_source": tracer.functions.source,
             "note": "indirect calls and jumps through a register or [reg+off]; unresolved ones may be "
             "interface methods the census missed, or the game's own virtual calls and function pointers",
@@ -976,6 +1031,22 @@ def census(
             for at, fn in sorted(tracer.indirect.items())
         ]
     return doc
+
+
+def seed_sites(docs: list[dict], path) -> dict[int, tuple[str, int]]:
+    """The interface calls runtime censuses saw from this executable, by return address."""
+    name = path.name.lower() if path else None
+    found: dict[int, tuple[str, int]] = {}
+    for doc in docs:
+        if doc.get("kind") != "runtime":
+            raise census_mod.CensusError("a seed is a runtime census")
+        for i in doc.get("interfaces", []):
+            for m in i["methods"]:
+                for site in m.get("sites", []):
+                    image = str(site.get("image") or "").lower()
+                    if site.get("return") and (not image or not name or image == name):
+                        found[int(site["return"], 16)] = (i["name"], m["slot"])
+    return found
 
 
 def site_json(site: Site) -> dict:

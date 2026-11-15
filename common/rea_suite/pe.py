@@ -17,7 +17,7 @@
   rea-suite pe resources <exe> [--type T] [--name N] [--extract DIR]
                                                       dialogs, menus, strings, version,
                                                       accelerators; icons and cursors exported
-  rea-suite pe census <exe> [--unresolved] [--out FILE]  interface methods and imports the code
+  rea-suite pe census <exe> [--seed RUN] [--unresolved]  interface methods and imports the code
                                                       calls (rea-census/1, docs/census.md)
   rea-suite pe match <old> <new> --functions T --functions-new T [--header H --header-out F]
                                                       a known build's functions and data found
@@ -526,8 +526,13 @@ def cmd_match(args, image: Image) -> int:
 
 def cmd_census(args, image: Image) -> int:
     try:
+        seeds = [census.read(args.caller_cwd / p) for p in args.seed]
         doc = census.static_census(
-            image, pefunctions.of(image), passes=args.passes, unresolved_sites=args.unresolved
+            image,
+            pefunctions.of(image),
+            passes=args.passes,
+            unresolved_sites=args.unresolved,
+            seeds=seeds,
         )
     except census.CensusError as exc:
         print(f"census: {exc}", file=sys.stderr)
@@ -649,6 +654,14 @@ def parser() -> argparse.ArgumentParser:
     c.add_argument("--passes", type=int, default=12, help="at most this many passes (default 12)")
     c.add_argument(
         "--unresolved", action="store_true", help="list the unresolved indirect calls in coverage"
+    )
+    c.add_argument(
+        "--seed",
+        action="append",
+        default=[],
+        type=Path,
+        metavar="JSON",
+        help="a runtime census whose calls type the objects they were made on; repeatable",
     )
     c.add_argument("--out", type=Path, help="write the document here instead of stdout")
     c = command("match", "a known build's functions and data in a later build", cmd_match)
