@@ -84,7 +84,7 @@ JDK) generates a parser from it in Python and other languages, and the generated
 `kaitaistruct` runtime (in the suite's environment):
 
 ```sh
-ksc -t python --outdir work/formats/ docs/formats/iw_fastfile_header.ksy   # a parser module
+ksc -t python --outdir work/formats/ <port>/docs/formats/iw_fastfile_header.ksy   # a parser module
 uv run python -c 'import sys; sys.path.insert(0, "work/formats")
 from iw_fastfile_header import IwFastfileHeader as H
 print(H.from_file("zone/english/common_mp.ff").version)'
