@@ -116,6 +116,28 @@ class Votes(unittest.TestCase):
         self.assertFalse(self.facts.changed)
 
 
+class Win32Imports(unittest.TestCase):
+    def test_decorated_names_give_stdcall_counts(self) -> None:
+        found = census_slots.parse_nm(
+            "00000000 T _CreateFileA@28\n00000000 I __imp__CreateFileA@28\n00000000 T _wsprintfA\n"
+        )
+        self.assertEqual(found, {"CreateFileA": (7, "stdcall"), "wsprintfA": (None, "cdecl")})
+
+    def test_the_generated_table(self) -> None:
+        table = json.loads((census.TABLES / "win32-imports.json").read_text())
+        functions = table["functions"]
+        self.assertEqual(table["kind"], "imports")
+        self.assertEqual(
+            functions["kernel32.dll!CreateFileA"],
+            {"module": "kernel32.dll", "args": 7, "conv": "stdcall"},
+        )
+        self.assertEqual(functions["wsock32.dll!#101"]["args"], 4)  # WSAAsyncSelect by ordinal
+        self.assertEqual(functions["mss32.dll!AIL_open_digital_driver"]["args"], 4)
+        self.assertNotIn(
+            "kernel32.dll!createfilea", census.Slots.load().functions
+        )  # not a slot table
+
+
 class StaticCensus(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:

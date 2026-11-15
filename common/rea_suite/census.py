@@ -75,6 +75,8 @@ class Slots:
         self.functions: dict[str, Function] = {}
         self.iids: dict[bytes, str] = {}
         for table in tables:
+            if table.get("kind") == "imports":
+                continue  # win32-imports.json: winrt's census mode reads it, not the static census
             thiscall = table.get("conv") == "thiscall"
             for name, body in table["interfaces"].items():
                 if name in self.methods:

@@ -126,6 +126,24 @@ PhysX headers are preprocessed as a Win32 build (`g++ -E`), and their vtables fo
 PhysX tables on every slot of its 13 classes and on all 244 argument counts winrt had on 2026-11-15.
 The PhysX SDK itself is not in git; the tables carry its headers' SHA-256.
 
+### The Win32 imports table
+
+`common/rea_suite/data/census/win32-imports.json` (`"kind": "imports"`) gives winrt's census mode
+what it needs to return from an import it has no answer for: per `module!Name` the argument count
+and calling convention, and `returns_float` where a header declares FLOAT or double. Every named
+export is listed again as `module!#ordinal`, for games that import by ordinal (wsock32 `#101`,
+dsound `#6`). winrt reads it at run time (`<GAME>_CENSUS_IMPORTS`); the static census does not use it.
+
+```sh
+uv run python -m rea_suite.census_slots imports /usr/i686-w64-mingw32/lib \
+  --dlls /mnt/c/Windows/SysWOW64 --extra <a game's mss32.dll> --include /usr/i686-w64-mingw32/include
+```
+
+Counts come from MinGW-w64's i686 import libraries: `_CreateFileA@28` is stdcall with 7 arguments;
+an undecorated name is cdecl, its `args` null (the caller cleans). Ordinals come from Windows' own
+32-bit DLLs (Windows 11's, read through WSL), Miles's `mss32.dll` from its decorated exports (Call
+of Duty's copy; another Miles version may differ). 31,917 entries on 2026-11-15.
+
 ## The pilot: Lost: Via Domus (2026-11-15)
 
 `Yeti_Final_Win32.exe` (MSVC 8 with link-time code generation, 187 classes with RTTI and most

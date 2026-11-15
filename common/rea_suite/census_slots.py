@@ -4,6 +4,9 @@
       COM interfaces from MinGW-w64's headers: d3d9, d3dx9, dinput8, dsound
   uv run python -m rea_suite.census_slots physx <SDKs-dir> --sdk physx-2.6.4 [--out DIR]
       PhysX 2.x classes from the SDK's headers, preprocessed by g++ -E as a Win32 build
+  uv run python -m rea_suite.census_slots imports <mingw-lib-dir> --dlls <SysWOW64> [--extra mss32.dll]
+      [--include <mingw-include-dir>] [--out DIR]
+      the Win32 imports' argument counts and calling conventions (win32-imports.json, below)
 
 A table (`common/rea_suite/data/census/<sdk>.json`, schema "rea-census-slots/1") lists per
 interface its vtable in slot order: each method's name, its argument count without `this`, the
@@ -491,9 +494,115 @@ def physx_table(sdks: Path, sdk: str) -> dict:
     }
 
 
-def write(table: dict, out: Path) -> Path:
+# --- Win32 imports ----------------------------------------------------------------------------
+
+IMPORT_MODULES = (
+    "kernel32", "user32", "gdi32", "advapi32", "winmm", "wsock32", "ws2_32", "ole32", "oleaut32",
+    "shell32", "version", "imm32", "comctl32", "comdlg32", "d3d9", "dinput", "dinput8", "dsound",
+    "ddraw", "msvcrt", "opengl32", "glu32", "xinput1_1", "xinput1_2", "xinput1_3", "xinput9_1_0",
+    "wininet", "iphlpapi", *(f"d3dx9_{n}" for n in range(24, 44)),
+)  # fmt: skip
+DECORATED = re.compile(r"^[0-9a-f]+ T _(\w+?)(?:@(\d+))?$")
+
+
+def import_library(path: Path) -> dict[str, tuple[int | None, str]]:
+    """Name -> (argument count, convention) from an i686 import library: `_Name@N` is stdcall
+    with N bytes of arguments, an undecorated `_Name` is cdecl (count unknown: the caller cleans)."""
+    out = subprocess.run(
+        ["i686-w64-mingw32-nm", "--defined-only", str(path)],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return parse_nm(out.stdout)
+
+
+def parse_nm(text: str) -> dict[str, tuple[int | None, str]]:
+    found: dict[str, tuple[int | None, str]] = {}
+    for line in text.splitlines():
+        match = DECORATED.match(line.strip())
+        if not match:
+            continue
+        name, size = match.group(1), match.group(2)
+        found.setdefault(name, (int(size) // 4, "stdcall") if size is not None else (None, "cdecl"))
+    return found
+
+
+def dll_exports(path: Path) -> list[tuple[int, str | None]]:
+    """(ordinal, name or None) for every export of a DLL."""
+    from rea_suite.pemodel import Image
+
+    return [(e.ordinal, e.name) for e in Image.open(path).exports]
+
+
+def float_returns(include: Path | None) -> set[str]:
+    """Functions the headers declare as returning FLOAT or double (WINAPI ones)."""
+    if include is None:
+        return set()
+    names = set()
+    pattern = re.compile(
+        r"\b(?:FLOAT|float|DOUBLE|double)\s+(?:WINAPI|APIENTRY|__stdcall|WINGDIAPI\s+\w+\s+APIENTRY)\s+(\w+)\s*\("
+    )
+    for header in include.glob("*.h"):
+        names.update(pattern.findall(header.read_text(encoding="utf-8", errors="replace")))
+    return names
+
+
+def imports_table(
+    lib_dir: Path, dll_dir: Path | None, extra: list[Path], include: Path | None
+) -> dict:
+    """The Win32 imports table: `module!Name` -> args, conv, returns_float; each named export
+    also as `module!#ordinal` where the DLL is at hand."""
+    floats = float_returns(include)
+    functions: dict[str, dict] = {}
+    sources: dict[str, str] = {}
+
+    def add(module: str, name: str, args: int | None, conv: str) -> None:
+        row: dict = {"module": module, "args": args, "conv": conv}
+        if name in floats:
+            row["returns_float"] = True
+        functions[f"{module}!{name}"] = row
+
+    for stem in IMPORT_MODULES:
+        lib = lib_dir / f"lib{stem}.a"
+        if not lib.exists():
+            continue
+        module = f"{stem}.dll"
+        known = import_library(lib)
+        sources[module] = f"{lib.name} {sha256(lib)[:16]}"
+        for name, (args, conv) in sorted(known.items()):
+            add(module, name, args, conv)
+        dll = dll_dir / module if dll_dir else None
+        if dll and dll.exists():
+            for ordinal, name in dll_exports(dll):
+                if name and name in known:
+                    args, conv = known[name]
+                    add(module, f"#{ordinal}", args, conv)
+            sources[module] += f"; ordinals from {dll.name} {sha256(dll)[:16]}"
+    for dll in extra:
+        module = dll.name.lower()
+        sources[module] = f"{dll.name} {sha256(dll)[:16]} (decorated exports)"
+        for ordinal, name in dll_exports(dll):
+            match = re.fullmatch(r"_?(\w+?)@(\d+)", name or "")
+            if match:
+                add(module, match.group(1), int(match.group(2)) // 4, "stdcall")
+                add(module, name, int(match.group(2)) // 4, "stdcall")  # as imported, decorated
+                add(module, f"#{ordinal}", int(match.group(2)) // 4, "stdcall")
+    return {
+        "schema": SCHEMA,
+        "kind": "imports",
+        "sdk": "win32",
+        "source": {"note": "args and conv from MinGW-w64's i686 import libraries (_Name@N: stdcall, N/4 "
+                   "arguments; undecorated: cdecl, args null); #ordinals from the DLLs named", "files": sources},
+        "interfaces": {},
+        "functions": dict(sorted(functions.items())),
+        "iids": {},
+    }  # fmt: skip
+
+
+def write(table: dict, out: Path, name: str | None = None) -> Path:
     out.mkdir(parents=True, exist_ok=True)
-    path = out / f"{table['sdk']}.json"
+    path = out / (name or f"{table['sdk']}.json")
     path.write_text(json.dumps(table, indent=1, sort_keys=False) + "\n", encoding="utf-8")
     return path
 
@@ -506,9 +615,37 @@ def main(argv: list[str] | None = None) -> int:
     px = sub.add_parser("physx", help="a PhysX 2.x table from the SDK's headers")
     px.add_argument("sdks", type=Path, help="the SDK's SDKs/ directory")
     px.add_argument("--sdk", required=True, help="the table's name, as physx-2.6.4")
-    for c in (com, px):
+    im = sub.add_parser("imports", help="the Win32 imports' argument counts and conventions")
+    im.add_argument("lib_dir", type=Path, help="MinGW-w64's i686 lib directory (lib<dll>.a)")
+    im.add_argument("--dlls", type=Path, help="a folder of the 32-bit DLLs (SysWOW64): ordinals")
+    im.add_argument(
+        "--extra",
+        type=Path,
+        action="append",
+        default=[],
+        help="a DLL with decorated exports (mss32.dll)",
+    )
+    im.add_argument("--include", type=Path, help="MinGW-w64's include directory: float returns")
+    for c in (com, px, im):
         c.add_argument("--out", type=Path, default=OUT)
     args = p.parse_args(argv)
+    if args.command == "imports":
+        table = imports_table(args.lib_dir, args.dlls, args.extra, args.include)
+        path = args.out / "win32-imports.json"
+        head = {k: v for k, v in table.items() if k != "functions"}
+        lines = [
+            f"  {json.dumps(k)}: {json.dumps(v, separators=(',', ':'))}"
+            for k, v in table["functions"].items()
+        ]
+        text = (
+            json.dumps(head, indent=1)[:-2]
+            + ',\n "functions": {\n'
+            + ",\n".join(lines)
+            + "\n }\n}\n"
+        )
+        path.write_text(text, encoding="utf-8")  # one function a line: readable diffs
+        print(f"{path}: {len(table['functions'])} functions")
+        return 0
     tables = (
         com_tables(args.include).values()
         if args.command == "com"
