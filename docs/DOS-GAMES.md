@@ -133,14 +133,17 @@ DOSBox-X is built from source and needs the `build` component too).
 
 ```sh
 rea-suite dosbox info
-rea-suite dosbox run --mount <copy of the game tree> --returns --seconds 240 \
-  --ints 10,33,31:00,31:03,31:06 --set "dosbox memsize=64" --log run.jsonl --quiet \
-  <copy>/GAME/MAIN.EXE <the game's own arguments>
+rea-suite dosbox run --profile dos4gw --mount <copy of the game tree> --returns --seconds 240 \
+  --log run.jsonl --quiet <copy>/GAME/MAIN.EXE <the game's own arguments>
 ```
 
 - Always run on a copy of the game tree in the work folder. The game may write saves and settings.
-- The game's own code is the calls with its flat code selector in `regs.cs` (protected mode `pm`).
-  DOS/4GW's loader and its real-mode reflections are the rest, and they are most of the log.
+- `--profile dos4gw` is the settings below in one: INT 21h left to DOSBox-X's log, INT 31h narrowed
+  to `31:00`, `31:03` and `31:06`, `memsize=64`, and `--own`. An option given on the command line
+  wins over the profile's.
+- The game's own code is the calls from its flat (32-bit) code segment; DOS/4GW's loader, its
+  16-bit protected-mode code and its real-mode reflections are the rest, and most of the log.
+  Every call record says which (`"own"`); `--own` logs the game's only.
 - **What a run settles**: the order of calls up to the first frame (memory, data files, mouse,
   video mode), where the extender put each object, the selectors the program starts with (PSP in
   ES, flat code and data), the callbacks actually installed, and the files actually opened (with

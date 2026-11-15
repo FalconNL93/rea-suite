@@ -284,6 +284,53 @@ class Stops(unittest.TestCase):
             self.assertIn("BPDEL 00", fake.commands)  # the return's, the newest
 
 
+class OwnCalls(unittest.TestCase):
+    """The program's own calls against its extender's (#11) and the dos4gw profile (#10)."""
+
+    BIG = ("SelectorInfo:", "CS: b:00000000 type:1B parbg", "    l:FFFFFFFF dpl : 3 11110")
+    SMALL = ("SelectorInfo:", "CS: b:00012340 type:1B parbg", "    l:0000FFFF dpl : 0 11100")
+
+    def run_stops(self, **options) -> tuple[list[dict], dosbox.Tracer, FakeDebugger]:
+        with tempfile.TemporaryDirectory() as tmp:
+            fake = FakeDebugger(Path(tmp))
+            fake.selectors = {"087": list(self.BIG), "010": list(self.SMALL)}
+            t, records = tracer(fake, Path(tmp), **options)
+            game = {"cr0": 1, "cs": 0x87, "ds": 0x8F, "es": 0x8F, "ss": 0x8F}
+            extender = {"cr0": 1, "cs": 0x10, "ds": 0x18, "es": 0x18, "ss": 0x18}
+            for state, code in [
+                (regs(eip=0x100), b"\x90\x90"),
+                (regs(eax=0x0006, ebx=0x0090, eip=0x2000, **extender), b"\xcd\x31"),  # DOS/4GW's
+                (regs(eax=0x3D00, edx=0x1000, eip=0x1A0040, **game), b"\xcd\x21"),  # the game's
+            ]:
+                fake.stop(t, state, code)
+            return records, t, fake
+
+    def test_every_call_says_whose_it_is_and_the_code_selector_is_the_programs(self) -> None:
+        records, t, _ = self.run_stops()
+        calls = [(r["int"], r["own"]) for r in records if r["kind"] == "int"]
+        self.assertEqual(calls, [("31", False), ("21", True)])
+        self.assertEqual(t.app_cs, 0x87)  # never the extender's 16-bit selector
+
+    def test_own_leaves_the_extenders_calls_out(self) -> None:
+        records, _, fake = self.run_stops(own=True)
+        self.assertEqual([r["int"] for r in records if r["kind"] == "int"], ["21"])
+        self.assertEqual(fake.commands.count("SELINFO 010"), 1)  # asked once per selector
+
+    def test_the_dos4gw_profile_fills_in_what_the_command_line_left(self) -> None:
+        args = argparse.Namespace(profile="dos4gw", ints=None, own=False, set=["cpu cycles=max"])
+        dosbox.apply_profile(args)
+        self.assertEqual((args.ints, args.own), ("31:00,31:03,31:06,33,10", True))
+        self.assertIn("dosbox memsize=64", args.set)
+        args = argparse.Namespace(
+            profile="dos4gw", ints="21", own=False, set=["dosbox  memsize=32"]
+        )
+        dosbox.apply_profile(args)
+        self.assertEqual((args.ints, args.set), ("21", ["dosbox  memsize=32"]))  # given: kept
+        args = argparse.Namespace(profile=None, ints=None, own=False, set=[])
+        dosbox.apply_profile(args)
+        self.assertEqual((args.ints, args.own, args.set), (dosbox.DEFAULT_INTS, False, []))
+
+
 class StandIn(threading.Thread):
     """DOSBox-X's side of the control channel: it answers a request only when the next line
     arrives, as its network thread does (it sends between reads)."""

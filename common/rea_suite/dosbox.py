@@ -78,6 +78,28 @@ from rea_suite import dosbox_regions as rg
 ROOT = Path(__file__).resolve().parents[2]
 WORK = ROOT / "work" / "dosbox"
 DEFAULT_INTS = "21,31,33,10"
+# Profiles: settings for a kind of program, below what a run gives on the command line.
+# dos4gw: under the debugger DOS/4GW's own loading took Theme Park 2 to 4 minutes at about 20 ms a
+# stop. INT 21h goes to DOSBox-X's log instead (file and dos-int records), INT 31h is narrowed to
+# descriptors, real-mode calls and locking, only the program's own calls are logged, and 64 MiB of
+# memory ends Watcom's heap probing at once (docs/DOS-GAMES.md).
+PROFILES = {
+    "dos4gw": {"ints": "31:00,31:03,31:06,33,10", "own": True, "set": ["dosbox memsize=64"]},
+}
+
+
+def apply_profile(args) -> None:
+    """The profile's settings where the command line gave none (--ints, --own, --set's keys)."""
+    profile = PROFILES.get(getattr(args, "profile", None) or "", {})
+    if args.ints is None:
+        args.ints = profile.get("ints", DEFAULT_INTS)
+    args.own = getattr(args, "own", False) or profile.get("own", False)
+    given = {" ".join(item.split("=", 1)[0].split()) for item in args.set}
+    for item in profile.get("set", []):
+        if " ".join(item.split("=", 1)[0].split()) not in given:
+            args.set.append(item)
+
+
 # DOSBox-X log groups switched on for every run, at debug level (names as in its [log] section).
 DEFAULT_GROUPS = "files,dosmisc,exec,mouse,int10"
 OPL_CAPTURES = "opl"  # the subfolder of the run's folder DOSBox-X writes its raw OPL captures to
@@ -606,6 +628,8 @@ class Tracer:
         self.ending = False  # the run's time is up: no more input or timed actions
         self.dumps = 0
         self.app_cs: int | None = None  # the program's protected-mode code selector, once seen
+        self.own_only = bool(getattr(args, "own", False))  # --own: only the program's own calls
+        self.big: dict[int, bool] = {}  # a code selector -> whether it is a 32-bit segment
         self.seen_pm = False  # the program has run in protected mode: a DPMI program
         self.pm_break = 0.0  # when a BREAK may be made for actions waiting for protected mode
         self.mouse_break = 0.0  # when a BREAK may be made for the pointer
@@ -668,14 +692,33 @@ class Tracer:
         for action in self.actions.pending("start"):
             self.act(action, regs)
 
+    def is_own(self, regs: dict[str, int]) -> bool:
+        """A call the program made itself, not its DOS extender or DPMI host: in protected mode
+        from a 32-bit code segment (a flat program's; DOS/4GW's and CWSDPMI's own code is 16-bit),
+        in real mode from the program's memory (its PSP up to A000h) while it has not run in
+        protected mode."""
+        if cpu_mode(regs) == "pm":
+            cs = regs["CS"]
+            if cs not in self.big:
+                try:
+                    self.big[cs] = acts.parse_selinfo(self.ch.request(f"SELINFO {hexarg(cs)}"))[2]
+                except ValueError:
+                    self.big[cs] = False
+            return self.big[cs]
+        if self.app_cs is not None or self.seen_pm:
+            return False
+        return self.psp is not None and self.psp <= regs["CS"] < 0xA000
+
     def call(self, n: int, regs: dict[str, int]) -> None:
         if from_bios(regs) and not self.nested:
             return
         ax = regs["EAX"] & 0xFFFF
-        if cpu_mode(regs) == "pm":
+        own = self.is_own(regs)
+        if cpu_mode(regs) == "pm" and own:
             self.app_cs = regs["CS"]
         record = int_record(n, regs, self.read)
-        if any(acts.covers(spec, n, ax) for spec in self.logged):
+        record["own"] = own
+        if any(acts.covers(spec, n, ax) for spec in self.logged) and (own or not self.own_only):
             self.log_call(n, regs, record)
         for action in self.actions.memory():
             if action.done or not action.trigger.matches_call(n, ax, record.get("path")):
@@ -1217,6 +1260,7 @@ class Terminal:
 
 
 def run(args) -> int:
+    apply_profile(args)
     binary = find_dosbox(args.dosbox)
     if not binary:
         print(
@@ -1487,8 +1531,20 @@ def parser() -> argparse.ArgumentParser:
     r.add_argument("--mount", type=Path, help="mount this folder as C: (it holds the program)")
     r.add_argument("--dpmi", action="store_true", help="load DOSBox-X's CWSDPMI first")
     r.add_argument(
+        "--profile",
+        choices=sorted(PROFILES),
+        help="settings for a kind of program, below the command line's: dos4gw (INT 21h to the log, "
+        f"INT 31h narrowed, --own, memsize=64; {PROFILES['dos4gw']['ints']})",
+    )
+    r.add_argument(
+        "--own",
+        action="store_true",
+        help="log only the program's own calls (a 32-bit code segment in protected mode; its own "
+        "memory in real mode), not its DOS extender's or DPMI host's; every call record says `own`",
+    )
+    r.add_argument(
         "--ints",
-        default=DEFAULT_INTS,
+        default=None,
         help=f"interrupts to trace in the debugger, INT[:AH[:AL]] in hex (default {DEFAULT_INTS}; "
         "empty: the log only). Each stop costs about 20 ms: for a DOS/4GW game's load trace narrowly "
         "(21:3D,33,10), the full set only for a short window",

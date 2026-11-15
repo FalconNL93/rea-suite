@@ -888,6 +888,7 @@ rea-suite dosbox info                                        # the binary, its v
 rea-suite dosbox run --dpmi --log work/tp.jsonl --seconds 300 work/tp/THEME/MAIN.EXE
 rea-suite dosbox run --ints 21:3d,21:3f,31 --returns game/GAME.EXE  # opens, reads, DPMI; results
 rea-suite dosbox run --ints '' game/GAME.EXE                 # DOSBox-X's log only (any build)
+rea-suite dosbox run --profile dos4gw game/GAME.EXE         # a DOS/4GW game: its own calls only
 rea-suite dosbox run --ints 21:3d --dump 0:400@exit --dump 1A2B30:0x8000@open:DATA/MAP.DAT \
   --input 't=8:ENTER t=12:mouse:160,100 t=12.5:click' game/GAME.EXE   # memory and input, below
 rea-suite dosbox parse work/dosbox/<run>/dosbox-x.log --program MAIN.EXE  # a log taken elsewhere
