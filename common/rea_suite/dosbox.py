@@ -88,6 +88,9 @@ PROFILES = {
 }
 
 
+FLAT_LIMIT = 0x00FFFFFF  # 16 MiB: a code segment this long is a flat program's, not an extender's
+
+
 def apply_profile(args) -> None:
     """The profile's settings where the command line gave none (--ints, --own, --set's keys)."""
     profile = PROFILES.get(getattr(args, "profile", None) or "", {})
@@ -694,14 +697,17 @@ class Tracer:
 
     def is_own(self, regs: dict[str, int]) -> bool:
         """A call the program made itself, not its DOS extender or DPMI host: in protected mode
-        from a 32-bit code segment (a flat program's; DOS/4GW's and CWSDPMI's own code is 16-bit),
-        in real mode from the program's memory (its PSP up to A000h) while it has not run in
-        protected mode."""
+        from a flat code segment, 32-bit and at least FLAT_LIMIT long (a flat program's spans 4 GiB;
+        DOS/4GW's own code is 16-bit, or 32-bit and a few hundred bytes: its first real-mode
+        callback comes from such a 0088h before the game is loaded, Theme Park 2026-11-15), in real
+        mode from the program's memory (its PSP up to A000h) while it has not run in protected
+        mode."""
         if cpu_mode(regs) == "pm":
             cs = regs["CS"]
             if cs not in self.big:
                 try:
-                    self.big[cs] = acts.parse_selinfo(self.ch.request(f"SELINFO {hexarg(cs)}"))[2]
+                    _base, limit, big = acts.parse_selinfo(self.ch.request(f"SELINFO {hexarg(cs)}"))
+                    self.big[cs] = big and limit >= FLAT_LIMIT
                 except ValueError:
                     self.big[cs] = False
             return self.big[cs]
@@ -717,6 +723,7 @@ class Tracer:
         if cpu_mode(regs) == "pm" and own:
             self.app_cs = regs["CS"]
         record = int_record(n, regs, self.read)
+        record["cs"] = f"{regs['CS']:04X}"
         record["own"] = own
         if any(acts.covers(spec, n, ax) for spec in self.logged) and (own or not self.own_only):
             self.log_call(n, regs, record)

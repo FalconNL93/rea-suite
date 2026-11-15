@@ -140,7 +140,8 @@ rea-suite dosbox run --profile dos4gw --mount <copy of the game tree> --returns 
 - Always run on a copy of the game tree in the work folder. The game may write saves and settings.
 - `--profile dos4gw` is the settings below in one: INT 21h left to DOSBox-X's log, INT 31h narrowed
   to `31:00`, `31:03` and `31:06`, `memsize=64`, and `--own`. An option given on the command line
-  wins over the profile's.
+  wins over the profile's. Theme Park with it (2026-11-15): the game's first own call at 71 s, its
+  first picture at 95 s, the menu's data at 97 s.
 - The game's own code is the calls from its flat (32-bit) code segment; DOS/4GW's loader, its
   16-bit protected-mode code and its real-mode reflections are the rest, and most of the log.
   Every call record says which (`"own"`); `--own` logs the game's only.

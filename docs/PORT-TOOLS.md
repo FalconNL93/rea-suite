@@ -917,10 +917,13 @@ Records have `t` (seconds since the start) and `kind`:
   `--nested`. Calls a protected-mode program makes appear in `pm`; an `int` its DPMI host or
   extender then executes in real mode on its behalf appears too, in `rm` at the host's address (a
   host that reflects through the interrupt table without an `int`, as CWSDPMI does, shows none).
-  `own` says whether the program made the call itself: in protected mode a call from a 32-bit code
-  segment (a flat program's; DOS/4GW's and CWSDPMI's own code is 16-bit), asked of the debugger once
-  per selector (`SELINFO`); in real mode one from the program's memory while it has not entered
-  protected mode. `--own` logs only those, and the code selector time and input actions wait for
+  `cs` is the caller's code selector or segment, and `own` says whether the program made the call
+  itself: in protected mode a call from a flat code segment, 32-bit and 16 MiB long or more (a flat
+  program's spans 4 GiB; DOS/4GW's own code is 16-bit, or 32-bit and a few hundred bytes), asked of
+  the debugger once per selector (`SELINFO`); in real mode one from the program's memory while it
+  has not entered protected mode. On Theme Park (2026-11-15, `--profile dos4gw`) all 109 of the
+  game's calls came from its flat selector 0160h and none of DOS/4GW's counted, the first of them a
+  DPMI 0303h from a 12Fh-byte 32-bit segment before the game was loaded. `--own` logs only those, and the code selector time and input actions wait for
   (below) is taken from them alone. `--profile dos4gw` is `--ints 31:00,31:03,31:06,33,10 --own
   --set "dosbox memsize=64"`, each part only where the command line gives none
   ([DOS-GAMES.md](DOS-GAMES.md) has why).

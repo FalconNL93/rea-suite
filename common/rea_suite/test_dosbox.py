@@ -289,16 +289,24 @@ class OwnCalls(unittest.TestCase):
 
     BIG = ("SelectorInfo:", "CS: b:00000000 type:1B parbg", "    l:FFFFFFFF dpl : 3 11110")
     SMALL = ("SelectorInfo:", "CS: b:00012340 type:1B parbg", "    l:0000FFFF dpl : 0 11100")
+    # 32-bit but a few hundred bytes: DOS/4GW's code that allocates its first real-mode callback
+    TINY32 = ("SelectorInfo:", "CS: b:001B3CC0 type:1B parbg", "    l:0000012F dpl : 0 11110")
 
     def run_stops(self, **options) -> tuple[list[dict], dosbox.Tracer, FakeDebugger]:
         with tempfile.TemporaryDirectory() as tmp:
             fake = FakeDebugger(Path(tmp))
-            fake.selectors = {"087": list(self.BIG), "010": list(self.SMALL)}
+            fake.selectors = {
+                "087": list(self.BIG),
+                "010": list(self.SMALL),
+                "088": list(self.TINY32),
+            }
             t, records = tracer(fake, Path(tmp), **options)
             game = {"cr0": 1, "cs": 0x87, "ds": 0x8F, "es": 0x8F, "ss": 0x8F}
             extender = {"cr0": 1, "cs": 0x10, "ds": 0x18, "es": 0x18, "ss": 0x18}
+            extender32 = {"cr0": 1, "cs": 0x88, "ds": 0x18, "es": 0x18, "ss": 0x18}
             for state, code in [
                 (regs(eip=0x100), b"\x90\x90"),
+                (regs(eax=0x0303, eip=0x119, **extender32), b"\xcd\x31"),  # DOS/4GW's, 32-bit
                 (regs(eax=0x0006, ebx=0x0090, eip=0x2000, **extender), b"\xcd\x31"),  # DOS/4GW's
                 (regs(eax=0x3D00, edx=0x1000, eip=0x1A0040, **game), b"\xcd\x21"),  # the game's
             ]:
@@ -307,8 +315,10 @@ class OwnCalls(unittest.TestCase):
 
     def test_every_call_says_whose_it_is_and_the_code_selector_is_the_programs(self) -> None:
         records, t, _ = self.run_stops()
-        calls = [(r["int"], r["own"]) for r in records if r["kind"] == "int"]
-        self.assertEqual(calls, [("31", False), ("21", True)])
+        calls = [(r["int"], r["cs"], r["own"]) for r in records if r["kind"] == "int"]
+        self.assertEqual(
+            calls, [("31", "0088", False), ("31", "0010", False), ("21", "0087", True)]
+        )
         self.assertEqual(t.app_cs, 0x87)  # never the extender's 16-bit selector
 
     def test_own_leaves_the_extenders_calls_out(self) -> None:
