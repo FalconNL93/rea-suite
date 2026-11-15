@@ -57,6 +57,13 @@
 #              `build: true` required), for a fix that came after the newest release.
 # plugins:     files from another release copied into the install dir:
 #              `copy: {<glob in archive>: <dir in install>}`.
+# sha256:      `{<asset name or platform>: <hex>}`: a download's expected SHA-256, for a pinned
+#              entry or a `url:` one (by platform). Every download is checked against GitHub's
+#              digest for the asset where GitHub gives one (the API's `digest`, else the release
+#              page's), else against this; a mismatch stops the install. What each download
+#              hashed to, and what vouched for it, goes to tools/digests.json; `rea-tools verify`
+#              compares those with what GitHub publishes now, `rea-tools check` notes installs
+#              with no recorded digest.
 
 tools:
   # Pinned to the build REA verifies (SUPPORTED_GHIDRA_VERSION in rea-agents'

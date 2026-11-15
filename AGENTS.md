@@ -23,7 +23,10 @@ installation.
   names that differ go in `platforms/linux/dnf-names.txt`, Arch names in `pacman-names.txt`),
   `platforms/macos/Brewfile`, `platforms/windows/winget.json`, or a component in
   `common/components.yml`. Prefer them in that order. Nothing is installed by a one-off
-  download or `curl | sh`.
+  download or `curl | sh`. A `tools.yml` download is checked against the SHA-256 GitHub
+  publishes for it, or a `sha256:` in the entry, and a mismatch stops the install
+  (`tools/digests.json` records what each one hashed to; `rea-tools verify` compares those with
+  GitHub's).
 * **Every platform.** A change to one platform's script has its counterparts: `bin/rea-suite`
   (Linux and macOS) and `platforms/windows/rea-suite.ps1`; `platforms/linux/bootstrap.sh`,
   `platforms/macos/bootstrap.sh` and `bootstrap.ps1`; `common/env.sh` and `env.ps1`; a tool in
@@ -89,7 +92,8 @@ installation.
   files (`common/*.test.mjs`); `rea-suite check` runs them all. A test that needs a real tool or
   sample is opt-in behind a `REA_*_INTEGRATION` or `REA_*_SAMPLE` switch. A package a test
   imports goes in the `test` group of `pyproject.toml` too, so CI installs it.
-* Generated files (`tools/bin/*` launchers, `tools/state.json`) are never edited by hand.
+* Generated files (`tools/bin/*` launchers, `tools/state.json`, `tools/digests.json`) are never
+  edited by hand.
 
 ## Reverse engineering with the suite
 

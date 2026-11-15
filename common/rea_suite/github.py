@@ -8,10 +8,10 @@ public github.com release pages, which are not rate limited the same way.
 from __future__ import annotations
 
 import functools
+import hashlib
 import json
 import os
 import re
-import shutil
 import sys
 import urllib.error
 import urllib.parse
@@ -45,15 +45,25 @@ def _html_release(repo: str, tag: str | None) -> dict:
     quoted = urllib.parse.quote(tag, safe="")
     with _open(f"https://github.com/{repo}/releases/expanded_assets/{quoted}") as resp:
         page = resp.read().decode("utf-8", "replace")
-    links = re.findall(r'href="(/[^"]+/releases/download/[^"]+)"', page)
-    assets = [
-        {
-            "name": urllib.parse.unquote(link.rsplit("/", 1)[1]),
-            "browser_download_url": f"https://github.com{link}",
-        }
-        for link in dict.fromkeys(links)
-    ]
-    return {"tag_name": tag, "assets": assets}
+    # each asset's link, then its digest (`sha256:<hex>`) before the next asset's link
+    events = sorted(
+        [
+            (m.start(), "link", m.group(1))
+            for m in re.finditer(r'href="(/[^"]+/releases/download/[^"]+)"', page)
+        ]
+        + [(m.start(), "digest", m.group(1)) for m in re.finditer(r"sha256:([0-9a-f]{64})", page)]
+    )
+    assets: dict[str, dict] = {}
+    current = None
+    for _at, kind, value in events:
+        if kind == "link":
+            current = assets.setdefault(value, {
+                "name": urllib.parse.unquote(value.rsplit("/", 1)[1]),
+                "browser_download_url": f"https://github.com{value}",
+            })  # fmt: skip
+        elif current is not None and "digest" not in current:
+            current["digest"] = f"sha256:{value}"
+    return {"tag_name": tag, "assets": list(assets.values())}
 
 
 @functools.cache
@@ -104,7 +114,28 @@ def source_url(repo: str, tag: str) -> str:
     return f"https://github.com/{repo}/archive/refs/tags/{urllib.parse.quote(tag, safe='')}.tar.gz"
 
 
-def download(url: str, dest: Path) -> None:
+class DigestMismatch(OSError):
+    """A download whose SHA-256 is not the one GitHub or tools.yml gives: the install stops."""
+
+
+def asset_digest(asset: dict) -> str | None:
+    """The SHA-256 GitHub gives for a release asset (the API's `digest`, or the release page's),
+    as hex; None for an asset GitHub has none for (releases from before it recorded them)."""
+    digest = asset.get("digest") or ""
+    return digest.removeprefix("sha256:").lower() if digest.startswith("sha256:") else None
+
+
+def download(url: str, dest: Path, expected: str | None = None) -> str:
+    """The file at url saved to dest; its SHA-256 (hex). With expected, a different digest
+    deletes the file and raises DigestMismatch."""
     print(f"  downloading {url}")
+    digest = hashlib.sha256()
     with _open(url) as resp, dest.open("wb") as out:
-        shutil.copyfileobj(resp, out, length=1 << 20)
+        while chunk := resp.read(1 << 20):
+            digest.update(chunk)
+            out.write(chunk)
+    got = digest.hexdigest()
+    if expected is not None and got != expected.lower():
+        dest.unlink(missing_ok=True)
+        raise DigestMismatch(f"{url}: SHA-256 {got}, expected {expected.lower()}: not installed")
+    return got

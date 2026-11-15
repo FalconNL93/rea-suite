@@ -44,6 +44,7 @@ class Tool:
     plugins: dict[str, dict] = field(default_factory=dict)
     build: dict = field(default_factory=dict)
     follows_pip: bool = False
+    sha256: dict[str, str] = field(default_factory=dict)  # asset name (or platform, for url) -> hex
 
     @classmethod
     def from_manifest(cls, name: str, spec: dict) -> Tool:
@@ -68,6 +69,7 @@ class Tool:
             bin=spec.get("bin", {}),
             ghidra_extensions=spec.get("ghidra-extensions") or {},
             plugins=spec.get("plugins") or {},
+            sha256={str(k): str(v).lower() for k, v in (spec.get("sha256") or {}).items()},
         )
 
     @property
@@ -99,6 +101,44 @@ def resolve_version(version: str) -> str:
 def load_tools() -> dict[str, Tool]:
     data = yaml.safe_load(MANIFEST.read_text())
     return {name: Tool.from_manifest(name, spec) for name, spec in data["tools"].items()}
+
+
+DIGESTS_FILE = TOOLS_DIR / "digests.json"
+
+
+def load_digests() -> dict[str, dict]:
+    """Per tool: the version installed and each downloaded file's SHA-256 with what vouched for
+    it (`github`: GitHub's digest; `tools.yml`: a pinned `sha256:`; `recorded`: nothing did)."""
+    return json.loads(DIGESTS_FILE.read_text()) if DIGESTS_FILE.exists() else {}
+
+
+def record_digests(tool: str, version: str, files: dict[str, dict]) -> None:
+    digests = load_digests()
+    digests[tool] = {"version": version, "files": files}
+    DIGESTS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    DIGESTS_FILE.write_text(json.dumps(digests, indent=2, sort_keys=True) + "\n")
+
+
+def fetch(url: str, dest: Path, expected: str | None, source: str) -> dict:
+    """Download, checked against expected when there is one; the record for digests.json."""
+    got = github.download(url, dest, expected)
+    if expected is None:
+        print(f"  note: no published SHA-256 for {dest.name}; recorded {got[:16]}...")
+    return {"sha256": got, "vouched": source if expected else "recorded", "url": url}
+
+
+def expected_digest(tool: Tool, asset: dict) -> tuple[str | None, str]:
+    """GitHub's digest for an asset, else tools.yml's `sha256:` for its name; and which."""
+    if digest := github.asset_digest(asset):
+        pinned = tool.sha256.get(asset["name"])
+        if pinned and pinned != digest:
+            raise github.DigestMismatch(
+                f"{tool.name}: tools.yml's sha256 for {asset['name']} is not GitHub's"
+            )
+        return digest, "github"
+    if pinned := tool.sha256.get(asset["name"]):
+        return pinned, "tools.yml"
+    return None, "recorded"
 
 
 def load_state() -> dict[str, str]:
@@ -170,10 +210,15 @@ def install_github(tool: Tool, state: dict[str, str], force_latest: bool) -> Non
         else:
             assets = pick_assets(tool, release)
             print(f"{tool.name}: installing {tag} ({', '.join(a['name'] for a in assets)})")
+            files = {}
             for asset in assets:
                 archive = Path(tmp) / asset["name"]
-                github.download(asset["browser_download_url"], archive)
+                expected, source = expected_digest(tool, asset)
+                files[asset["name"]] = fetch(
+                    asset["browser_download_url"], archive, expected, source
+                )
                 extract(archive, staging, tool.strip)
+            record_digests(tool.name, tag, files)
         if dest.exists():
             shutil.rmtree(dest)
         staging.rename(dest)
@@ -209,8 +254,10 @@ def install_url(tool: Tool, state: dict[str, str], force: bool) -> None:
     dest.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=dest.parent) as tmp:
         archive = Path(tmp) / url.rsplit("/", 1)[1]
-        github.download(url, archive)
+        expected = tool.sha256.get(PLATFORM) or tool.sha256.get(archive.name)
+        record = fetch(url, archive, expected, "tools.yml")
         extract(archive, Path(tmp) / "x", tool.strip)
+        record_digests(tool.name, tool.version, {archive.name: record})
         (Path(tmp) / "x").rename(dest)
     state[tool.name] = tool.version
     save_state(state)
@@ -290,7 +337,8 @@ def sync_plugins(dest: Path, specs: dict[str, dict]) -> None:
         print(f"  plugin {name}: installing {tag}")
         with tempfile.TemporaryDirectory(dir=dest) as tmp:
             archive = Path(tmp) / asset["name"]
-            github.download(asset["browser_download_url"], archive)
+            expected = github.asset_digest(asset)
+            fetch(asset["browser_download_url"], archive, expected, "github")
             extract(archive, Path(tmp) / "x", 0)
             for source_glob, target in spec["copy"].items():
                 files = glob.glob(str(Path(tmp) / "x" / source_glob), recursive=True)
@@ -487,8 +535,8 @@ def cmd_status(args: argparse.Namespace) -> None:
 
 
 def cmd_check(args: argparse.Namespace) -> None:
-    """Offline health check: installed versions, launchers, Ghidra extensions."""
-    state, problems = load_state(), 0
+    """Offline health check: installed versions, launchers, Ghidra extensions, digests recorded."""
+    state, problems, digests = load_state(), 0, load_digests()
     for tool in select(load_tools(), args.tools):
         version = state.get(tool.name)
         dest = TOOLS_DIR / tool.name / (version or "?")
@@ -520,11 +568,60 @@ def cmd_check(args: argparse.Namespace) -> None:
             ]
         if tool.name == "ghidra" and PLATFORM == "macos" and not ghidra.native_decompiler(dest):
             absent.append("natives (rea-tools reinstall ghidra)")
+        recorded = digests.get(tool.name, {})
+        unvouched = (
+            [f for f, row in recorded.get("files", {}).items() if row.get("vouched") == "recorded"]
+            if recorded.get("version") == version
+            else []
+        )
         if absent:
             print(f"  FAIL  {tool.name:18} {version}; missing {', '.join(absent)}")
             problems += 1
+        elif tool.github and not tool.needs_build and recorded.get("version") != version:
+            print(
+                f"  ok    {tool.name:18} {version} (no digest recorded: installed before #29; reinstall records one)"
+            )
+        elif unvouched:
+            print(
+                f"  ok    {tool.name:18} {version} ({len(unvouched)} download(s) with no published digest)"
+            )
         else:
             print(f"  ok    {tool.name:18} {version}")
+    if problems:
+        sys.exit(1)
+
+
+def cmd_verify(args: argparse.Namespace) -> None:
+    """Online: each recorded download's SHA-256 against what GitHub publishes for that release
+    now. A changed asset under the same tag fails; one GitHub has no digest for is noted."""
+    tools, digests, problems = load_tools(), load_digests(), 0
+    for name, record in sorted(digests.items()):
+        if args.tools and name not in args.tools:
+            continue
+        tool = tools.get(name)
+        if tool is None or not tool.github:
+            print(f"  info  {name:18} {record['version']}: not a GitHub release; recorded only")
+            continue
+        try:
+            assets = {
+                a["name"]: a for a in github.release(tool.github, record["version"])["assets"]
+            }
+        except (OSError, LookupError) as exc:
+            print(f"  ?     {name:18} {record['version']}: {exc}")
+            continue
+        for file, row in sorted(record["files"].items()):
+            now = github.asset_digest(assets.get(file, {}))
+            if now is None:
+                print(
+                    f"  info  {name:18} {file}: GitHub gives no digest (recorded {row['sha256'][:16]}...)"
+                )
+            elif now != row["sha256"]:
+                print(
+                    f"  FAIL  {name:18} {file}: GitHub now gives {now[:16]}..., installed {row['sha256'][:16]}..."
+                )
+                problems += 1
+            else:
+                print(f"  ok    {name:18} {file}")
     if problems:
         sys.exit(1)
 
@@ -736,6 +833,7 @@ def main() -> None:
         ("remove", cmd_remove, "remove tools (e.g. after deselecting a component)"),
         ("prune", cmd_prune, "remove inactive versions"),
         ("check", cmd_check, "offline check of installs, launchers and extensions"),
+        ("verify", cmd_verify, "online: recorded download digests against GitHub's"),
     ]:
         p = sub.add_parser(name, help=help_text)
         p.add_argument("tools", nargs="*", help="tool names (default: all)")
@@ -781,6 +879,9 @@ def main() -> None:
         args.func(args)
     except subprocess.CalledProcessError as exc:
         sys.exit(exc.returncode)
+    except github.DigestMismatch as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

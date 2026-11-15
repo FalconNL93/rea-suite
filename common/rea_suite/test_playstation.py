@@ -242,7 +242,7 @@ class OptionalExtensionTests(unittest.TestCase):
                 patch.object(
                     ghidra.github,
                     "download",
-                    side_effect=lambda _, dest: shutil.copyfile(archive, dest),
+                    side_effect=lambda _, dest, *expected: shutil.copyfile(archive, dest),
                 ),
             ):
                 ghidra._sync_one(root, "12.1.4", "psx", spec, None, False)

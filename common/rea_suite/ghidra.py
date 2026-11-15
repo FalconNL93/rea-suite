@@ -180,7 +180,7 @@ def _sync_one(
         if asset:
             print(f"  ghidra extension {name}: installing {tag} for Ghidra {version}")
             archive = work / asset["name"]
-            github.download(asset["browser_download_url"], archive)
+            github.download(asset["browser_download_url"], archive, github.asset_digest(asset))
         else:
             print(f"  ghidra extension {name}: no build for Ghidra {version}, building {tag}")
             archive = _build(install, repo, tag, spec, work)
@@ -228,7 +228,7 @@ def _add_deps(project: Path, deps: list[dict], work: Path) -> None:
         pattern = re.compile(dep["assets"][PLATFORM])
         asset = next(a for a in release["assets"] if pattern.search(a["name"]))
         archive = work / asset["name"]
-        github.download(asset["browser_download_url"], archive)
+        github.download(asset["browser_download_url"], archive, github.asset_digest(asset))
         unpacked = work / f"dep-{dep['github'].replace('/', '-')}"
         extract(archive, unpacked, 1)
         archive.unlink()
