@@ -50,9 +50,25 @@ Paths are relative to your terminal's current directory. On Windows use `rea-sui
 | Extract a PS2 DVD ISO and import its EE executable | `rea-suite playstation game.iso --project work/game --ghidra` |
 | Use an already extracted game | `rea-suite playstation /path/to/extracted --project work/game --ghidra` |
 | Supply a boot path when SYSTEM.CNF is missing | `rea-suite playstation /path/to/extracted --boot SLUS_000.00 --project work/game --ghidra` |
+| Import overlays and modules too (repeat `--overlay`) | `rea-suite playstation game.cue --project work/game --ghidra --overlay OVL/BATTLE.BIN@80100000 --overlay OVL/MENU.EXE` |
 | Prepare without Ghidra | `rea-suite playstation game.iso --project work/game` |
 
 The boot name above is illustrative. Use the actual `BOOT` / `BOOT2` path in `SYSTEM.CNF`.
+
+`--overlay PATH[@ADDRESS]` names a file of the disc as `--boot` does (case and `;1` ignored) and how
+it is imported is decided by what it is:
+
+| File | Import | ADDRESS |
+|---|---|---|
+| raw code (a PS1 `.BIN`/`.OVL`, a raw PS2 overlay) | an overlay block `ovl_<NAME>` in the boot program, so its calls into the program resolve; disassembled from its first byte | required: the load address |
+| PS-X EXE | an overlay block of its payload, disassembled from its header's entry | optional; must match the header's load address |
+| IRX (IOP module) | a program of its own, `MIPS:LE:32:default`, in the project's `overlays/<dir>/` folder | optional: the base it is loaded at |
+| ERX (EE module, ELF type 0xFF91) | a program of its own, R5900 | optional: its base |
+| another EE ELF | a program of its own, R5900, at its own address | refused |
+
+Each module's functions go to `analysis/overlays/<path>.tsv`; overlay blocks' functions are in
+`analysis/functions.tsv` with their space (`ovl_BATTLE_BIN::80100000`). `project.json` records
+each overlay with its hash, address and Ghidra command.
 For split BIN tracks, pass the CUE and keep its referenced files inside the same directory tree.
 Raw BIN without a CUE can lose audio-track information. ISO9660 ISO files take the 7-Zip route;
 2352-byte CD images take the dumpsxiso route, regardless of filename extension. A CHD is refused:

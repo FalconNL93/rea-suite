@@ -167,6 +167,103 @@ class ProjectTests(unittest.TestCase):
         self.assertIn("r5900:LE:32:default", manifest["ghidra_command"])
 
 
+class OverlayTests(unittest.TestCase):
+    """--overlay (#16): which file becomes an overlay block in the boot program and which a
+    program of its own, at what address, and the Ghidra commands that follow."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name).resolve()
+        self.disc = self.root / "disc"
+        (self.disc / "OVL").mkdir(parents=True)
+
+    def ps1(self):
+        (self.disc / "SLUS_000.00").write_bytes(psx())
+        (self.disc / "SYSTEM.CNF").write_text("BOOT = cdrom:\\SLUS_000.00;1\n")
+        (self.disc / "OVL/BATTLE.BIN").write_bytes(b"\x08\x00\xe0\x03" * 64)
+        (self.disc / "OVL/MENU.EXE").write_bytes(psx())
+        return playstation.inventory(self.disc, 100)
+
+    def ps2(self):
+        (self.disc / "SLES_000.00").write_bytes(elf())
+        (self.disc / "SYSTEM.CNF").write_text("BOOT2 = cdrom0:\\SLES_000.00;1\n")
+        (self.disc / "OVL/SOUND.IRX").write_bytes(elf(0, playstation.IRX_TYPE))
+        (self.disc / "OVL/GAME.ERX").write_bytes(elf(0x20924001, playstation.ERX_TYPE))
+        return playstation.inventory(self.disc, 100)
+
+    def test_ps1_overlays_become_blocks_in_the_boot_program(self):
+        raw, exe = playstation.overlays(self.ps1(), ["ovl/battle.bin;1@80100000", "OVL/MENU.EXE"])
+        self.assertEqual(
+            (raw["import"], raw["address"], raw["offset"], raw["length"], raw["block"]),
+            ("block", "0x80100000", 0, 256, "ovl_BATTLE_BIN"),
+        )
+        self.assertEqual((exe["address"], exe["offset"], exe["length"]), ("0x80010000", 2048, 2048))
+        with self.assertRaisesRegex(ValueError, "needs @ADDRESS"):
+            playstation.overlays(self.ps1(), ["OVL/BATTLE.BIN"])
+        with self.assertRaisesRegex(ValueError, "header loads it at 0x80010000"):
+            playstation.overlays(self.ps1(), ["OVL/MENU.EXE@80020000"])
+        with self.assertRaisesRegex(ValueError, "not on the disc"):
+            playstation.overlays(self.ps1(), ["OVL/NONE.BIN@80100000"])
+        with self.assertRaisesRegex(ValueError, "unsafe"):
+            playstation.overlays(self.ps1(), ["../outside@80100000"])
+        with self.assertRaisesRegex(ValueError, "is the boot program"):
+            playstation.overlays(self.ps1(), ["SLUS_000.00"])
+        with self.assertRaisesRegex(ValueError, "no hex address"):
+            playstation.overlay_spec("OVL/BATTLE.BIN@zz")
+
+    def test_ps2_modules_become_programs_of_their_own(self):
+        state = self.ps2()
+        self.assertIn("ps2-erx", {p["kind"] for p in state["executables"]})
+        irx, erx = playstation.overlays(state, ["OVL/SOUND.IRX", "OVL/GAME.ERX@01000000"])
+        self.assertEqual(
+            (irx["import"], irx["language"], irx["folder"], irx["address"]),
+            ("program", "MIPS:LE:32:default", "overlays/OVL", None),
+        )
+        self.assertEqual((erx["language"], erx["address"]), ("r5900:LE:32:default", "0x1000000"))
+        with self.assertRaisesRegex(ValueError, "beside a PS1 program"):
+            state["boot_executable"]["kind"] = "ps1-exe"
+            playstation.overlays(state, ["OVL/SOUND.IRX"])
+
+    def test_the_ghidra_commands(self):
+        self.ps1()
+        args = argparse.Namespace(caller_cwd=self.root, input=self.disc, project=self.root / "p",
+                                  plan=False, ghidra=True, max_files=100, timeout=30, boot=None,
+                                  overlay=["OVL/BATTLE.BIN@80100000"])  # fmt: skip
+        with (
+            patch.dict("os.environ", {"GHIDRA_INSTALL_DIR": str(self.root)}),
+            patch.object(playstation.ghidra_headless.AnalyzeHeadless, "run", return_value=0),
+            self.assertRaisesRegex(ValueError, "no project"),  # nothing ran, so no project
+        ):
+            playstation.prepare(args)
+        manifest = json.loads((self.root / "p/project.json").read_text())
+        command = manifest["ghidra_command"]
+        at = command.index("AddOverlay.java")
+        self.assertEqual(
+            command[at + 2 : at + 7], ["0", "256", "0x80100000", "ovl_BATTLE_BIN", "0x80100000"]
+        )
+        self.assertEqual(manifest["overlays"][0]["import"], "block")
+        with self.assertRaisesRegex(ValueError, "add --ghidra"):
+            playstation.prepare(argparse.Namespace(**(vars(args) | {"ghidra": False})))
+
+    def test_an_irx_is_imported_into_the_overlays_folder(self):
+        state = self.ps2()
+        (o,) = playstation.overlays(state, ["OVL/SOUND.IRX@00100000"])
+        runner = playstation.ghidra_headless.AnalyzeHeadless(self.root)
+        project = self.root / "p"
+
+        def ran(command, log, timeout):
+            Path(command[command.index("ExportFunctions.java") + 1]).write_text("")
+            return 0
+
+        with patch.object(runner, "run", side_effect=ran):
+            playstation.import_overlay(runner, project, self.disc, o, 30)
+        command = o["ghidra_command"]
+        self.assertEqual(command[2], "playstation/overlays/OVL")
+        self.assertEqual(command[command.index("-loader-imagebase") + 1], "0x100000")
+        self.assertEqual(o["functions"], "analysis/overlays/OVL_SOUND.IRX.tsv")
+
+
 @unittest.skipUnless(os.environ.get("REA_PLAYSTATION_INTEGRATION") == "1", "opt-in Ghidra smoke")
 class RealGhidraTests(unittest.TestCase):
     def test_console_loaders_mapping_and_exports(self):
@@ -195,6 +292,40 @@ class RealGhidraTests(unittest.TestCase):
                     "decompile failed", (root / system / "analysis/entry.c").read_text()
                 )
                 print(system, result.get("warnings", []))
+
+    def test_overlays_on_both_systems(self):
+        work = Path(__file__).resolve().parents[2] / "work/playstation-tests"
+        work.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=work) as tmp:
+            root = Path(tmp)
+            discs = {
+                "ps1": ("BOOT = cdrom:\\MAIN.EXE;1\n", "MAIN.EXE", psx(),
+                        [("OVL/BATTLE.BIN", b"\x08\x00\xe0\x03\x00\x00\x00\x00" * 8)],
+                        ["OVL/BATTLE.BIN@80100000"]),
+                "ps2": ("BOOT2 = cdrom0:\\MAIN.ELF;1\n", "MAIN.ELF", elf(),
+                        [("IOP/SOUND.IRX", elf(0, playstation.IRX_TYPE))], ["IOP/SOUND.IRX@00100000"]),
+            }  # fmt: skip
+            for system, (cnf, boot, blob, extra, specs) in discs.items():
+                disc = root / f"{system}-disc"
+                for name, data in [(boot, blob), *extra]:
+                    (disc / name).parent.mkdir(parents=True, exist_ok=True)
+                    (disc / name).write_bytes(data)
+                (disc / "SYSTEM.CNF").write_text(cnf)
+                args = argparse.Namespace(caller_cwd=root, input=disc, project=root / system,
+                                          plan=False, ghidra=True, max_files=100, timeout=90,
+                                          boot=None, overlay=specs)  # fmt: skip
+                result = playstation.prepare(args)
+                functions = (root / system / "analysis/functions.tsv").read_text()
+                if system == "ps1":
+                    self.assertIn("ovl_BATTLE_BIN::80100000", functions)
+                else:
+                    # a synthetic module has no symbols to seed analysis: its import is checked
+                    (o,) = result["overlays"]
+                    self.assertTrue((root / system / o["functions"]).is_file())
+                    log = (root / system / "logs/ghidra-overlay-IOP_SOUND.IRX.log").read_text()
+                    self.assertIn('"-loader-imagebase" to "Image Base"', log)
+                    self.assertIn("MIPS:LE:32:default", log)
+                    self.assertIn("Save succeeded for: /overlays/IOP/SOUND.IRX", log)
 
 
 class OptionalExtensionTests(unittest.TestCase):

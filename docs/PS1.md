@@ -44,7 +44,8 @@ strings -a work/game/disc/SLUS_000.00 | rg -i 'psy-?q|sony computer|lib[a-z]+ ve
 - **Overlays.** Most larger games load more code at run time over a fixed region: other PS-X EXEs or
   plain `.BIN`/`.OVL` files on the disc, loaded by the game's own loader. `project.json` lists only the
   files with a PS-X EXE header; the others are found by the code that reads them (step 4 shows the
-  load address). Each overlay is a separate import, at its load address.
+  load address). Each overlay is imported at its load address with `--overlay PATH@ADDRESS`
+  ([PLAYSTATION.md](PLAYSTATION.md#rea-suite-playstation-prepare-a-project)): an overlay block in the boot program.
 
 *Feeds:* the SDK version for step 3, the list of code that is not in the boot executable.
 
@@ -60,8 +61,11 @@ rea-ghidra xrefs     --project work/game/ghidra SLUS_000.00 -o out.c -- "MEMCARD
   geometry coprocessor) instructions through its macro segment, and applies the PsyQ signatures of the
   version found; library functions come out named. Check a few names against their behavior before
   trusting the set: a wrong version names the wrong functions.
-- Overlays: add each one as an overlay memory block at its load address (the loader's
-  [video tutorial](https://youtu.be/fpijiL1x3Pc)). Ghidra keeps blocks at the same addresses apart.
+- Overlays: `--overlay` adds each one as an overlay memory block at its load address and
+  disassembles it from its first byte (a PS-X EXE from its entry); a later one by hand is the same in
+  the GUI (the loader's [video tutorial](https://youtu.be/fpijiL1x3Pc)). Ghidra keeps blocks at the
+  same addresses apart; a call from the program into the region does not pick one of the overlays
+  loaded there by itself, so set such a reference by hand to the overlay meant.
 - `rea-suite playstation --ghidra` disables CERT Kaiju's Function Hashing for the import, which throws
   on this processor; other analyzer errors stay as warnings in `logs/ghidra.log`.
 - REA does not open PS-X EXEs (its MIPS policy, [PLAYSTATION.md](PLAYSTATION.md#rea)): use
@@ -210,7 +214,5 @@ mkpsxiso work/game/disc.xml -o work/patched.bin -c work/patched.cue
 ## Still missing
 
 - A PS1 profile in REA (open_binary refuses PS-X EXEs): [REA #6746](https://github.com/morluto/rea/issues/6746).
-- An overlay import in `rea-suite playstation` (each overlay at a given load address into the same
-  Ghidra project); today it imports the boot executable only.
 - armips, maspsx, m2c and asm-differ as installed tools: none has a release for every platform (armips:
   Windows x86 only; maspsx: none of its own); see issue [#17](https://git.falcon-net.nl/FalconNL93/rea-suite/issues/17).

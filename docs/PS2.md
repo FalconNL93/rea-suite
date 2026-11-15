@@ -78,9 +78,14 @@ rea-ghidra xrefs     --project work/game/ghidra SLUS_200.00 -o out.c -- "cdrom0:
   FunctionID set built from ps2dev's open-source ps2sdk would not match Sony's code. Without it, name
   them by hand: their syscall stubs (`syscall` with the number in `v1`), the strings they print, and
   the SIF RPC calls to IOP modules by their server ids.
-- IOP modules: import an IRX on its own into the same Ghidra project with the MIPS little-endian
-  32-bit language (`MIPS:LE:32:default`); Ghidra's ELF loader takes the type (checked with a synthetic
-  module, 2026-11-12; a real module's relocations are not yet checked). Its export and import tables
+- IOP modules and EE modules: `--overlay IOP/SOUND.IRX@BASE` imports an IRX as a program of its own
+  in the project's `overlays/` folder with the MIPS little-endian 32-bit language
+  (`MIPS:LE:32:default`), an ERX the same with R5900, at the base given (from PCSX2's module list,
+  step 4) or Ghidra's default; a raw EE overlay becomes an overlay block in the boot program
+  ([PLAYSTATION.md](PLAYSTATION.md#rea-suite-playstation-prepare-a-project)). Ghidra's ELF loader takes the IRX type and the base
+  (checked with a synthetic module, 2026-11-15). Its functions come from the module's symbols and
+  analysis; a module without symbols gives few or none until its entry (the `iopmod` section's) is
+  disassembled by hand. A real module's relocations are not yet checked. Its export and import tables
   (the `iopmod` section and the stub tables) name the libraries it links.
 - REA does not open R5900 ELFs ([PLAYSTATION.md](PLAYSTATION.md#rea)): use `rea-ghidra` and the GUI.
 

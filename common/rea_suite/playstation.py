@@ -17,6 +17,10 @@ from rea_suite.archive import seven_zip
 
 # ELF type of an IOP module (IRX): an SCE-specific relocatable, R3000 code for the IOP.
 IRX_TYPE = 0xFF80
+# ELF type of an EE relocatable module (ERX, Sony's liberx): R5900 code loaded at run time
+# (Emotion Engine: Reloaded's ET_ERX2).
+ERX_TYPE = 0xFF91
+LANGUAGES = {"ps1-exe": "PSX:LE:32:default", "ps2-ee": "r5900:LE:32:default"}
 
 
 def digest(path: Path) -> str:
@@ -43,6 +47,8 @@ def executable(path: Path) -> dict | None:
             flags = struct.unpack_from("<I", head, 36)[0]
             if elf_type == IRX_TYPE:
                 kind = "ps2-irx"
+            elif elf_type == ERX_TYPE:
+                kind = "ps2-erx"
             else:
                 kind = "ps2-ee" if flags & 0x00FF0000 == 0x00920000 else "mips-elf"
             return {
@@ -123,6 +129,89 @@ def inventory(root: Path, limit: int, override: str | None = None) -> dict:
     }
 
 
+def overlay_spec(value: str) -> tuple[str, int | None]:
+    """`PATH[@ADDRESS]`: a file of the disc (as --boot names one) and its hex load address."""
+    path, _, address = value.rpartition("@") if "@" in value else (value, "", "")
+    if not path:
+        raise ValueError(f"overlay {value!r}: expected PATH[@ADDRESS]")
+    if not address:
+        return path, None
+    try:
+        number = int(address, 16)
+    except ValueError:
+        raise ValueError(f"overlay {value!r}: {address!r} is no hex address") from None
+    if not 0 <= number <= 0xFFFFFFFF:
+        raise ValueError(f"overlay {value!r}: the address is outside 32 bits")
+    return path, number
+
+
+def block_name(path: str, taken: set[str]) -> str:
+    """An overlay space's name: the file's, with what Ghidra refuses in one replaced."""
+    base = "ovl_" + re.sub(r"[^A-Za-z0-9_]", "_", PurePosixPath(path).name)
+    name, n = base, 1
+    while name in taken:
+        n += 1
+        name = f"{base}_{n}"
+    taken.add(name)
+    return name
+
+
+def overlays(state: dict, specs: list[str]) -> list[dict]:
+    """How each requested overlay is imported. Code that runs on the boot program's CPU over its
+    memory (a PS1 overlay, a raw PS2 one, a PS-X EXE loaded later) becomes an overlay block in the
+    boot program, where its calls into the program resolve; an IOP module (IRX, the IOP's R3000)
+    or an EE module or program in an ELF of its own is a program of its own in the project's
+    `overlays/` folder, at the given base for a relocatable one."""
+    root = Path(state["root"])
+    if not root.is_dir():
+        raise ValueError("--overlay needs a disc or an extracted tree, not a lone executable")
+    boot = state["boot_executable"]
+    by_name = {row["path"].split(";")[0].casefold(): row["path"] for row in state["files"]}
+    plan, taken = [], set()
+    for spec in specs:
+        request, address = overlay_spec(spec)
+        relative = by_name.get(boot_path(request))
+        if not relative:
+            raise ValueError(f"overlay {request!r} is not on the disc")
+        if relative == boot["path"]:
+            raise ValueError(f"overlay {request!r} is the boot program")
+        path = root / relative
+        info = executable(path) or {"kind": "raw"}
+        kind, row = info["kind"], {"path": relative, "kind": info["kind"], "sha256": digest(path)}
+        if kind in ("raw", "ps1-exe"):
+            if boot["kind"] != "ps1-exe" and kind == "ps1-exe":
+                raise ValueError(f"overlay {relative}: a PS-X EXE beside a PS2 program")
+            if kind == "ps1-exe":
+                load, offset, length = int(info["load"], 16), 2048, info["payload_size"]
+                if address is not None and address != load:
+                    raise ValueError(
+                        f"overlay {relative}: its PS-X EXE header loads it at {load:#x}, not "
+                        f"{address:#x}"
+                    )
+                entry = int(info["entry"], 16)
+            else:
+                if address is None:
+                    raise ValueError(f"overlay {relative}: a raw file needs @ADDRESS")
+                load, offset, length, entry = address, 0, path.stat().st_size, address
+            if length < 1 or offset + length > path.stat().st_size:
+                raise ValueError(f"overlay {relative}: {length} bytes at {offset} are not there")
+            row |= {"import": "block", "block": block_name(relative, taken), "address": hex(load),
+                    "offset": offset, "length": length, "entry": hex(entry)}  # fmt: skip
+        elif kind in ("ps2-irx", "ps2-erx", "ps2-ee"):
+            if boot["kind"] != "ps2-ee":
+                raise ValueError(f"overlay {relative}: a PS2 module beside a PS1 program")
+            if kind == "ps2-ee" and address is not None:
+                raise ValueError(f"overlay {relative}: an EE executable loads at its own address")
+            language = "MIPS:LE:32:default" if kind == "ps2-irx" else LANGUAGES["ps2-ee"]
+            folder = PurePosixPath("overlays", relative).parent.as_posix()
+            row |= {"import": "program", "language": language, "folder": folder,
+                    "address": hex(address) if address is not None else None}  # fmt: skip
+        else:
+            raise ValueError(f"overlay {relative}: a {kind} is not one this command imports")
+        plan.append(row)
+    return plan
+
+
 def image_kind(source: Path) -> str:
     if source.suffix.lower() == ".cue":
         return "cd"
@@ -178,7 +267,35 @@ def run(command: list[str], project: Path, log, timeout: int) -> None:
     bounded.run(command, project, log, timeout)
 
 
+def import_overlay(runner, project: Path, root: Path, o: dict, timeout: int) -> None:
+    """A module or program of its own, into the project's overlays/ folder, with its functions."""
+    out = project / "analysis/overlays" / (o["path"].replace("/", "_") + ".tsv")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    log = project / "logs" / f"ghidra-overlay-{o['path'].replace('/', '_')}.log"
+    options = [("imagebase", o["address"])] if o["address"] else []
+    command = runner.command(
+        project / "ghidra",
+        f"playstation/{o['folder']}",
+        *ghidra_headless.import_arguments(root / o["path"], "ElfLoader", options),
+        "-processor", o["language"], "-cspec", "default",
+        "-analysisTimeoutPerFile", str(timeout),
+        "-scriptPath", str(Path(__file__).resolve().parents[1] / "ghidra_scripts"),
+        "-preScript", "ConfigureConsole.java",
+        "-postScript", "ExportFunctions.java", str(out),
+    )  # fmt: skip
+    o["ghidra_command"] = command
+    runner.run(command, log, timeout + 120)
+    if not out.is_file():
+        raise ValueError(f"Ghidra did not import overlay {o['path']}; inspect {log}")
+    o["functions"] = str(out.relative_to(project))
+
+
 def prepare(args: argparse.Namespace) -> dict:
+    specs = getattr(args, "overlay", None) or []
+    if specs and not args.ghidra:
+        raise ValueError("--overlay imports into the Ghidra project; add --ghidra")
+    for spec in specs:
+        overlay_spec(spec)
     source = (args.caller_cwd / args.input).resolve()
     project = (args.caller_cwd / args.project).resolve()
     if not source.exists():
@@ -197,6 +314,7 @@ def prepare(args: argparse.Namespace) -> dict:
             "project": str(project),
             "extraction": command,
             "ghidra_requested": args.ghidra,
+            "overlays_requested": specs,
             "writes": False,
         }
     if command and not (Path(command[0]).is_file() or shutil.which(command[0])):
@@ -224,9 +342,7 @@ def prepare(args: argparse.Namespace) -> dict:
         if args.ghidra:
             if not boot:
                 raise ValueError("no supported boot executable; inspect inventory or supply --boot")
-            language = {"ps1-exe": "PSX:LE:32:default", "ps2-ee": "r5900:LE:32:default"}.get(
-                boot["kind"]
-            )
+            language = LANGUAGES.get(boot["kind"])
             if not language:
                 raise ValueError(
                     "boot ELF is not identified as R5900; import IOP/modules separately"
@@ -234,6 +350,11 @@ def prepare(args: argparse.Namespace) -> dict:
             runner = ghidra_headless.headless()
             root = Path(state["root"])
             target = root / boot["path"] if root.is_dir() else root
+            extra = state["overlays"] = overlays(state, specs) if specs else []
+            blocks = []
+            for o in (o for o in extra if o["import"] == "block"):
+                blocks += ["-preScript", "AddOverlay.java", str(root / o["path"]), str(o["offset"]),
+                           str(o["length"]), o["address"], o["block"], o["entry"]]  # fmt: skip
             ghidra = runner.command(
                 project / "ghidra",
                 "playstation",
@@ -251,6 +372,7 @@ def prepare(args: argparse.Namespace) -> dict:
                 str(Path(__file__).resolve().parents[1] / "ghidra_scripts"),
                 "-preScript",
                 "ConfigureConsole.java",
+                *blocks,
                 "-postScript",
                 "ExportFunctions.java",
                 str(project / "analysis/functions.tsv"),
@@ -278,6 +400,9 @@ def prepare(args: argparse.Namespace) -> dict:
                 if not (project / output).is_file():
                     raise ValueError(f"Ghidra did not produce {output}; inspect logs/ghidra.log")
 
+            for o in (o for o in extra if o["import"] == "program"):
+                import_overlay(runner, project, root, o, args.timeout)
+
             entry_text = (project / "analysis/entry.c").read_text(errors="replace")
             if "no function" in entry_text or "decompile failed" in entry_text:
                 state.setdefault("warnings", []).append(
@@ -304,6 +429,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     p.add_argument(
         "--plan", action="store_true", help="show extraction command; no writes or tools run"
+    )
+    p.add_argument(
+        "--overlay",
+        action="append",
+        metavar="PATH[@ADDRESS]",
+        help="with --ghidra, also import this disc file: a PS1 or raw overlay as an overlay block "
+        "in the boot program at ADDRESS (a PS-X EXE at its header's), an IRX/ERX as a program "
+        "of its own (ADDRESS its base); repeatable",
     )
     p.add_argument("--max-files", type=int, default=100000)
     p.add_argument(
