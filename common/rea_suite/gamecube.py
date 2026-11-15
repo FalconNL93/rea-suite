@@ -4,6 +4,7 @@ its main DOL and its file table. Ghidra analysis is `rea-ghidra analyze` with th
 
   rea-suite gamecube info  <file> [-o JSON]   DOL, REL, RSO or disc image (ISO/GCM; RVZ, WIA, WBFS,
                                               CISO, GCZ and Wii partitions with nod-rs)
+  rea-suite gamecube texture <file> [-o DIR]  a TPL's or BTI's images (GX formats) to PNG
   rea-suite gamecube check                    the GameCube loader in place for this Ghidra
 
 A plain GameCube ISO is read here. Every other container, and the encrypted partitions of a Wii
@@ -21,7 +22,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
 
-from rea_suite import extcheck
+from rea_suite import extcheck, gxtexture
 from rea_suite.text import decoded
 
 DOL_HEADER = 0x100
@@ -569,6 +570,24 @@ def info(path: Path) -> dict:
         raise ValueError(f"neither a disc image, a DOL, a REL nor an RSO ({dol_error})") from None
 
 
+def textures(path: Path, out: Path | None) -> list[dict]:
+    """Each image of a TPL or BTI: its format and size, and with `out` the PNG written there as
+    <file stem>.<image>.png (names of our own, none from the file)."""
+    rows = []
+    for texture in gxtexture.read(path.read_bytes(), path.name):
+        row = {"image": texture.name, "format": texture.format_name,
+               "size": [texture.width, texture.height], "mipmaps": texture.mipmaps}  # fmt: skip
+        if texture.palette is not None:
+            row["palette"] = gxtexture.PALETTE_FORMATS.get(texture.palette_format, "?")
+        if out is not None:
+            out.mkdir(parents=True, exist_ok=True)
+            target = out / f"{path.stem}.{texture.name}.png"
+            target.write_bytes(gxtexture.png(texture.width, texture.height, texture.rgba()))
+            row["png"] = str(target)
+        rows.append(row)
+    return rows
+
+
 def emit(args: argparse.Namespace, out: str) -> None:
     if args.output:
         target = (args.caller_cwd / args.output).resolve()
@@ -589,10 +608,21 @@ def main(argv: list[str] | None = None) -> int:
     q = sub.add_parser("info", help="DOL, REL, RSO or disc image as JSON")
     q.add_argument("file", type=Path)
     q.add_argument("-o", "--output", type=Path)
+    t = sub.add_parser("texture", help="a TPL's or BTI's images to PNG, listed as JSON")
+    t.add_argument("file", type=Path)
+    t.add_argument("-o", "--out", type=Path, help="folder for the PNGs (default: list only)")
     sub.add_parser("check", help="the GameCube loader in place for this Ghidra (files only)")
     args = p.parse_args(argv)
     if args.command == "check":
         return extcheck.check(LOADER, LOADER_FILES, FIX, "DOL, REL, Gekko/Broadway")
+    if args.command == "texture":
+        try:
+            rows = textures((args.caller_cwd / args.file).resolve(),
+                            (args.caller_cwd / args.out).resolve() if args.out else None)  # fmt: skip
+        except (OSError, ValueError, struct.error) as exc:
+            p.exit(1, f"gamecube: {exc}\n")
+        sys.stdout.write(json.dumps(rows, indent=1) + "\n")
+        return 0
     try:
         found = info((args.caller_cwd / args.file).resolve())
     except (OSError, ValueError, struct.error) as exc:

@@ -178,7 +178,11 @@ gdb-multiarch -ex 'set architecture powerpc:750' -ex 'target remote 127.0.0.1:23
 - Audio is DSP ADPCM (`.dsp`, `.brstm` on the Wii) or streamed ADP: `vgmstream-cli -o out.wav
   file.brstm` converts it (`-m` prints the stream's format, rate and loop points without converting;
   checked on a synthetic `.dsp`, whose decoded samples match the ADPCM formula, 2026-11-15).
-  Textures are GX formats (TPL, BTI).
+  Textures are GX formats in TPL (Nintendo's SDK) or BTI (J3D) files: `rea-suite gamecube texture
+  font.tpl -o work/game/png` lists each image's format, size and palette and writes it as PNG
+  (I4, I8, IA4, IA8, RGB565, RGB5A3, RGBA8, C4, C8, C14X2 and CMPR; the first mipmap level only).
+  Checked with texels worked out by hand, CMPR's blend as Dolphin decodes it, not yet with a game's
+  files.
 
 ## 6. Decompilation: dtk and objdiff
 
@@ -253,7 +257,6 @@ What a recompilation of a GameCube or Wii game needs, whichever recompiler is us
 ## Still missing
 
 - A run of `rea-suite oracle` against Dolphin with a real game.
-- A GX texture converter (TPL, BTI).
 
 ## Sources (read 2026-11-13)
 
