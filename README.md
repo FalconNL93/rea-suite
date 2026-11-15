@@ -168,7 +168,7 @@ REA_SUITE_COMPONENTS="build steam"
 | `steam` | no | SteamCMD and Steamless (Windows) |
 | `porting` | no | porting old Windows games: Wine + winedbg, rr, perf + hotspot (Linux), Tracy, WinDbg and the ViGEmBus driver (Windows) ([Porting old games](#porting-old-games); Wine is over 1 GB) |
 | `dos` | no | DOS games: DOSBox-X with its debugger for `rea-suite dosbox`; built from source on Linux (with component `build`), the release on macOS and Windows ([port tools](docs/PORT-TOOLS.md#dos-programs-rea-suite-dosbox)) |
-| `playstation` | no | PS1/PS2 disc preparation, chdman, Ghidra console loaders, jPSXdec, the PCSX-Redux and PCSX2 emulators ([tools](docs/PLAYSTATION.md), routes for [PS1](docs/PS1.md) and [PS2](docs/PS2.md)) |
+| `playstation` | no | PS1/PS2 disc preparation (CD and DVD rebuilds), chdman, Ghidra console loaders, jPSXdec, the PCSX-Redux and PCSX2 emulators ([tools](docs/PLAYSTATION.md), routes for [PS1](docs/PS1.md) and [PS2](docs/PS2.md)) |
 | `decomp` | no | decompilation projects: splat (split MIPS executables) and objdiff (match objects against the original) |
 | `game-archives` | no | extract-xiso, ZArchive's `zarchive` (to create a .zar; reading needs no component: `rea-suite zar`); Windows also XGDTool and QuickBMS ([platform limits](docs/GAME-ARCHIVES.md)) |
 | `xbox` | no | original Xbox games: xemu with QEMU's GDB stub, extract-xiso ([route](docs/XBOX-CLASSIC.md)) |
@@ -511,6 +511,7 @@ been run on macOS arm64 and Linux x86_64 (WSL2, 2026-11-03); Windows execution r
 | pyinstxtractor-ng | Unpack PyInstaller executables into their .pyc files | uv tool |
 | pycdc, pycdas | Decompile and disassemble Python bytecode (.pyc) | tools.yml, built from source (component `build`) |
 | dumpsxiso, mkpsxiso | Extract/rebuild PS1 and PS2 CD images with layout XML (component `playstation`) | tools.yml, release binaries |
+| dumps2iso, mkps2iso | Extract/rebuild PS2 DVD images with layout XML, files kept at their LBAs (component `playstation`) | tools.yml, release binaries |
 | jPSXdec | PS1 media indexing/conversion, CLI and GUI (component `playstation`) | tools.yml, Java JAR |
 | chdman | CHD disc images to CUE/BIN or ISO (component `playstation`) | apt `mame-tools` / brew `rom-tools` / Windows: tools.yml (`chdman.exe` from MAME's release) |
 | PCSX-Redux (`pcsx-redux`) | PS1 emulator with a debugger, GDB server, Lua and a web API; starts without a Sony BIOS (component `playstation`) | tools.yml, distrib.app builds |

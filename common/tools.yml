@@ -185,7 +185,7 @@ tools:
         asset: '^ghidra_{ghidra}_PUBLIC_\d+_ghidra-nativeaot\.zip$'
         build: true
 
-  # CD extraction and layout-aware rebuilding; PS2 DVDs use 7-Zip instead.
+  # CD extraction and layout-aware rebuilding; PS2 DVDs go to mkps2iso.
   mkpsxiso:
     github: Lameguy64/mkpsxiso
     version: latest
@@ -202,6 +202,25 @@ tools:
       windows:
         dumpsxiso: dumpsxiso.exe
         mkpsxiso: mkpsxiso.exe
+
+  # PS2 DVD extraction and rebuilding: dumps2iso writes the image's layout as XML (`-l` forces
+  # every file's LBA), mkps2iso builds an image from it; DVDs only, CDs go to mkpsxiso.
+  mkps2iso:
+    github: N4gtan/mkps2iso
+    version: latest
+    assets:
+      linux: '^mkps2iso-[\d.]+-Linux\.zip$'
+      macos: '^mkps2iso-[\d.]+-Darwin\.zip$'
+      windows: '^mkps2iso-[\d.]+-win64\.zip$'
+    strip: 1
+    bin:
+      linux: &mkps2iso-unix
+        dumps2iso: bin/dumps2iso
+        mkps2iso: bin/mkps2iso
+      macos: *mkps2iso-unix
+      windows:
+        dumps2iso: dumps2iso.exe
+        mkps2iso: mkps2iso.exe
 
   # Java CLI/GUI for PS1 audio/video/TIM assets; optional playstation component.
   jpsxdec:

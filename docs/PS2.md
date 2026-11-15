@@ -17,7 +17,8 @@ sha1sum work/game-src/game.iso                              # compare with the R
 rea-suite playstation work/game-src/game.iso --project work/game --ghidra
 ```
 
-- Most PS2 games are DVDs (2048-byte sectors, ISO9660 with UDF); 7-Zip extracts them. Early titles
+- Most PS2 games are DVDs (2048-byte sectors, ISO9660 with UDF); 7-Zip extracts them, and
+  `dumps2iso` keeps their layout for a rebuild (step 8). Early titles
   are CDs (2352-byte sectors, often a CUE with audio tracks); the command sends those to dumpsxiso.
 - Dual-layer DVDs are untested with the command; compare the extracted tree's file count and sizes
   with the ISO's own listing (`7z l`).
@@ -42,7 +43,11 @@ The code of a PS2 game lives in several places, and each is its own import:
   A module the game ships names what the game drives on the IOP; Sony's standard ones are matched by
   name and version string, not reverse engineered.
 - **VU microprograms**: VU1 (and VU0 micro mode) code is uploaded by the EE as data, often from inside
-  the ELF. Ghidra has no VU micro-mode language; PCSX2's debugger disassembles VU code.
+  the ELF. Ghidra has no VU micro-mode language (none found, 2026-11-15). PCSX2's debugger shows VU
+  code; [vud](https://codeberg.org/mmu/vud) (MIT, Rust, no release yet) finds the VIF MPG uploads in
+  the boot ELF or a memory dump and disassembles each microprogram, marking which fit VU1 (an
+  `xgkick`). It is a source build (`cargo build --release`) a port does for itself; `dvp-objdump` from
+  ps2dev's [ps2toolchain-dvp](https://github.com/ps2dev/ps2toolchain-dvp) is the other route.
 - **STABS symbols**: many retail ELFs kept an `.mdebug` section with functions, types and globals.
   Emotion Engine: Reloaded's STABS analyzer applies them at import; a game with them is a different
   job from a stripped one. [RetroReversing's list](https://retroreversing.com/ps2-unstripped) names
@@ -62,10 +67,17 @@ rea-ghidra xrefs     --project work/game/ghidra SLUS_200.00 -o out.c -- "cdrom0:
   MIPS leaves undecoded, and its MIPS-R5900 Constant Reference Analyzer fixes references to globals. If a function does not decompile, its README suggests turning off
   the "Decompiler Parameter ID" analyzer.
 - Its STABS analyzer runs a bundled x86_64 `stdump`; on macOS ARM that needs Rosetta 2.
-- **No SDK signatures.** The PS2 SDK libraries (`libkernl`, `libgraph`, `libpad`, `libcdvd`, ...)
-  are named by hand in a stripped game: their syscall stubs (`syscall` with the number in `v1`), the
-  strings they print, and the SIF RPC calls to IOP modules by their server ids. ghidra-ps2sdk, which
-  named them, is gone ([PLAYSTATION.md](PLAYSTATION.md#what-the-communities-use-and-what-the-suite-has)).
+- **No SDK signatures in Ghidra.** ghidra-ps2sdk, which named the PS2 SDK libraries (`libkernl`,
+  `libgraph`, `libpad`, `libcdvd`, ...), is gone, and no fork was found
+  ([PLAYSTATION.md](PLAYSTATION.md#what-the-communities-use-and-what-the-suite-has)). The nearest
+  replacement is [sce-symbol-scanner](https://github.com/LostTemplarRH/sce-symbol-scanner): its CLI
+  (`java -jar symboldb.jar scan SLUS_200.00`, JRE 21+) matches the ELF's bytes against a database
+  built from Sony's own libraries and prints address, name, size and library, which a port applies
+  as names. It has no license file and its data comes from Sony's libraries, so the suite does not
+  install it; a port downloads its release itself. Its Ghidra plugin is work in progress. A
+  FunctionID set built from ps2dev's open-source ps2sdk would not match Sony's code. Without it, name
+  them by hand: their syscall stubs (`syscall` with the number in `v1`), the strings they print, and
+  the SIF RPC calls to IOP modules by their server ids.
 - IOP modules: import an IRX on its own into the same Ghidra project with the MIPS little-endian
   32-bit language (`MIPS:LE:32:default`); Ghidra's ELF loader takes the type (checked with a synthetic
   module, 2026-11-12; a real module's relocations are not yet checked). Its export and import tables
@@ -141,9 +153,25 @@ What a recompilation of a PS2 game needs, whichever recompiler is used:
 
 - Patch code in the ELF at the file offset of its segment (the program headers map addresses to
   offsets), or as PCSX2 patches (`.pnach`, by address) while testing.
-- No suite tool rebuilds a PS2 DVD with its original layout. Games that read files by sector need the
-  file order and positions kept; a generic ISO writer does not keep them. Prefer loading changed files
-  from the port's own folder over rebuilding the disc.
+- Games that read files by sector need the file order and positions kept; a generic ISO writer does
+  not keep them. `dumps2iso -l` (tools.yml `mkps2iso`) writes the image's files and an XML with
+  every file's LBA forced (`offs`), and `mkps2iso` builds the image back from it:
+
+  ```sh
+  dumps2iso -l -o work/game-dvd -x work/game-dvd.xml work/game-src/game.iso
+  # replace files under work/game-dvd/, then
+  mkps2iso -y -o work/game-patched.iso work/game-dvd.xml
+  ```
+
+- Checked on a synthetic image (2026-11-15, v1.1.1): a dump and rebuild of a rebuilt image is
+  byte-identical. The first 12 sectors (the boot logo) are encrypted with the serial, which the dump
+  takes from the boot file's name, so an image built with another serial differs there only.
+- **A file that grows past its sectors overwrites the next file, without a warning** (checked: the
+  image builds "successfully" and the file's last sector holds its neighbour). Keep a replaced file
+  within its sector count (`ceil(size / 2048)`), or move it to free space, past the last entry
+  (an `offs` beyond the end of the image's last file or `dummy`), and check with a second dump.
+- Dual-layer images and fragmented images (not supported) are untested here; no commercial image has
+  been rebuilt yet. Loading changed files from the port's own folder still beats rebuilding the disc.
 
 ## Outputs, kept where they belong
 
@@ -156,7 +184,7 @@ What a recompilation of a PS2 game needs, whichever recompiler is used:
 
 ## Still missing
 
-- PS2 SDK library signatures for Ghidra (ghidra-ps2sdk is gone); see issue [#15](https://git.falcon-net.nl/FalconNL93/rea-suite/issues/15).
-- A VU microcode disassembler or Ghidra language.
+- PS2 SDK library signatures in Ghidra: sce-symbol-scanner's Ghidra plugin, once it is released
+  with a license (step 3).
+- A Ghidra language for VU micro mode; a released build of vud, which tools.yml could then install.
 - A PS2 profile in REA: [REA #6746](https://github.com/morluto/rea/issues/6746).
-- A PS2 DVD rebuild that keeps the layout.

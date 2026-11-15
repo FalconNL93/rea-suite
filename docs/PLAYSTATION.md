@@ -16,6 +16,7 @@ components selected. Selection runs setup.
 | Tool | Purpose | Component | Linux x86_64 / macOS ARM / Windows x64 |
 |---|---|---|---|
 | dumpsxiso / mkpsxiso | Extract 2352-byte CD BIN/CUE; keep an XML layout to rebuild the CD | playstation | release binaries |
+| dumps2iso / mkps2iso | Extract a PS2 DVD (DVD-5/9, UDF) into files and an XML of its layout; rebuild it with every file at its original LBA | playstation | release binaries |
 | chdman | CHD images to CUE/BIN (CD) or ISO (DVD) | playstation | apt `mame-tools`, brew `rom-tools`; Windows: `chdman.exe` alone from MAME's release (`mame*b_x64.exe`, a 7-Zip self-extractor; tools.yml `mame-chdman`, checked against GitHub's digest), since MAME's winget installer needs an install location |
 | ghidra_psx_ldr | PS-X EXE loader, PSX processor with GTE, PsyQ library signatures | playstation | exact-version Ghidra extension |
 | Emotion Engine: Reloaded | PS2 EE R5900/MMI/VU0 macro instructions, STABS from `.mdebug` (bundled x86_64 `stdump`), PCSX2 savestate import | playstation | exact-version Ghidra extension |
@@ -87,7 +88,9 @@ Checked 2026-11-12 against the upstream repositories and release pages linked. T
 | [ghidra_psx_ldr](https://github.com/lab313ru/ghidra_psx_ldr) | PS-X EXE, GTE, overlays, PsyQ signatures | yes. Its newest release (2026.11.08) is built for Ghidra 12.2 only; the suite takes 2026.10.03, the newest with a 12.1.4 build |
 | [psx_psyq_signatures](https://github.com/lab313ru/psx_psyq_signatures) | PsyQ library signatures by SDK version | yes, inside the loader's release |
 | [ghidra-emotionengine-reloaded](https://github.com/chaoticgd/ghidra-emotionengine-reloaded) | R5900, MMI, VU0 macro, STABS, PCSX2 savestates | yes, v2.1.39 (12.1.4 build) |
-| ghidra-ps2sdk (abelbriggs1) | PS2 SDK library analyzer and type databases on top of EE Reloaded | **no**: its GitHub repository answers 404 (2026-11-12); no other source found |
+| ghidra-ps2sdk (abelbriggs1) | PS2 SDK library analyzer and type databases on top of EE Reloaded | **no**: its GitHub repository answers 404 (2026-11-12); no fork or mirror found (2026-11-15) |
+| [sce-symbol-scanner](https://github.com/LostTemplarRH/sce-symbol-scanner) | names Sony PS2 SDK functions in an EE ELF by their bytes, from a database built from Sony's own libraries (`symboldb.jar scan <elf>`, JRE 21+); a Ghidra plugin is work in progress | no: no license file, and its database is derived from Sony's libraries; one release, v0.0.1 (2026-04-20, checked 2026-11-15). A port runs it by hand; see [PS2.md](PS2.md) step 3 |
+| [vud](https://codeberg.org/mmu/vud) | finds VIF MPG uploads in an ELF or memory dump and disassembles the VU microprograms (VU0/VU1 guessed per block) | no: MIT, Rust, no release or tag yet (newest commit 2026-11-08, checked 2026-11-15); a source build. Fallback: `dvp-objdump` from [ps2toolchain-dvp](https://github.com/ps2dev/ps2toolchain-dvp) (binutils for the `dvp` target, source build) |
 | [splat](https://github.com/ethteck/splat) | split PSX/PS2/N64/PSP executables for a decompilation | yes (component `decomp`) |
 | [objdiff](https://github.com/encounter/objdiff) | per-function match against the original | yes (component `decomp`) |
 | [maspsx](https://github.com/mkst/maspsx) | makes GCC's assembly assemble as PsyQ's ASPSX did, for matching PS1 code | no: maspsx itself has no release or package (its one release tag, `aspsx`, 2026-10-13, holds the original ASPSX binaries and a `psyq-obj-parser` build, not maspsx; checked 2026-11-13); decompilation projects carry it as a submodule |
@@ -98,12 +101,12 @@ Checked 2026-11-12 against the upstream repositories and release pages linked. T
 | [DuckStation](https://github.com/stenzek/duckstation) | accurate PS1 emulation, debugger | no: PCSX-Redux covers RE. DuckStation has a GDB server (`src/core/gdb_server.cpp`, `[Debug] EnableGDBServer` and `GDBServerPort`, checked 2026-11-13), so it is the second oracle (`rea-suite oracle`, [PS1.md](PS1.md) step 4); its license is CC BY-NC-ND 4.0, which allows running it unmodified |
 | [PCSX2](https://github.com/PCSX2/pcsx2) | PS2 debugger (EE/IOP), symbol import, PINE | yes. It has **no GDB stub** (none in its source tree, 2026-11-12) |
 | [mkpsxiso](https://github.com/Lameguy64/mkpsxiso) | PS1 CD extract and rebuild | yes |
+| [mkps2iso](https://github.com/N4gtan/mkps2iso) | PS2 DVD extract and rebuild with the original file order and LBAs (`dumps2iso -l`) | yes (GPL-2.0; [PS2.md](PS2.md) step 8) |
 | [jPSXdec](https://github.com/m35/jpsxdec) | PS1 video, audio, images | yes |
 | [chdman](https://docs.mamedev.org/tools/chdman.html) | CHD to CUE/BIN or ISO | yes (Windows from MAME's release) |
 | [armips](https://github.com/Kingcom/armips) | assemble patches into an executable | no: its newest release, v0.11.0 (2020-05-10), has one asset, a 32-bit Windows build; no Linux or macOS build exists (checked 2026-11-13) |
 | [psxrecomp](https://github.com/RetroPortingToolKit/psxrecomp), [RecompOne](https://github.com/BlackLabelHQ/RecompOne) | PS1 static recompilation (to C/C++; to C#) | no: a port takes one as its own dependency. psxrecomp (PolyForm Noncommercial) now has releases: v0.3.7-alpha (2026-11-07) with a Windows x86_64 CLI, a source zip and SHA256SUMS, plus nightlies. RecompOne (MIT) has none. Both moved; the old URLs redirect (checked 2026-11-13) |
 | [PS2Recomp](https://github.com/ran-j/PS2Recomp) | PS2 static recompilation (R5900 to C++, a runtime, IOP modules) | no: pre-release tags v0.2 to v0.4 (newest 2026-04-05) with no binaries, so in practice source only (CMake, submodules, tested mainly with MSVC), GPL; a port's own dependency (checked 2026-11-13) |
-| PS2 DVD rebuild | a patched PS2 DVD with the original file order | no: no maintained tool found; see [PS2.md](PS2.md) |
 
 ## REA
 
