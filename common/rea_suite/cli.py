@@ -153,8 +153,8 @@ def save_state(state: dict[str, str]) -> None:
 # --- GitHub release tools ----------------------------------------------------
 
 
-def pick_assets(tool: Tool, release: dict) -> list[dict]:
-    patterns = tool.assets.get(PLATFORM) or tool.assets["any"]
+def pick_assets(tool: Tool, release: dict, platform: str = PLATFORM) -> list[dict]:
+    patterns = tool.assets.get(platform) or tool.assets["any"]
     picked = []
     for pattern in [patterns] if isinstance(patterns, str) else patterns:
         regex = re.compile(pattern)
@@ -591,6 +591,40 @@ def cmd_check(args: argparse.Namespace) -> None:
         sys.exit(1)
 
 
+def cmd_fetch(args: argparse.Namespace) -> None:
+    """A tool's release for a platform, as tools.yml names it, checked like an install (#29),
+    unpacked into a folder: for one run of a Windows tool from WSL through interop, nothing
+    installed. Prints the release and each launcher's file in the folder."""
+    spec = yaml.safe_load(MANIFEST.read_text())["tools"].get(args.tool)
+    if spec is None:
+        raise SystemExit(f"fetch: no tool {args.tool!r} in tools.yml")
+    tool = Tool.from_manifest(args.tool, spec)
+    repo = spec.get("github")
+    tool.github = repo.get(args.platform) if isinstance(repo, dict) else repo
+    if not tool.github or (args.platform not in tool.assets and "any" not in tool.assets):
+        raise SystemExit(f"fetch: {args.tool} has no {args.platform} release asset in tools.yml")
+    release = github.release(tool.github, tool.version)
+    into = Path(args.into)
+    if into.exists() and any(into.iterdir()):
+        raise SystemExit(f"fetch: {into} is not empty")
+    into.mkdir(parents=True, exist_ok=True)
+    files = {}
+    with tempfile.TemporaryDirectory(dir=into) as tmp:
+        for asset in pick_assets(tool, release, args.platform):
+            archive = Path(tmp) / asset["name"]
+            expected, source = expected_digest(tool, asset)
+            files[asset["name"]] = fetch(asset["browser_download_url"], archive, expected, source)
+            extract(archive, into / "tool", tool.strip)
+    launchers = {}
+    for name, entry in tool.bin.get(args.platform, {}).items():
+        pattern = entry if isinstance(entry, str) else entry["path"]
+        matches = sorted(glob.glob(str(into / "tool" / pattern), recursive=True))
+        if matches:
+            launchers[name] = matches[-1]
+    print(json.dumps({"tool": tool.name, "release": release["tag_name"], "platform": args.platform,
+                      "dir": str(into / "tool"), "files": files, "launchers": launchers}, indent=1))  # fmt: skip
+
+
 def cmd_verify(args: argparse.Namespace) -> None:
     """Online: each recorded download's SHA-256 against what GitHub publishes for that release
     now. A changed asset under the same tag fails; one GitHub has no digest for is noted."""
@@ -845,6 +879,14 @@ def main() -> None:
         if name == "prune":
             p.add_argument("--dry-run", action="store_true", help="only list what would go")
         p.set_defaults(func=func)
+    p = sub.add_parser(
+        "fetch",
+        help="a tool's release for a platform, checked, unpacked into a folder (no install)",
+    )
+    p.add_argument("tool")
+    p.add_argument("--platform", choices=("linux", "macos", "windows"), default=PLATFORM)
+    p.add_argument("--into", required=True, help="an empty or new folder (a throwaway one)")
+    p.set_defaults(func=cmd_fetch)
     p = sub.add_parser("use", help="switch a tool to another installed version (rollback)")
     p.add_argument("tool")
     p.add_argument("version", help="directory name under tools/<tool>/")

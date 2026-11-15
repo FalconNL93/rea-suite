@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -80,6 +81,32 @@ class Digests(unittest.TestCase):
             cli.record_digests("t", "v1", {"a.zip": row})
             self.assertEqual(cli.load_digests()["t"]["files"]["a.zip"]["sha256"], GOOD)
             self.assertEqual(row["vouched"], "recorded")  # nothing published to check against
+
+
+class Fetch(unittest.TestCase):
+    def test_a_windows_tool_is_fetched_checked_and_unpacked_into_a_folder(self) -> None:
+        import zipfile
+        from types import SimpleNamespace
+
+        blob = io.BytesIO()
+        with zipfile.ZipFile(blob, "w") as z:
+            z.writestr("Steamless.CLI.exe", b"MZ")
+        data = blob.getvalue()
+        release = {"tag_name": "v3", "assets": [{"name": "Steamless.v3.zip", "browser_download_url": "https://x/s.zip",
+                                                 "digest": f"sha256:{hashlib.sha256(data).hexdigest()}"}]}  # fmt: skip
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            patch.object(github, "release", return_value=release),
+            patch.object(github, "_open", return_value=Response(data)),
+            patch("sys.stdout", new_callable=io.StringIO) as out,
+        ):
+            cli.cmd_fetch(
+                SimpleNamespace(tool="steamless", platform="windows", into=str(Path(tmp) / "run"))
+            )
+            self.assertTrue((Path(tmp) / "run" / "tool" / "Steamless.CLI.exe").is_file())
+        report = json.loads(out.getvalue()[out.getvalue().index("{") :])
+        self.assertEqual(report["files"]["Steamless.v3.zip"]["vouched"], "github")
+        self.assertTrue(report["launchers"]["steamless-cli"].endswith("Steamless.CLI.exe"))
 
 
 if __name__ == "__main__":

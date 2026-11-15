@@ -64,6 +64,9 @@
 #              hashed to, and what vouched for it, goes to tools/digests.json; `rea-tools verify`
 #              compares those with what GitHub publishes now, `rea-tools check` notes installs
 #              with no recorded digest.
+# `rea-tools fetch <tool> --platform windows --into DIR` puts a tool's release for a platform,
+#              checked the same way, into a throwaway folder without installing it: a Windows
+#              tool run once from WSL through interop (Steamless on a game's exe).
 
 tools:
   # Pinned to the build REA verifies (SUPPORTED_GHIDRA_VERSION in rea-agents'
