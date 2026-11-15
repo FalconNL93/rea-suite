@@ -79,6 +79,19 @@ so it is paid once:
   that later queries open read-only; `rea-suite pe` answers RTTI, reference and caller questions
   from the bytes without any analysis ([port tools](PORT-TOOLS.md)).
 
+9a. **A snapshot does not spare the import.** REA's Ghidra provider imports every target into a
+    throwaway project: `GhidraLauncher.js` (rea-agents 6.8.0) runs `analyzeHeadless <runtime>/project
+    rea-project -import <target> ... -readOnly -deleteProject`, and no setting keeps or reuses that
+    project. A `--snapshot` (or `close_binary`'s `snapshot_path`) keeps REA's answers, names and
+    evidence, not Ghidra's database, so the next session on the image imports and analyzes it again:
+    Alan Wake Remastered's 7 MB executable outlasted the 330 s deadline every time (2026-11-12).
+    **Workaround:** keep the analysis outside REA's session: `rea-ghidra analyze` once (no deadline;
+    under `heavy run` on the shared machine), then `rea-ghidra decomp|xrefs|functions` open that
+    project read-only in seconds; byte-level questions (references, callers, RTTI, strings) go to
+    `rea-suite pe` without any analysis; reference chains through registers to Rizin's `/r`
+    ([PORT-TOOLS.md](PORT-TOOLS.md#reference-chains-rizin-r)). The fix is upstream: a provider
+    setting that keeps the project per image and reopens it.
+
 ## Keeping a session's evidence and names
 
 Found with rea-agents 6.8.0 by the Max Payne, Call of Duty and Theme Park ports (2026-11-03 to

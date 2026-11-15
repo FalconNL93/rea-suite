@@ -166,6 +166,30 @@ is not found either, the exit code is 3 and the answer proves nothing.
 rea-suite pe refs game/Game.exe 0x4326d0 --data --control 0x4328f0   # Lost: no pointer to it anywhere
 ```
 
+### Reference chains: rizin `/r`
+
+`pe refs` and `pe callers` answer from the bytes at once, but only for a literal address in an
+instruction (or, with `--data`, in data). A chain through registers and computed addresses needs an
+analysis, and when REA's Ghidra session would import a large image again (it keeps no project,
+[REA-KNOWN-ISSUES.md](REA-KNOWN-ISSUES.md) item 9a), the bundled Rizin is the faster tool. Alan Wake
+Remastered (7 MB executable) answered one reference query in seconds to minutes this way:
+
+```sh
+rizin -e scr.color=0 -qc 'aa; axt @ 0x14012a3f0' game/Game.exe   # references, from the xref table
+rizin -e scr.color=0 -qc 'aa; /r 0x14012a3f0' game/Game.exe       # the same by a search (prints
+                                                                  # each range it scans first)
+rizin -qc 'e str.encoding=ascii; /z skipintro' game/Game.exe      # a string's address
+rizin -qc 'ps @ 0x1406f2340' game/Game.exe                        # the C string at an address
+```
+
+Checked 2026-11-15 with Rizin 0.9.1 on a small MinGW program: `aa; axt` and `aa; /r` both found its
+one reference to an IAT slot (`mov esi, [GetTickCount]` in `main`).
+
+Rizin 0.9.1 (the suite's, `tools/bin/rizin`) has no `psz` (use `ps`) and no `/ <string>` (use
+`/z`, with `e str.encoding` set, or it warns and guesses). `aa` analyzes enough for `/r` and `axt`;
+`aaa` takes much longer on a large image. For a project that keeps its analysis and names, use
+`rea-ghidra analyze` once and query it after.
+
 ### Every call site of an import DLL
 
 ```sh
