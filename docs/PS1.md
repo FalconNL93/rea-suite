@@ -178,8 +178,13 @@ first session (Time to Kill, 2026-11-14):
   without a log line), unset `DISPLAY` and `WAYLAND_DISPLAY` and give an empty `XDG_RUNTIME_DIR`.
   `<game> --help` starts the game: read the runtime's flags in its source.
 
-The server has no breakpoints, so `rea-suite oracle` cannot drive it the way it drives a GDB stub;
-its frame counter and `read_ram` are the sync point and the read a back end of its own would use.
+The server has no breakpoints and no pause (upstream removed `pause`, `step` and `run_to_frame`;
+`host_pause` stops the server too, as the game's main thread pumps it). `rea-suite oracle run
+--target psxrecomp://127.0.0.1:PORT` reads it anyway: `frame=N` sync points from the runtime's
+frame history (four regions of 128 bytes, recorded every frame), `t=` ones live
+([PORT-TOOLS.md](PORT-TOOLS.md#the-oracle-regions-at-sync-points-rea-suite-oracle)). A Release
+build (`PSX_NO_DEBUG_TOOLS`) records no frame history, so a port that wants `frame=` sync points
+keeps a build without it for its oracle runs.
 
 ## 8. Patching and rebuilding the CD
 

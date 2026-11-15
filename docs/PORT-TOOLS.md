@@ -687,6 +687,7 @@ rea-suite dosbox run --ints '' --regions tp.toml --input-file tp.keys game/GAME.
 | PCSX-Redux (PS1) | `gdb://` | `mips` | `-gdb -gdb-port 3333` ([PS1.md](PS1.md), step 4) |
 | melonDS (DS) | `gdb://` | `arm` (`arm9`, `arm7`) | its GDB stub, one port per CPU, in the emulator's settings |
 | PPSSPP (PSP) | `ppsspp://` | (MIPS Allegrex) | "Allow remote debugger"; mind the privacy trap ([PSP.md](PSP.md), step 5) |
+| A PSXRecomp runtime (PS1 port) | `psxrecomp://` | (none needed) | `PSX_DEBUG_SERVER=1`, `--debug-port N`; no breakpoints: `frame=N` and `t=` ([PS1.md](PS1.md), step 7) |
 
 **The regions file** (TOML; JSON with the same keys when its name ends in `.json`) names the regions
 and the sync points. For the emulator back ends:
@@ -705,7 +706,8 @@ ignore = ["0x10:4"]             # optional: OFFSET:LEN ranges `compare --regions
 
 [[sync]]
 name = "frame"                  # unique
-at = "pc=80012340"              # start, pc=ADDR (software breakpoint), hw=ADDR (hardware), t=SECONDS
+at = "pc=80012340"              # start, pc=ADDR (software breakpoint), hw=ADDR (hardware), t=SECONDS,
+                                # frame=N (the end of guest frame N, from a frame history: psxrecomp://)
 regions = ["score", "actors"]   # optional: every region, in the file's order
 repeat = true                   # optional: every hit of the breakpoint is a sync point, not the first only
 ```
@@ -795,6 +797,13 @@ memory, close) and the driver that takes a target from trigger to trigger. A new
   reports your local address to report.ppsspp.org while that server runs ([PSP.md](PSP.md)), so
   the suite neither starts PPSSPP nor turns `RemoteDebuggerOnStartup` on: you do, knowing that.
   Hardware breakpoints (`hw=`) are software ones there.
+- **`psxrecomp://HOST:PORT`** (`oracle_psxrecomp.py`): a PSXRecomp runtime's debug server, one JSON
+  line a connection. It has no breakpoints and no pause (upstream removed them; a host pause stops
+  the server too), so the game runs freely: `frame=N` sync points read the regions as they were at
+  the end of frame N from the runtime's frame history (`set_snapshot`, `read_frame_ram`: four
+  regions of at most 128 bytes, the last 36,000 frames), taken once the counter has passed N; `t=`
+  and `start` read live RAM (`read_ram`). A build with `PSX_NO_DEBUG_TOOLS` (a Release build) keeps
+  no frame history: its `frame=` reads fail with that reason, `t=` reads work.
 
 Checked 2026-11-13 on Linux by `test_oracle.py` (the emulator dialect, `--sync`, byte order, the
 driver against a scripted target: start, breakpoints, repeats, a stop that is none, time triggers,
@@ -803,9 +812,14 @@ unreadable regions, `--max-points` and `--seconds`; `oracle compare` on a DOSBox
 mode, memory in packet-sized pieces and its errors, `Z0`/`Z1`, stepping off a breakpoint, the PC from
 `T`, `p` and the arch table, the 0x03 stop, the program's end, a stub without detach, and `oracle run`
 then `compare` end to end) and `test_oracle_ppsspp.py` (a stand-in WebSocket debugger: the handshake,
-masked frames, tickets, breakpoints, `memory.read`, the time limit, `oracle run`). Not yet run against
-a real emulator: xemu, Dolphin, DuckStation, PCSX-Redux, melonDS and PPSSPP are known here from their
-source and documentation only.
+masked frames, tickets, breakpoints, `memory.read`, the time limit, `oracle run`), and on 2026-11-15
+by `test_oracle_psxrecomp.py` (a stand-in debug server: `frame=` reads from the history at the end of
+the frame, the slots set and cleared, the limits, no breakpoints, a back end's error recorded by
+`oracle run` as a script). Run against a real target on 2026-11-15: Duke Nukem: Time to Kill's
+PSXRecomp Release build, twice from the start: `t=5` read the overlay load word in both runs
+(0x801F4000, as that port's research has it), `frame=` came back with the no-history reason, and
+`compare` named the first unreadable sync point. Not yet run against xemu, Dolphin, DuckStation,
+PCSX-Redux, melonDS or PPSSPP, known here from their source and documentation only.
 
 ## DOS programs: `rea-suite dosbox`
 

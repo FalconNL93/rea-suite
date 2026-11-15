@@ -19,7 +19,8 @@ The pieces, each behind a seam of its own:
 - EmulatorTarget, the interface a back end implements: connect, set and clear breakpoints, resume
   until it stops, read memory, close. oracle_gdb.py speaks GDB's remote protocol (xemu, Dolphin,
   DuckStation, PCSX-Redux, melonDS and the other stubs), oracle_ppsspp.py PPSSPP's WebSocket
-  debugger;
+  debugger, oracle_psxrecomp.py a PSXRecomp runtime's debug server (no breakpoints: its frame
+  history, read at frame=N triggers, through the optional frames/watch/read_at_frame);
 - run_syncs, the driver that takes a target to each sync point's trigger and reads its regions.
 
 DOSBox-X (dosbox.py, dosbox_regions.py) writes the same format with a dialect of its own (INT
@@ -236,13 +237,15 @@ def parse_address(text: str) -> Address:
 @dataclass(frozen=True)
 class Trigger:
     """When a sync point's regions are read: on connecting (`start`), when the CPU reaches an
-    address (`pc=ADDR`, a software breakpoint; `hw=ADDR`, a hardware one), or at a time in
-    seconds after connecting, host clock (`t=SECONDS`)."""
+    address (`pc=ADDR`, a software breakpoint; `hw=ADDR`, a hardware one), at a time in
+    seconds after connecting, host clock (`t=SECONDS`), or as they were at the end of a guest
+    frame (`frame=N`, from a target that keeps a frame history: PSXRecomp's)."""
 
-    kind: str  # start, pc, hw, time
+    kind: str  # start, pc, hw, time, frame
     text: str
     address: int | None = None
     seconds: float | None = None
+    frame: int | None = None
 
     @property
     def breakpoint(self) -> tuple[int, bool] | None:
@@ -265,10 +268,18 @@ def parse_trigger(text: str) -> Trigger:
         if seconds < 0:
             raise ValueError(f"trigger {text!r}: a time is at least 0")
         return Trigger("time", t, seconds=seconds)
+    if low.startswith("frame="):
+        try:
+            frame = int(low[6:], 0)
+        except ValueError:
+            raise ValueError(f"trigger {text!r}: frame= takes a frame number") from None
+        if frame < 0:
+            raise ValueError(f"trigger {text!r}: a frame is at least 0")
+        return Trigger("frame", t, frame=frame)
     for kind in ("pc", "hw"):
         if low.startswith(kind + "="):
             return Trigger(kind, t, address=parse_address(t[3:]).value)
-    raise ValueError(f"trigger {text!r}: one of pc=ADDR, hw=ADDR, t=SECONDS, start")
+    raise ValueError(f"trigger {text!r}: one of pc=ADDR, hw=ADDR, t=SECONDS, frame=N, start")
 
 
 @dataclass
@@ -686,6 +697,7 @@ class Stop:
     reason: str
     pc: int | None = None
     detail: str = ""
+    frame: int | None = None  # the guest's frame counter, from a target that has one
 
 
 class EmulatorTarget(ABC):
@@ -717,6 +729,17 @@ class EmulatorTarget(ABC):
     def close(self) -> None:
         """Clear the breakpoints set, leave the emulator running and disconnect."""
 
+    # A target with a frame history (frame= triggers) says so and implements these two.
+    frames = False
+
+    def watch(self, regions: list[Region]) -> None:
+        """Have the target record these regions at the end of every frame from now on."""
+        raise TargetError(f"{self.producer}: no frame history (frame= triggers)")
+
+    def read_at_frame(self, frame: int, address: int, length: int) -> bytes:
+        """Memory as it was at the end of a frame the history still holds."""
+        raise TargetError(f"{self.producer}: no frame history (frame= triggers)")
+
 
 Backend = Callable[[str, argparse.Namespace], EmulatorTarget]
 
@@ -734,7 +757,12 @@ def backends() -> dict[str, Backend]:
 
         return oracle_ppsspp.PpssppTarget.from_url(where, args.timeout)
 
-    return {"gdb": gdb, "ppsspp": ppsspp}
+    def psxrecomp(where: str, args) -> EmulatorTarget:
+        from rea_suite import oracle_psxrecomp
+
+        return oracle_psxrecomp.PsxRecompTarget.from_url(where, args.timeout)
+
+    return {"gdb": gdb, "ppsspp": ppsspp, "psxrecomp": psxrecomp}
 
 
 def open_target(url: str, args) -> EmulatorTarget:
@@ -786,10 +814,17 @@ def run_syncs(
         for region in sync.regions:
             data, error = None, None
             try:
-                data = target.read(region.address.value, region.length)
+                if sync.trigger.kind == "frame":
+                    data = target.read_at_frame(
+                        sync.trigger.frame, region.address.value, region.length
+                    )
+                else:
+                    data = target.read(region.address.value, region.length)
             except (TargetError, ValueError) as exc:
                 error, errors = str(exc), errors + 1
             detail = {"addr": region.address.text}
+            if sync.trigger.kind == "frame":
+                detail["frame"] = sync.trigger.frame
             if stop.pc is not None:
                 detail["pc"] = f"{stop.pc:08X}"
             writer.region(sync.name, region, data, error, sync.hits, **detail)
@@ -819,6 +854,18 @@ def run_syncs(
             armed.add(bp)  # type: ignore[arg-type]
 
     stop = target.connect()
+    framed = [s for s in syncs if s.trigger.kind == "frame"]
+    if framed:
+        if not target.frames:
+            target.close()
+            raise ValueError(
+                f"{target.producer} keeps no frame history: frame= triggers need psxrecomp://"
+            )
+        watched: dict[int, Region] = {}
+        for sync in framed:
+            for region in sync.regions:
+                watched.setdefault(region.address.value, region)
+        target.watch(list(watched.values()))
     start = clock()
     emit({"kind": "connect", "producer": target.producer,
           "pc": f"{stop.pc:08X}" if stop.pc is not None else None})  # fmt: skip
@@ -849,8 +896,12 @@ def run_syncs(
                 if full():
                     break
                 t = sync.trigger
-                if (t.kind == "time" and t.seconds <= now) or (
-                    stop.reason == "break" and t.breakpoint and t.address == stop.pc
+                if (
+                    (t.kind == "time" and t.seconds <= now)
+                    or (stop.reason == "break" and t.breakpoint and t.address == stop.pc)
+                    or (
+                        t.kind == "frame" and stop.frame is not None and t.frame < stop.frame
+                    )  # past it: recorded
                 ):
                     take(sync, stop)
                     hit = True
@@ -933,10 +984,16 @@ def parser() -> argparse.ArgumentParser:
         "trigger and reads its regions into a sequence file. gdb://HOST:PORT speaks GDB's remote "
         "protocol (xemu, Dolphin, DuckStation, PCSX-Redux, melonDS, ...); ppsspp://HOST:PORT "
         "PPSSPP's WebSocket debugger, which you turn on yourself (while it runs, PPSSPP reports "
-        "your local address to report.ppsspp.org: docs/PSP.md). The suite starts no emulator. "
+        "your local address to report.ppsspp.org: docs/PSP.md); psxrecomp://HOST:PORT a PSXRecomp "
+        "runtime's debug server (PSX_DEBUG_SERVER=1), read at frame=N from its frame history. "
+        "The suite starts no emulator. "
         "Exit 0 when every sync point was read, 1 when one never came, 2 on bad input.",
     )
-    r.add_argument("--target", required=True, help="gdb://HOST:PORT or ppsspp://HOST:PORT")
+    r.add_argument(
+        "--target",
+        required=True,
+        help="gdb://HOST:PORT, ppsspp://HOST:PORT or psxrecomp://HOST:PORT",
+    )
     r.add_argument(
         "--arch",
         help="the CPU, for GDB targets: x86, x86-64, ppc (Gekko, Broadway, 750), mips (R3000), arm",
@@ -987,4 +1044,8 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    # Run the package's copy: the back ends import rea_suite.oracle, and one module means one
+    # TargetError, so a back end's error is the driver's to catch (not a second class from __main__).
+    from rea_suite import oracle as package  # noqa: PLW0406 - the package copy, on purpose
+
+    raise SystemExit(package.main())
