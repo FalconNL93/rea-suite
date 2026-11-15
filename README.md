@@ -776,6 +776,21 @@ rea-suite steamstub game/Game.exe.unpacked.exe   # none: .bind gone, code readab
 sha256sum game/Game.exe game/Game.exe.unpacked.exe
 ```
 
+From WSL without a Windows checkout, fetch Steamless for one run instead: the release
+`tools.yml` names, its SHA-256 checked as an install would, unpacked into a throwaway folder under
+`%TEMP%` and run through interop; nothing is installed on Windows (.NET Framework 4.x must be there):
+
+```sh
+dir=$(wslpath -u "$(cd /mnt/c && cmd.exe /c 'echo %TEMP%' | tr -d '\r')")/rea-steamless-$$
+rea-tools fetch steamless --platform windows --into "$dir"     # prints the launchers' files
+cp game/Game.exe "$dir/"
+(cd /mnt/c && cmd.exe /c "cd /d $(wslpath -w "$dir") && tool\Steamless.CLI.exe Game.exe")
+cp "$dir/Game.exe.unpacked.exe" work/ && rm -rf "$dir"
+```
+
+Done this way on 2026-11-15 for Call of Duty 4's `iw3sp.exe` (SteamStub variant 2.0, x86):
+Steamless v3.1.0.5 removed `.bind` and decrypted `.text`; `rea-suite steamstub` found no stub left.
+
 Unwrapping a game's executable needs the owner's permission, per game, each time a new
 executable is unwrapped. Record in the port, next to the files: the wrapped file's SHA-256 and
 version, the Steamless version (or its commit), the date of the permission, and the unwrapped

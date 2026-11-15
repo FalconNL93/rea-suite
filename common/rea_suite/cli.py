@@ -153,8 +153,8 @@ def save_state(state: dict[str, str]) -> None:
 # --- GitHub release tools ----------------------------------------------------
 
 
-def pick_assets(tool: Tool, release: dict, platform: str = PLATFORM) -> list[dict]:
-    patterns = tool.assets.get(platform) or tool.assets["any"]
+def pick_assets(tool: Tool, release: dict, platform: str | None = None) -> list[dict]:
+    patterns = tool.assets.get(platform or PLATFORM) or tool.assets["any"]
     picked = []
     for pattern in [patterns] if isinstance(patterns, str) else patterns:
         regex = re.compile(pattern)
