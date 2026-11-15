@@ -66,6 +66,12 @@ SAMPLE = [
     ("rawfile", rawfile("../../escape.cfg", b"bind x quit\n")),
     ("rawfile", rawfile("empty.cfg", b"")),  # a zero-length raw file
     ("localize", localize("PLATFORM", "PC")),  # a name without an underscore
+    (
+        "localize",
+        FF + FF + "\u00a9 2007".encode("cp1252") + b"\0MENU_COPYRIGHT\0",
+    ),  # cp1252, not UTF-8
+    # a table of {u32, -1} pairs, which has a raw file's shape with 47 ('/') as its name
+    ("material", FF + u32(8) + FF + u32(0x2F) + FF + u32(2) + FF + u32(0x11) + FF + bytes(8)),
     ("image", b"\x00" * 16),
 ]
 
@@ -90,7 +96,7 @@ class Reading(unittest.TestCase):
             found,
             {("rawfile", "maps/mp/_load.gsc"), ("stringtable", "mp/statstable.csv"),
              ("localize", "MENU_START_GAME"), ("rawfile", "../../escape.cfg"),
-             ("rawfile", "empty.cfg"), ("localize", "PLATFORM")},
+             ("rawfile", "empty.cfg"), ("localize", "PLATFORM"), ("localize", "MENU_COPYRIGHT")},
         )  # fmt: skip
         table = next(f for f in self.zone.found if f.type == "stringtable")
         self.assertEqual(table.rows, [["0", "rank"], ["1", "a,b"]])
@@ -100,13 +106,17 @@ class Reading(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "out"
             written = fastfile.extract(self.zone, root, set(fastfile.EXTRACTED))
-            self.assertEqual(written, {"rawfile": 3, "stringtable": 1, "localize": 2})
+            self.assertEqual(written, {"rawfile": 3, "stringtable": 1, "localize": 3})
             self.assertEqual((root / "maps/mp/_load.gsc").read_bytes(), b"main()\n{\n}\n")
             self.assertEqual((root / "escape.cfg").read_bytes(), b"bind x quit\n")  # `..` dropped
             self.assertEqual((root / "mp/statstable.csv").read_text(), '0,rank\n1,"a,b"\n')
             self.assertEqual(
                 json.loads((root / "localize.json").read_text()),
-                {"MENU_START_GAME": "Start game", "PLATFORM": "PC"},
+                {
+                    "MENU_START_GAME": "Start game",
+                    "PLATFORM": "PC",
+                    "MENU_COPYRIGHT": "\u00a9 2007",
+                },
             )
             self.assertFalse((Path(tmp) / "escape.cfg").exists())
 

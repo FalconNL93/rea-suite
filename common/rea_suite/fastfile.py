@@ -209,6 +209,9 @@ FORMATS: tuple[Format, ...] = (
 # --- finding the simple assets ------------------------------------------------------------------
 
 NAME = re.compile(rb"[\x21-\x7e][\x20-\x7e]{0,254}\0")
+# a raw file's name: a relative path of two characters or more (a table of {u32, -1} pairs has
+# the raw file's shape with the number 47 as the name "/": cod4's zones, 2026-11-15)
+RAWFILE_NAME = re.compile(rb"[A-Za-z0-9_.][A-Za-z0-9_./\-]{1,254}\0")
 LOCALIZE_NAME = re.compile(rb"[A-Z0-9_]{2,128}\0")
 FF4 = b"\xff\xff\xff\xff"
 
@@ -228,7 +231,7 @@ def text_at(zone: bytes, at: int, limit: int = 1 << 20) -> tuple[str, int] | Non
     try:
         value = raw.decode("utf-8")
     except UnicodeDecodeError:
-        return None
+        value = raw.decode("cp1252", errors="replace")  # the game's English text is cp1252 (©)
     if any(ord(c) < 32 and c not in "\t\n\r" for c in value):
         return None
     return value, end + 1
@@ -258,7 +261,7 @@ def scan(zone: bytes, start: int, wanted: Counter) -> list[Found]:
 
 
 def rawfile(zone: bytes, at: int, length: int) -> tuple[Found, int] | None:
-    name = cstring(zone, at + 12)
+    name = cstring(zone, at + 12, RAWFILE_NAME)
     if name is None:
         return None
     text, data_at = name
