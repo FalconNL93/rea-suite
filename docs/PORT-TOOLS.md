@@ -911,6 +911,13 @@ Records have `t` (seconds since the start) and `kind`:
   `--nested`. Calls a protected-mode program makes appear in `pm`; an `int` its DPMI host or
   extender then executes in real mode on its behalf appears too, in `rm` at the host's address (a
   host that reflects through the interrupt table without an `int`, as CWSDPMI does, shows none).
+  `own` says whether the program made the call itself: in protected mode a call from a 32-bit code
+  segment (a flat program's; DOS/4GW's and CWSDPMI's own code is 16-bit), asked of the debugger once
+  per selector (`SELINFO`); in real mode one from the program's memory while it has not entered
+  protected mode. `--own` logs only those, and the code selector time and input actions wait for
+  (below) is taken from them alone. `--profile dos4gw` is `--ints 31:00,31:03,31:06,33,10 --own
+  --set "dosbox memsize=64"`, each part only where the command line gives none
+  ([DOS-GAMES.md](DOS-GAMES.md) has why).
 - **`return`** (`--returns`): the registers a call returns with (`carry` the CF flag), by `call`.
 - **`callback`**: an entry into a real-mode callback, with its registers: the address DPMI 0303h
   returned (`via` `dpmi 0303`, with the protected-mode `handler`) and the handler INT 33h 000Ch
