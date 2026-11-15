@@ -15,7 +15,7 @@ import struct
 from dataclasses import dataclass
 
 from capstone import CS_ARCH_X86, CS_MODE_32, CS_MODE_64, Cs, CsError
-from capstone.x86 import X86_OP_IMM, X86_OP_MEM, X86_REG_INVALID, X86_REG_RIP
+from capstone.x86 import X86_OP_IMM, X86_OP_MEM, X86_OP_REG, X86_REG_INVALID, X86_REG_RIP
 
 from . import pefunctions
 from .pefunctions import Function
@@ -405,23 +405,97 @@ class Registrar:
     fields: list[str]
 
 
+VOLATILE64 = ("rax", "rcx", "rdx", "r8", "r9", "r10", "r11")  # the Windows x64 convention's
+VOLATILE32 = ("eax", "ecx", "edx")
+LEGACY = {
+    "a": "ax",
+    "b": "bx",
+    "c": "cx",
+    "d": "dx",
+    "si": "si",
+    "di": "di",
+    "bp": "bp",
+    "sp": "sp",
+}
+
+
+def register_family(name: str, x64: bool) -> str:
+    """A register's full name: r8d -> r8, ecx/cx/cl -> rcx (ecx in an x86 image)."""
+    name = name.lower()
+    numbered = re.fullmatch(r"r(\d+)[dwb]?", name)
+    if numbered:
+        return f"r{numbered.group(1)}"
+    core = re.fullmatch(r"[re]?([abcd])[xlh]|[re]?(si|di|bp|sp)l?", name)
+    if not core:
+        return name
+    base = LEGACY[core.group(1) or core.group(2)]
+    return ("r" if x64 else "e") + base
+
+
+def register_value(insn, x64: bool, known: dict[str, object]):
+    """What an instruction leaves in its destination register, when it is a plain load: an
+    immediate (int), 0 for `xor r, r`, an address (`lea r, [rip+X]` or `[X]`: hex), a base and
+    offset (`lea r, [rbx+0x10]`: text), or a copy of another tracked register; None otherwise."""
+    ops = insn.operands
+    if len(ops) != 2 or ops[0].type != X86_OP_REG:
+        return None
+    src = ops[1]
+    if insn.mnemonic == "mov" and src.type == X86_OP_IMM:
+        return src.imm & (2**64 - 1)
+    if insn.mnemonic == "mov" and src.type == X86_OP_REG:
+        return known.get(register_family(insn.reg_name(src.reg), x64), insn.reg_name(src.reg))
+    if insn.mnemonic == "xor" and src.type == X86_OP_REG and src.reg == ops[0].reg:
+        return 0
+    if insn.mnemonic == "lea" and src.type == X86_OP_MEM:
+        mem = src.mem
+        if mem.index != X86_REG_INVALID:
+            return None
+        if mem.base == X86_REG_RIP:
+            return f"{insn.address + insn.size + mem.disp:#x}"
+        if mem.base == X86_REG_INVALID:
+            return f"{mem.disp & (2**64 - 1):#x}"
+        return f"{insn.reg_name(mem.base)}{mem.disp:+#x}" if mem.disp else insn.reg_name(mem.base)
+    return None
+
+
 def registry(
     image: Image,
     ranges: list[tuple[int, int]],
     registrars: dict[int, Registrar],
     stack_byte: int | None = None,
+    registers: list[str] | None = None,
 ) -> list[dict]:
     """Settings a game registers in straight-line code: for each call to a registrar in the
     ranges, the strings loaded since the previous call, named by the registrar's fields. With
     stack_byte, also the last byte stored to [rsp+stack_byte] (or [esp+...]) before the call,
-    which is where some engines pass a bool's default: a number, or the register's name."""
+    which is where some engines pass a bool's default: a number, or the register's name. With
+    registers (`r8d`, `rcx`), also what each held at the call, set since the previous call
+    (register_value: a constant, an address, a base and offset; "?" for any other write; None
+    when nothing set it): a type passed as a number, the object a setting belongs to."""
     stack = "rsp" if image.x64 else "esp"
     store = None if stack_byte is None else f"byte ptr [{stack} + {stack_byte:#x}], "
+    wanted = {register_family(r, image.x64): r for r in registers or []}
     result = []
     for start, size in ranges:
         strings: list[str] = []
         stored = None
+        values: dict[str, object] = {}
         for insn in instructions(image, start, size):
+            if wanted:
+                try:
+                    written = {
+                        register_family(insn.reg_name(r), image.x64) for r in insn.regs_access()[1]
+                    }
+                except CsError:
+                    written = set()
+                for family in written:
+                    value = register_value(insn, image.x64, values)
+                    values[family] = "?" if value is None else value
+                if insn.mnemonic == "call":  # what the callee may change before the next line
+                    volatile = VOLATILE64 if image.x64 else VOLATILE32
+                    captured = dict(values)
+                    for family in volatile:
+                        values.pop(family, None)
             if store and insn.mnemonic == "mov" and insn.op_str.startswith(store):
                 value = insn.op_str[len(store) :]
                 stored = int(value, 0) if value[:1].isdigit() else value
@@ -445,6 +519,10 @@ def registry(
                     }
                     if store:
                         row["stored"] = stored
+                    if wanted:
+                        row["registers"] = {
+                            name: captured.get(family) for family, name in wanted.items()
+                        }
                     result.append(row)
                     strings, stored = [], None
                     continue

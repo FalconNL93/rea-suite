@@ -242,7 +242,27 @@ rea-suite pe registry game/Game.exe --config re/option-registry.json --json
 ```
 
 The config holds the same: `{"ranges": [["0x2a1000", "0x400"]], "registrars": {"0x5d3100":
-{"type": "bool", "fields": ["description", "name"]}}, "stack_byte": "0x30"}`. Find the registrar
+{"type": "bool", "fields": ["description", "name"]}}, "stack_byte": "0x30", "registers": ["r8d"]}`.
+
+`--register REG` (repeatable) adds what a register held at each call, set since the previous
+call: a constant (`mov r8d, 3`; `xor r8d, r8d` is 0), an address (`lea rcx, [rip+X]`, a static
+object), a base and offset (`lea rcx, [rbx+0x20]`, a field), or a copy of a register that kept
+its value (`mov rcx, rbx`); `"?"` for any other write, null when nothing set it. A call clears
+the registers its callee may change (rax, rcx, rdx, r8-r11 on x64; eax, ecx, edx on x86), and a
+sub-register counts as its whole one (`r8d` is r8). That covers registrars that take a type as a
+number and the object a setting belongs to, as Remedy's tweakables do:
+
+```sh
+rea-suite pe registry game/Game.exe --range 0x1000:0x72a39f \
+  --registrar 0x140461320=tweakable:name --register r8d --register rcx --json
+```
+
+Checked 2026-11-15 on Alan Wake Remastered (`Game_f_x64_EOS.exe`, the whole of `.text`, 33 s): the
+1,097 tweakables that port's own scan found, every one named, its type in `r8d` (887 of type 1,
+163 of type 0, then 3, 2, 5 and 4; one set by another write, `"?"`), 1,036 on a static object
+(`rcx` a rip-relative address).
+
+Find the registrar
 by one setting's name (`refs --string`), the call after it, and the blocks around it. The port
 keeps its addresses and what it tested; this gives the table.
 

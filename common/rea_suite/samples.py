@@ -824,3 +824,46 @@ def program_census() -> tuple[bytes, dict[str, int]]:
         flags={".data": 0xC0000040},
     )
     return image, at
+
+
+def program_registry_args() -> tuple[bytes, dict[str, int]]:
+    """x64 code that registers settings the way Remedy's tweakable registrar does: the name in
+    rdx, the type as a constant in r8d, the object in rcx (a static one by rip-relative lea, a
+    field of rbx's, and rbx itself copied, which a call leaves alone), then the registrar; a
+    last call sets nothing, so the registers it reports are the ones a call left (rbx's copy
+    is gone with rcx). Assembled with Keystone."""
+    from keystone import KS_ARCH_X86, KS_MODE_64, Ks
+
+    base, start = 0x140000000, 0x1000
+    names = ["fog_density", "show_hud", "player_speed"]
+    strings, at, data = {}, 0x2000, b""
+    for text in names:
+        strings[text] = at + len(data)
+        data += text.encode() + b"\0"
+    static_object = 0x3000
+    registrar = 0x1200
+    lines = [
+        ("lea", "rdx", "fog_density"), "mov r8d, 3", "lea rcx, [rip + {obj}]", f"call {registrar:#x}",
+        ("lea", "rdx", "show_hud"), "xor r8d, r8d", "lea rcx, [rbx + 0x20]", f"call {registrar:#x}",
+        ("lea", "rdx", "player_speed"), "mov r8d, 1", "mov rcx, rbx", f"call {registrar:#x}",
+        f"call {registrar:#x}", "ret",
+    ]  # fmt: skip
+    ks = Ks(KS_ARCH_X86, KS_MODE_64)
+    code, sites = b"", []
+    for line in lines:
+        address = start + len(code)
+        if isinstance(line, tuple):
+            _, register, text = line
+            line = f"lea {register}, [rip + {strings[text] - (address + 7):#x}]"
+        elif "{obj}" in line:
+            line = line.format(obj=f"{static_object - (address + 7):#x}")
+        encoded = bytes(ks.asm(line, address)[0])
+        if line.startswith("call"):
+            sites.append(address)
+        code += encoded
+    end = len(code)
+    code = code.ljust(registrar - start, b"\xcc") + b"\xc3".ljust(0x10, b"\xcc")
+    image = pe([(".text", code), (".rdata", data), (".data", bytes(0x40))], base=base, x64=True,
+               flags={".data": 0xC0000040})  # fmt: skip
+    return image, {"start": start, "size": end, "registrar": registrar, "object": static_object,
+                   "sites": sites}  # fmt: skip

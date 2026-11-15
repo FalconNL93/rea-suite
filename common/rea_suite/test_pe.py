@@ -298,6 +298,35 @@ class Registry(unittest.TestCase):
         self.assertEqual([r["site"] for r in rows], [f"{s:#x}" for s in at["sites"][:3]])
 
 
+class RegistryRegisters(unittest.TestCase):
+    def test_a_type_in_r8d_and_the_object_in_rcx(self) -> None:
+        data, at = samples.program_registry_args()
+        rows = scan.registry(
+            Image(data), [(at["start"], at["size"])],
+            {at["registrar"]: scan.Registrar("tweakable", ["name"])}, registers=["r8d", "rcx", "rbx"],
+        )  # fmt: skip
+        self.assertEqual(
+            [(r["name"], r["registers"]["r8d"], r["registers"]["rcx"]) for r in rows],
+            [("fog_density", 3, f"{0x140000000 + at['object']:#x}"), ("show_hud", 0, "rbx+0x20"),
+             ("player_speed", 1, "rbx"), (None, None, None)],
+        )  # fmt: skip
+        # rbx survives the calls (callee-saved) and is never set here: nothing to report
+        self.assertEqual({r["registers"]["rbx"] for r in rows}, {None})
+        self.assertEqual(scan.register_family("r8d", True), "r8")
+        self.assertEqual(scan.register_family("cl", True), "rcx")
+        self.assertEqual(scan.register_family("ecx", False), "ecx")
+
+    def test_the_cli_takes_registers(self) -> None:
+        data, at = samples.program_registry_args()
+        with tempfile.TemporaryDirectory() as tmp:
+            Path(tmp, "g.exe").write_bytes(data)
+            code, out = run("--caller-cwd", tmp, "registry", "g.exe", "--range",
+                            f"{at['start']:#x}:{at['size']:#x}", "--registrar",
+                            f"{at['registrar']:#x}=tweakable:name", "--register", "r8d", "--json")  # fmt: skip
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(out)[0]["registers"], {"r8d": 3})
+
+
 class Cli(unittest.TestCase):
     def setUp(self) -> None:
         tmp = tempfile.TemporaryDirectory()
