@@ -608,9 +608,13 @@ rea-suite frida common/frida/observer.js --spawn game/Game.exe --seconds 600 --l
 rea-suite census from-frida work/imports.jsonl --exe game/Game.exe --out work/game.windows.json
 ```
 
-Not yet run (2026-11-15): the converter has a unit test and the script parses, but Frida 17.26.2
-cannot attach on this WSL kernel (6.18; the getenv check above fails the same way), and no
-Windows run has been made. The opt-in test in `test_frida_run` covers the imports mode.
+Checked 2026-11-15 on Windows 11 (frida 17.26.2, run from WSL through interop in a throwaway
+folder): a MinGW test program, 32-bit and 64-bit, that calls `GetTickCount` 3 times, `Sleep` 6
+times from 6 sites and `GetCurrentProcessId` once came out with exactly those counts and callers
+(38 and 35 imports hooked); `census from-frida` made its log a runtime census whose return
+addresses are all among `pe census`'s import sites for the same executable. Frida 17.26.2 cannot
+attach on this WSL's own kernel (6.18): the Linux checks above, and the opt-in test, fail there with
+"connection is closed". Not yet run against a game.
 
 Checked 2026-11-10 on Linux (frida 17.24.3): a spawned Python's `getenv` calls with argument and
 result strings, change mode per group, counts per caller and `only_from`; the opt-in test runs
