@@ -1,0 +1,159 @@
+"""IW3 fastfiles on synthetic files built here (the layout fastfile.py describes): the header, the
+zlib stream, the zone's sizes and asset list, the simple assets found by shape among others, the
+extraction and its path checks. REA_FASTFILE_SAMPLE=<a CoD4 PC .ff> reads a real one too."""
+
+from __future__ import annotations
+
+import contextlib
+import io
+import json
+import os
+import struct
+import tempfile
+import unittest
+import zlib
+from pathlib import Path
+
+from rea_suite import fastfile
+
+FF = struct.pack("<I", 0xFFFFFFFF)
+
+
+def u32(v: int) -> bytes:
+    return struct.pack("<I", v)
+
+
+def type_id(name: str) -> int:
+    return fastfile.IW3_ASSET_TYPES.index(name)
+
+
+def zone(assets: list[tuple[str, bytes]], strings: list[str] = ("j_head",)) -> bytes:
+    """The zone: sizes, the asset list (script strings, then the assets' types), then each
+    asset's data in order."""
+    body = u32(len(strings)) + FF + u32(len(assets)) + FF
+    body += FF * len(strings) + b"".join(s.encode() + b"\0" for s in strings)
+    body += b"\0" * (-len(body) % 4)
+    body += b"".join(u32(type_id(kind)) + FF for kind, _ in assets)
+    body += b"".join(data for _, data in assets)
+    head = u32(len(body)) + u32(0) + b"".join(u32(0x1000 * (i + 1)) for i in range(9))
+    return head + body
+
+
+def rawfile(name: str, data: bytes) -> bytes:
+    return FF + u32(len(data)) + FF + name.encode() + b"\0" + data + b"\0"
+
+
+def stringtable(name: str, rows: list[list[str]]) -> bytes:
+    cells = [c for row in rows for c in row]
+    return (FF + u32(len(rows[0])) + u32(len(rows)) + FF + name.encode() + b"\0" + FF * len(cells)
+            + b"".join(c.encode() + b"\0" for c in cells))  # fmt: skip
+
+
+def localize(name: str, value: str) -> bytes:
+    return FF + FF + value.encode() + b"\0" + name.encode() + b"\0"
+
+
+def fastfile_bytes(z: bytes, magic: bytes = b"IWffu100", version: bytes = u32(5)) -> bytes:
+    return magic + version + zlib.compress(z)
+
+
+SAMPLE = [
+    ("material", b"\x00\x11" + FF + b"noise that is no asset we read\x00" + bytes(range(40))),
+    ("rawfile", rawfile("maps/mp/_load.gsc", b"main()\n{\n}\n")),
+    ("stringtable", stringtable("mp/statstable.csv", [["0", "rank"], ["1", "a,b"]])),
+    ("localize", localize("MENU_START_GAME", "Start game")),
+    ("rawfile", rawfile("../../escape.cfg", b"bind x quit\n")),
+    ("image", b"\x00" * 16),
+]
+
+
+class Reading(unittest.TestCase):
+    def setUp(self) -> None:
+        self.zone = fastfile.read(fastfile_bytes(zone(SAMPLE)))
+
+    def test_header_sizes_and_the_asset_list(self) -> None:
+        z = self.zone
+        self.assertEqual((z.game, z.platform, z.version), ("IW3", "pc", 5))
+        self.assertEqual(z.blocks["temp"], 0x1000)
+        self.assertEqual(z.blocks["index"], 0x9000)
+        self.assertEqual(z.strings, ["j_head"])
+        self.assertEqual(z.counts()["rawfile"], 2)
+        self.assertEqual(z.assets[0], "material")
+
+    def test_the_simple_assets_are_found_among_others(self) -> None:
+        found = {(f.type, f.name) for f in self.zone.found}
+        self.assertEqual(
+            found,
+            {("rawfile", "maps/mp/_load.gsc"), ("stringtable", "mp/statstable.csv"),
+             ("localize", "MENU_START_GAME"), ("rawfile", "../../escape.cfg")},
+        )  # fmt: skip
+        table = next(f for f in self.zone.found if f.type == "stringtable")
+        self.assertEqual(table.rows, [["0", "rank"], ["1", "a,b"]])
+        self.assertEqual(self.zone.as_json()["by_type"]["rawfile"], {"listed": 2, "found": 2})
+
+    def test_extraction_stays_inside_its_folder(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "out"
+            written = fastfile.extract(self.zone, root, set(fastfile.EXTRACTED))
+            self.assertEqual(written, {"rawfile": 2, "stringtable": 1, "localize": 1})
+            self.assertEqual((root / "maps/mp/_load.gsc").read_bytes(), b"main()\n{\n}\n")
+            self.assertEqual((root / "escape.cfg").read_bytes(), b"bind x quit\n")  # `..` dropped
+            self.assertEqual((root / "mp/statstable.csv").read_text(), '0,rank\n1,"a,b"\n')
+            self.assertEqual(
+                json.loads((root / "localize.json").read_text()), {"MENU_START_GAME": "Start game"}
+            )
+            self.assertFalse((Path(tmp) / "escape.cfg").exists())
+
+    def test_other_fastfiles_are_named_and_refused(self) -> None:
+        z = zone(SAMPLE)
+        with self.assertRaisesRegex(fastfile.FastfileError, "xbox360"):
+            fastfile.read(fastfile_bytes(z, version=struct.pack(">I", 1)))
+        with self.assertRaisesRegex(fastfile.FastfileError, "signed"):
+            fastfile.read(fastfile_bytes(z, magic=b"IWff0100"))
+        with self.assertRaisesRegex(fastfile.FastfileError, "does not know"):
+            fastfile.read(fastfile_bytes(z, version=u32(0x114)))  # IW4
+        with self.assertRaisesRegex(fastfile.FastfileError, "no IWff"):
+            fastfile.read(b"PK\x03\x04" + bytes(20))
+        with self.assertRaisesRegex(fastfile.FastfileError, "zlib"):
+            fastfile.read(b"IWffu100" + u32(5) + b"not zlib at all")
+
+    def test_the_cli(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            Path(tmp, "mp_test.ff").write_bytes(fastfile_bytes(zone(SAMPLE)))
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                self.assertEqual(fastfile.main(["--caller-cwd", tmp, "info", "mp_test.ff"]), 0)
+            self.assertIn("rawfile                 2 (2 found)", out.getvalue())
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                code = fastfile.main(
+                    [
+                        "--caller-cwd",
+                        tmp,
+                        "extract",
+                        "mp_test.ff",
+                        "--out",
+                        "x",
+                        "--type",
+                        "rawfile",
+                    ]
+                )
+            self.assertEqual((code, out.getvalue().strip()), (0, "2 rawfile"))
+            with contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(fastfile.main(["--caller-cwd", tmp, "info", "missing.ff"]), 2)
+
+
+@unittest.skipUnless(os.environ.get("REA_FASTFILE_SAMPLE"), "reads a real CoD4 PC fastfile")
+class Sample(unittest.TestCase):
+    def test_a_real_fastfile(self) -> None:
+        z = fastfile.read(Path(os.environ["REA_FASTFILE_SAMPLE"]).read_bytes())
+        self.assertEqual((z.game, z.platform), ("IW3", "pc"))
+        self.assertTrue(z.assets)
+        listed, found = z.counts(), z.found_counts()
+        for kind in fastfile.EXTRACTED:
+            self.assertLessEqual(found[kind], listed[kind], kind)
+        print("\n".join(fastfile.info_lines(z)))
+
+
+if __name__ == "__main__":
+    unittest.main()

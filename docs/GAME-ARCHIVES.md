@@ -39,6 +39,34 @@ ending in the magic `0x169f52d6` (`zarchivecommon.h`). A 360 .zar is made either
 image with extract-xiso and packing the folder with `zarchive`, or by XGDTool `--zar` straight from a
 disc image or a Games on Demand package. No other common format uses the .zar extension.
 
+## IW engine fastfiles: `rea-suite fastfile`
+
+Call of Duty 4's zones (`zone/<language>/*.ff`, IW3 on the PC) are fastfiles: a 12-byte header
+(`IWffu100`, version 5), then one zlib stream holding the zone: its sizes and memory blocks, the
+script strings, the asset list (a type per asset) and every asset's data in list order. The `.iwd`
+files beside them are plain zip archives (any zip tool reads them).
+
+```sh
+rea-suite fastfile info zone/english/common_mp.ff           # header, sizes, blocks, assets by type
+rea-suite fastfile list zone/english/common_mp.ff --json    # the raw files, tables, strings found
+rea-suite fastfile extract zone/english/common_mp.ff --out work/cod4/common_mp
+```
+
+The asset list names every asset's type; the reader finds the simple ones by their shape in the
+stream (raw files with their bytes, string tables as CSV, localized strings into `localize.json`) and
+says when it found fewer than the list holds. Images, models, materials, menus and the other types are
+counted, not read: walking to their data means reading every asset before them, of every type.
+Names come from the file: an extracted path keeps to the output folder (`..` and empty parts dropped,
+unsafe characters as `%XX`). IW3 on the Xbox 360 (version 1, big-endian), signed fastfiles
+(`IWff0100`), IW4 and later are recognized and refused by name, the places a second reader goes.
+
+The format's facts come from [OpenAssetTools](https://github.com/Laupetin/OpenAssetTools)
+(`ZoneConstantsIW3.h`, `IW3.h`, `IW3_Assets.h`), read as documentation: it is GPL-3.0, so nothing of
+it is wrapped or copied. Its Unlinker dumps more asset types (images, materials) and links fastfiles;
+use it on its own where that is needed. Checked 2026-11-15 on synthetic fastfiles built by the test
+(`test_fastfile.py`); not yet on the game's own files: `REA_FASTFILE_SAMPLE=<a .ff> uv run --no-sync
+python -m unittest rea_suite.test_fastfile` in `common/` reads one.
+
 ## Reading without the tools
 
 | Command | Gives |
