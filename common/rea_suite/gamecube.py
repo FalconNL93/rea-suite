@@ -2,7 +2,7 @@
 its main DOL and its file table. Ghidra analysis is `rea-ghidra analyze` with the GameCube loader
 (component `gamecube`); the route is docs/GAMECUBE-WII.md.
 
-  rea-suite gamecube info  <file> [-o JSON]   DOL, REL or disc image (ISO/GCM; RVZ, WIA, WBFS,
+  rea-suite gamecube info  <file> [-o JSON]   DOL, REL, RSO or disc image (ISO/GCM; RVZ, WIA, WBFS,
                                               CISO, GCZ and Wii partitions with nod-rs)
   rea-suite gamecube check                    the GameCube loader in place for this Ghidra
 
@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Protocol
 
 from rea_suite import extcheck
+from rea_suite.text import decoded
 
 DOL_HEADER = 0x100
 TEXT_SLOTS, DATA_SLOTS = 7, 11
@@ -185,6 +186,96 @@ def rel_info(data: bytes) -> dict:
         (info["fix_size"],) = struct.unpack_from(">I", data, 0x48)
     if name_size and name_offset + name_size <= len(data):
         info["name_offset"] = f"0x{name_offset:x}"  # into the game's module name file (str)
+    return info
+
+
+RSO_HEADER = 0x58
+
+
+def symbol_hash(name: bytes) -> int:
+    """The ELF hash an RSO's export carries for its name."""
+    h = 0
+    for c in name:
+        h = (h << 4) + c
+        top = h & 0xF0000000
+        if top:
+            h ^= top >> 24
+        h &= ~top & 0xFFFFFFFF
+    return h
+
+
+def rso_info(data: bytes) -> dict:
+    """An RSO module (Wii, `.rso`; the layout as decomp-toolkit's src/util/rso.rs reads it): its
+    sections, its exports by name with their section and offset, and the names it imports from
+    other modules (resolved when the game links it). Names are the module's own text."""
+    if len(data) < RSO_HEADER:
+        raise ValueError("too short for an RSO header")
+    nxt, prev, count, table, name_at, name_size, version, bss_size = struct.unpack_from(
+        ">8I", data, 0
+    )
+    prolog_s, epilog_s, unresolved_s, bss_s = struct.unpack_from(">4B", data, 0x20)
+    prolog, epilog, unresolved = struct.unpack_from(">3I", data, 0x24)
+    int_at, int_size, ext_at, ext_size = struct.unpack_from(">4I", data, 0x30)
+    exp_at, exp_size, exp_names, imp_at, imp_size, imp_names = struct.unpack_from(">6I", data, 0x40)
+    if nxt or prev or bss_s or table != RSO_HEADER or version != 1:
+        raise ValueError("not an RSO (next, prev and bss section 0, section table at 0x58)")
+    if not 0 < count <= 256 or table + count * 8 > len(data):
+        raise ValueError("section table outside the file: not an RSO")
+    for at, size, what, unit in [(int_at, int_size, "internal relocations", 12),
+                                 (ext_at, ext_size, "external relocations", 12),
+                                 (exp_at, exp_size, "export table", 16),
+                                 (imp_at, imp_size, "import table", 12)]:  # fmt: skip
+        if size and (at + size > len(data) or size % unit):
+            raise ValueError(f"{what} outside the file: not an RSO")
+
+    def name(table_at: int, offset: int) -> str:
+        at = table_at + offset
+        end = data.find(b"\0", at)
+        if not 0 <= at < len(data) or end < 0:
+            raise ValueError(f"a symbol name at 0x{at:x} lies outside the file")
+        return decoded(data[at:end], "latin-1")
+
+    sections, bss = [], 0
+    for i in range(count):
+        offset, size = struct.unpack_from(">2I", data, table + i * 8)
+        start = offset & ~1
+        if start and start + size > len(data):
+            raise ValueError(f"section {i} lies outside the file")
+        bss += size if not start else 0
+        if size:
+            sections.append({"index": i, "file_offset": f"0x{start:x}", "size": f"0x{size:x}",
+                             "executable": bool(offset & 1), "bss": start == 0})  # fmt: skip
+    exports, bad_hashes = [], 0
+    for at in range(exp_at, exp_at + exp_size, 16):
+        name_off, offset, section, digest = struct.unpack_from(">4I", data, at)
+        raw_end = data.find(b"\0", exp_names + name_off)
+        if symbol_hash(data[exp_names + name_off : raw_end]) != digest:
+            bad_hashes += 1
+        exports.append({"name": name(exp_names, name_off), "section": section,
+                        "offset": f"0x{offset:x}"})  # fmt: skip
+    imports = [name(imp_names, struct.unpack_from(">I", data, at)[0])
+               for at in range(imp_at, imp_at + imp_size, 12)]  # fmt: skip
+    info = {
+        "kind": "rso",
+        "version": version,
+        "sections": sections,
+        "bss_size": f"0x{bss_size:x}",
+        "prolog": {"section": prolog_s, "offset": f"0x{prolog:x}"},
+        "epilog": {"section": epilog_s, "offset": f"0x{epilog:x}"},
+        "unresolved": {"section": unresolved_s, "offset": f"0x{unresolved:x}"},
+        "relocations": {"internal": int_size // 12, "external": ext_size // 12},
+        "exports": exports,
+        "imports": imports,
+    }
+    if name_at and name_size and name_at + name_size <= len(data):
+        info["name"] = decoded(data[name_at : name_at + name_size].rstrip(b"\0"), "latin-1")
+    notes = []
+    if bss != bss_size:
+        notes.append(f"the sections' BSS (0x{bss:x}) is not the header's (0x{bss_size:x})")
+    if bad_hashes:
+        notes.append(f"{bad_hashes} export(s) whose name hash does not match")
+    if notes:
+        info["notes"] = notes
     return info
 
 
@@ -465,13 +556,17 @@ def info(path: Path) -> dict:
     data = path.read_bytes()
     if path.suffix.lower() == ".rel":
         return rel_info(data)
+    if path.suffix.lower() == ".rso":
+        return rso_info(data)
     try:
         return dol_info(data)
     except ValueError as dol_error:
-        try:
-            return rel_info(data)
-        except ValueError:
-            raise ValueError(f"neither a disc image, a DOL nor a REL ({dol_error})") from None
+        for reader in (rel_info, rso_info):
+            try:
+                return reader(data)
+            except ValueError:
+                pass
+        raise ValueError(f"neither a disc image, a DOL, a REL nor an RSO ({dol_error})") from None
 
 
 def emit(args: argparse.Namespace, out: str) -> None:
@@ -491,7 +586,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     p.add_argument("--caller-cwd", type=Path, default=Path.cwd(), help=argparse.SUPPRESS)
     sub = p.add_subparsers(dest="command", required=True)
-    q = sub.add_parser("info", help="DOL, REL or disc image as JSON")
+    q = sub.add_parser("info", help="DOL, REL, RSO or disc image as JSON")
     q.add_argument("file", type=Path)
     q.add_argument("-o", "--output", type=Path)
     sub.add_parser("check", help="the GameCube loader in place for this Ghidra (files only)")

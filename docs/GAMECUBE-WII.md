@@ -79,8 +79,11 @@ The code of a GameCube or Wii game lives in up to three kinds of file:
 - **RELs** (`.rel`): relocatable modules loaded at run time, the GameCube's DLLs. Each has a module id,
   sections without addresses, and relocations grouped by the module they point into (0 is the DOL).
   `info` counts the relocations per imported module. Many games keep a `.str` file of module names.
-- **RSOs** (`.rso`, some later Wii games): relocatable modules with named exports and imports. `dtk rso
-  info` reads them; `rea-suite gamecube` does not.
+- **RSOs** (`.rso`, some later Wii games): relocatable modules with named exports and imports.
+  `rea-suite gamecube info x.rso` lists the sections, each export with its section and offset (its
+  name hash checked), the names it imports and the relocation counts, from the layout decomp-toolkit
+  reads (`src/util/rso.rs`); checked with synthetic modules, not yet a game's. `dtk rso info` reads
+  them too, and dtk is what splits one for a decompilation.
 
 - **SDK banners**: the SDK's libraries register strings such as `<< Dolphin SDK - OS release build: ... >>`
   (`RVL_SDK` on the Wii). `info` lists them under `sdk`: the build dates say which SDK the game linked,
@@ -248,7 +251,6 @@ What a recompilation of a GameCube or Wii game needs, whichever recompiler is us
 ## Still missing
 
 - A run of `rea-suite oracle` against Dolphin with a real game.
-- An RSO reader in `rea-suite gamecube`; dtk covers it today.
 - DSP ADPCM and GX texture converters.
 
 ## Sources (read 2026-11-13)

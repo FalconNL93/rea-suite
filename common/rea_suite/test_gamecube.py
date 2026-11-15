@@ -38,6 +38,36 @@ def dol() -> bytes:
     return bytes(data) + text.ljust(0x20, b"\0") + payload
 
 
+def rso(exports=(("main", 1, 0x10), ("\x1b[2Jevil", 2, 4)), imports=("OSReport",)) -> bytes:
+    """An RSO: a code and a data section and a BSS one, exports with their hashes, imports."""
+    code, data = bytes(0x40), bytes(0x20)
+    names_e = b"".join(n.encode() + b"\0" for n, _, _ in exports)
+    names_i = b"".join(n.encode() + b"\0" for n in imports)
+    table = 0x58
+    code_at = table + 3 * 8
+    data_at = code_at + len(code)
+    exp_at = data_at + len(data)
+    exp_names = exp_at + 16 * len(exports)
+    imp_at = exp_names + len(names_e)
+    imp_names = imp_at + 12 * len(imports)
+    name_at = imp_names + len(names_i)
+    head = struct.pack(">8I", 0, 0, 3, table, name_at, 6, 1, 0x30)
+    head += struct.pack(">4B", 1, 0, 0, 0) + struct.pack(">3I", 0x10, 0, 0)
+    head += struct.pack(">4I", 0, 0, 0, 0)
+    head += struct.pack(">6I", exp_at, 16 * len(exports), exp_names, imp_at, 12 * len(imports),
+                        imp_names)  # fmt: skip
+    sections = struct.pack(">6I", code_at | 1, len(code), data_at, len(data), 0, 0x30)
+    exp, at = b"", 0
+    for n, section, offset in exports:
+        exp += struct.pack(">4I", at, offset, section, gamecube.symbol_hash(n.encode()))
+        at += len(n) + 1
+    imp, at = b"", 0
+    for n in imports:
+        imp += struct.pack(">3I", at, 0, 0)
+        at += len(n) + 1
+    return head + sections + code + data + exp + names_e + imp + names_i + b"menu.\0"
+
+
 def rel(version: int = 3) -> bytes:
     """A module with a text and a bss section, importing from the DOL (0) and itself (7)."""
     header = {1: 0x40, 2: 0x48, 3: 0x4C}[version]
@@ -190,6 +220,31 @@ class Rel(unittest.TestCase):
 
 
 class Disc(unittest.TestCase):
+    def test_an_rso_gives_its_sections_exports_and_imports(self):
+        found = gamecube.rso_info(rso())
+        self.assertEqual(found["kind"], "rso")
+        self.assertEqual([x["bss"] for x in found["sections"]], [False, False, True])
+        self.assertTrue(found["sections"][0]["executable"])
+        self.assertEqual(found["exports"][0], {"name": "main", "section": 1, "offset": "0x10"})
+        self.assertEqual(found["exports"][1]["name"], "\\x1b[2Jevil")  # a target's text, escaped
+        self.assertEqual((found["imports"], found["name"]), (["OSReport"], "menu."))
+        self.assertEqual(found["prolog"], {"section": 1, "offset": "0x10"})
+        self.assertNotIn("notes", found)
+        self.assertEqual(gamecube.symbol_hash(b"printf"), 0x077905A6)  # the System V ELF hash
+
+    def test_a_broken_rso_is_refused_or_noted(self):
+        broken = bytearray(rso())
+        struct.pack_into(">I", broken, 0xC, 0x60)
+        with self.assertRaisesRegex(ValueError, "not an RSO"):
+            gamecube.rso_info(bytes(broken))
+        broken = bytearray(rso())
+        struct.pack_into(">I", broken, 0x44, 0x1000)
+        with self.assertRaisesRegex(ValueError, "export table outside"):
+            gamecube.rso_info(bytes(broken))
+        broken = bytearray(rso())
+        struct.pack_into(">I", broken, 0x1C, 0x10)
+        self.assertIn("BSS", gamecube.rso_info(bytes(broken))["notes"][0])
+
     def test_a_gamecube_iso_gives_its_header_main_dol_and_file_table(self):
         with tempfile.TemporaryDirectory() as tmp:
             found = gamecube.info(written(tmp, "game.iso", gc_iso()))
@@ -282,7 +337,10 @@ class Command(unittest.TestCase):
             written(tmp, "main.dol", dol())
             written(tmp, "a.rel", rel())
             written(tmp, "unnamed", rel())
-            for name, kind in [("main.dol", "dol"), ("a.rel", "rel"), ("unnamed", "rel")]:
+            written(tmp, "m.rso", rso())
+            written(tmp, "unnamed2", rso())
+            for name, kind in [("main.dol", "dol"), ("a.rel", "rel"), ("unnamed", "rel"),
+                               ("m.rso", "rso"), ("unnamed2", "rso")]:  # fmt: skip
                 gamecube.main(["--caller-cwd", tmp, "info", name, "-o", "out.json"])
                 self.assertEqual(json.loads((Path(tmp) / "out.json").read_text())["kind"], kind)
 
@@ -293,7 +351,7 @@ class Command(unittest.TestCase):
             with contextlib.redirect_stderr(err), self.assertRaises(SystemExit) as stop:
                 gamecube.main(["--caller-cwd", tmp, "info", "x.bin"])
         self.assertEqual(stop.exception.code, 1)
-        self.assertIn("neither a disc image, a DOL nor a REL", err.getvalue())
+        self.assertIn("neither a disc image, a DOL, a REL nor an RSO", err.getvalue())
 
 
 def fake_install(tmp: str, version: str = "12.1.4", files: bool = True) -> Path:
