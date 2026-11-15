@@ -36,6 +36,8 @@ dependencies = [
     "zstandard>=0.23",
     # Original Xbox XBE headers, sections, libraries and kernel imports (rea-suite xbox)
     "pyxbe>=1.0.4",
+    # Kaitai Struct's runtime for the parsers its compiler (`ksc`, tools.yml) generates in Python
+    "kaitaistruct>=0.11",
     # Disassembler / CPU emulator / assembler engines
     "capstone>=5",
     "unicorn>=2.1",
@@ -74,6 +76,7 @@ test = [
     "cryptography>=44",
     "pyxbe>=1.0.4",
     "zstandard>=0.23",
+    "kaitaistruct>=0.11",
 ]
 
 [tool.uv]

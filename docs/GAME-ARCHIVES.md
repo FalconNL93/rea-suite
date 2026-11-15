@@ -76,6 +76,29 @@ builds; there is no macOS one) once a port needs those types (the orchestrator, 
 (`test_fastfile.py`); not yet on the game's own files: `REA_FASTFILE_SAMPLE=<a .ff> uv run --no-sync
 python -m unittest rea_suite.test_fastfile` in `common/` reads one.
 
+## Describing a format: Kaitai Struct
+
+A format met in more than one game, or read by more than one tool, is worth describing once in
+[Kaitai Struct](https://kaitai.io)'s YAML (`.ksy`): the compiler (`ksc`, tools.yml, on the suite's
+JDK) generates a parser from it in Python and other languages, and the generated Python runs on the
+`kaitaistruct` runtime (in the suite's environment):
+
+```sh
+ksc -t python --outdir work/formats/ docs/formats/iw_fastfile_header.ksy   # a parser module
+uv run python -c 'import sys; sys.path.insert(0, "work/formats")
+from iw_fastfile_header import IwFastfileHeader as H
+print(H.from_file("zone/english/common_mp.ff").version)'
+```
+
+A port keeps its own `.ksy` files with its other format notes; the suite's readers (`rmdp`,
+`yetibig`, `fastfile`) stay hand-written Python, where streaming, limits and error messages are
+easier to control. The visualizer (`ksv`, a Ruby gem) is not provided: it needs Ruby, which nothing
+else in the suite does. The [Web IDE](https://ide.kaitai.io) shows a `.ksy` against a file in the
+browser, which reads the file there without sending it; for a game's own files ImHex (tools.yml)
+stays the offline viewer. Checked 2026-11-15 on Linux: `ksc` 0.11 compiled a header description
+whose parser read an IW3 fastfile's header (`REA_KAITAI_INTEGRATION=1 uv run --no-sync python -m
+unittest rea_suite.test_kaitai` in `common/`, with `tools/bin` on PATH).
+
 ## Reading without the tools
 
 | Command | Gives |

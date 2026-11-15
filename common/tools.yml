@@ -836,6 +836,22 @@ tools:
         qapitrace: '*-win64/bin/qapitrace.exe'
         apitrace32: '*-win32/bin/apitrace.exe'
 
+  # Kaitai Struct's compiler: a file format described once in .ksy, a parser in Python (and C++,
+  # C#, Java, ...) generated from it; the generated Python needs the kaitaistruct runtime
+  # (pyproject.toml). One zip for every platform, run on the suite's JDK (JAVA_HOME, env.sh).
+  kaitai-struct-compiler:
+    github: kaitai-io/kaitai_struct_compiler
+    version: latest
+    assets:
+      any: ['^kaitai-struct-compiler-[\d.]+\.zip$']
+    bin:
+      linux:
+        ksc: '**/bin/kaitai-struct-compiler'
+      macos:
+        ksc: '**/bin/kaitai-struct-compiler'
+      windows:
+        ksc: '**/bin/kaitai-struct-compiler.bat'
+
   # RenderDoc: frame captures of Direct3D 11/12, Vulkan and OpenGL (a port's renderer, or an old
   # game after Wine's or DXVK's translation). Its binaries are on renderdoc.org, not GitHub, so the
   # version is pinned and each download's SHA-256 too (hashed on first download, 2026-11-15:
