@@ -571,6 +571,8 @@ been run on macOS arm64 and Linux x86_64 (WSL2, 2026-11-03); Windows execution r
 | --- | --- | --- |
 | Internet Archive CLI (`ia`) | Search archive.org and fetch preserved game builds, manuals and patches (`ia search`, `ia metadata`, `ia download`; `upload` too). `ia configure` stores your archive.org credentials in your own config (`~/.config/internetarchive/ia.ini`, `%APPDATA%` on Windows), never in this repository; downloads go in `work/` | pip `internetarchive` |
 | SteamCMD | Download game builds and specific depots/versions from Steam (component `steam`) | Valve download |
+| apitrace | Record and replay a game's Direct3D 7-11, DirectDraw and OpenGL calls, frame by frame: what an old game draws, for comparing the original with a port (component `porting`; Linux and Windows, the win32 build for a 32-bit game; no macOS release) | tools.yml |
+| RenderDoc | Frame captures of Direct3D 11/12, Vulkan and OpenGL: a port's renderer, or an old game after Wine's or DXVK's translation (component `porting`; Linux and Windows, pinned with its SHA-256; no macOS build) | tools.yml |
 | Steamless | Strip SteamStub DRM from executables before analysis (Windows; component `steam`) | tools.yml |
 | Wine, winedbg | Run the original Windows game on Linux and trace its API calls, file and registry access (`WINEDEBUG=+relay`); 32-bit games run through Wine's WoW64, no i386 multiarch needed (component `porting`; not on macOS, see [Porting old games](#porting-old-games)) | apt |
 | Process Monitor (`Procmon64`) | File, registry and process activity of the original game on Windows; part of the Sysinternals Suite | winget (Sysinternals) |

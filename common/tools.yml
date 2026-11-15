@@ -818,6 +818,45 @@ tools:
         tracy-capture: tracy-capture.exe
         tracy-csvexport: tracy-csvexport.exe
 
+  # Graphics traces of the original and the port (component porting). apitrace records and
+  # replays Direct3D 7-11, DirectDraw and OpenGL calls: what an old game draws, which RenderDoc
+  # does not take. Windows gets both builds: a 32-bit game is traced with the win32 one (its
+  # wrapper DLLs, lib/wrappers/*.dll, beside the game's exe). No macOS release.
+  apitrace:
+    github: apitrace/apitrace
+    version: latest
+    assets:
+      linux: '^apitrace-[\d.]+-Linux\.tar\.bz2$'
+      windows: ['^apitrace-[\d.]+-win64\.7z$', '^apitrace-[\d.]+-win32\.7z$']
+    bin:
+      linux:
+        apitrace: '**/bin/apitrace'  # the Linux build has no qapitrace (the GUI): Windows', or a distribution's
+      windows:
+        apitrace: '*-win64/bin/apitrace.exe'
+        qapitrace: '*-win64/bin/qapitrace.exe'
+        apitrace32: '*-win32/bin/apitrace.exe'
+
+  # RenderDoc: frame captures of Direct3D 11/12, Vulkan and OpenGL (a port's renderer, or an old
+  # game after Wine's or DXVK's translation). Its binaries are on renderdoc.org, not GitHub, so the
+  # version is pinned and each download's SHA-256 too (hashed on first download, 2026-11-15:
+  # renderdoc.org publishes none). No macOS build.
+  renderdoc:
+    url:
+      linux: https://renderdoc.org/stable/1.47/renderdoc_1.47.tar.gz
+      windows: https://renderdoc.org/stable/1.47/RenderDoc_1.47_64.zip
+    version: '1.47'
+    strip: 1
+    sha256:
+      linux: 200361c2761da1ca77a2acfe0c37e8db5839ba7cb9f204e8394d66dad7e6336a
+      windows: b51712e58d40066b34ca30c7869d15f72e4b5c001b2d92232f6783a636d5a3c1
+    bin:
+      linux:
+        qrenderdoc: bin/qrenderdoc
+        renderdoccmd: bin/renderdoccmd
+      windows:
+        qrenderdoc: qrenderdoc.exe
+        renderdoccmd: renderdoccmd.exe
+
   # --- component: dos ---
 
   # DOSBox-X with its debugger (rea-suite dosbox). The macOS and Windows releases are built with
