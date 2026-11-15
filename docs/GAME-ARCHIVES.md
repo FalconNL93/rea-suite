@@ -70,8 +70,9 @@ unsafe characters as `%XX`). IW3 on the Xbox 360 (version 1, big-endian), signed
 
 The format's facts come from [OpenAssetTools](https://github.com/Laupetin/OpenAssetTools)
 (`ZoneConstantsIW3.h`, `IW3.h`, `IW3_Assets.h`), read as documentation: it is GPL-3.0, so nothing of
-it is wrapped or copied. Its Unlinker dumps more asset types (images, materials) and links fastfiles;
-use it on its own where that is needed. Checked 2026-11-15 on synthetic fastfiles built by the test
+it is copied or linked. Its Unlinker dumps more asset types (images, materials) and links fastfiles;
+run as its own program it is no licensing question, so it may join `tools.yml` (Linux and Windows
+builds; there is no macOS one) once a port needs those types (the orchestrator, 2026-11-15). Checked 2026-11-15 on synthetic fastfiles built by the test
 (`test_fastfile.py`); not yet on the game's own files: `REA_FASTFILE_SAMPLE=<a .ff> uv run --no-sync
 python -m unittest rea_suite.test_fastfile` in `common/` reads one.
 

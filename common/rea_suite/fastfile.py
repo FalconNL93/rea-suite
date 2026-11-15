@@ -216,7 +216,6 @@ NAME = re.compile(rb"[\x21-\x7e][\x20-\x7e]{0,254}\0")
 # a raw file's name: a relative path of two characters or more (a table of {u32, -1} pairs has
 # the raw file's shape with the number 47 as the name "/": cod4's zones, 2026-11-15)
 RAWFILE_NAME = re.compile(rb"[A-Za-z0-9_.][A-Za-z0-9_./\-]{1,254}\0")
-LOCALIZE_NAME = re.compile(rb"[A-Z0-9_]{2,128}\0")
 FF4 = b"\xff\xff\xff\xff"
 
 
@@ -285,7 +284,9 @@ def scan(zone: bytes, start: int, wanted: Counter, blocks: list[int] | None = No
     return found
 
 
-SHARED_LOCALIZE_NAME = re.compile(rb"(?=[A-Z0-9_]*_)[A-Z0-9_]{3,128}\0")
+# a localize key: three characters or more of [A-Z0-9_], one an underscore (both shapes; cod4's
+# zones had material data read as "48" and "P0")
+LOCALIZE_KEY = re.compile(rb"(?=[A-Z0-9_]*_)[A-Z0-9_]{3,128}\0")
 
 
 def shared_shape(
@@ -299,7 +300,7 @@ def shared_shape(
     if wanted["localize"] and ff - 4 >= last:
         value = struct.unpack_from("<I", zone, ff - 4)[0]
         if encoded(value, blocks):
-            name = cstring(zone, ff + 4, SHARED_LOCALIZE_NAME)
+            name = cstring(zone, ff + 4, LOCALIZE_KEY)
             if name is not None:
                 return Found("localize", name[0], ff - 4, value=None, shared=value), name[1]
     return None
@@ -346,7 +347,7 @@ def localize(zone: bytes, at: int) -> tuple[Found, int] | None:
     value = text_at(zone, at + 8, 1 << 16)
     if value is None:
         return None
-    name = cstring(zone, value[1], LOCALIZE_NAME)
+    name = cstring(zone, value[1], LOCALIZE_KEY)
     if name is None:
         return None
     return Found("localize", name[0], at, value=value[0]), name[1]
@@ -476,9 +477,10 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(zone.as_json(), indent=1) if args.json else "\n".join(info_lines(zone)))
     elif args.command == "list":
         rows = [
-            {"type": f.type, "name": f.name, "offset": f"{f.offset:#x}", "end": f"{f.end:#x}"}
+            {"type": f.type, "name": f.name, "offset": f"{f.offset:#x}", "end": f"{f.end:#x}",
+             **({"value": f.value} if f.type == "localize" else {})}
             for f in zone.found
-        ]
+        ]  # fmt: skip
         if args.debug:
             print("\n".join(debug_lines(zone)))
         elif args.json:

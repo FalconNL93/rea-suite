@@ -65,7 +65,7 @@ SAMPLE = [
     ("localize", localize("MENU_START_GAME", "Start game")),
     ("rawfile", rawfile("../../escape.cfg", b"bind x quit\n")),
     ("rawfile", rawfile("empty.cfg", b"")),  # a zero-length raw file
-    ("localize", localize("PLATFORM", "PC")),  # a name without an underscore
+    ("material", localize("P0", "PC")),  # the ordinary shape with a name that is no localize key
     (
         "localize",
         FF + FF + "\u00a9 2007".encode("cp1252") + b"\0MENU_COPYRIGHT\0",
@@ -105,7 +105,7 @@ class Reading(unittest.TestCase):
             found,
             {("rawfile", "maps/mp/_load.gsc"), ("stringtable", "mp/statstable.csv"),
              ("localize", "MENU_START_GAME"), ("rawfile", "../../escape.cfg"),
-             ("rawfile", "empty.cfg"), ("localize", "PLATFORM"), ("localize", "MENU_COPYRIGHT"),
+             ("rawfile", "empty.cfg"), ("localize", "MENU_COPYRIGHT"),
              ("localize", "CGAME_SPECTATORS")},
         )  # fmt: skip
         table = next(f for f in self.zone.found if f.type == "stringtable")
@@ -116,7 +116,7 @@ class Reading(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "out"
             written = fastfile.extract(self.zone, root, set(fastfile.EXTRACTED))
-            self.assertEqual(written, {"rawfile": 3, "stringtable": 1, "localize": 4})
+            self.assertEqual(written, {"rawfile": 3, "stringtable": 1, "localize": 3})
             self.assertEqual((root / "maps/mp/_load.gsc").read_bytes(), b"main()\n{\n}\n")
             self.assertEqual((root / "escape.cfg").read_bytes(), b"bind x quit\n")  # `..` dropped
             self.assertEqual((root / "mp/statstable.csv").read_text(), '0,rank\n1,"a,b"\n')
@@ -124,7 +124,6 @@ class Reading(unittest.TestCase):
                 json.loads((root / "localize.json").read_text()),
                 {
                     "MENU_START_GAME": "Start game",
-                    "PLATFORM": "PC",
                     "MENU_COPYRIGHT": "\u00a9 2007",
                     "CGAME_SPECTATORS": None,  # a shared string, not resolved
                 },
@@ -182,6 +181,14 @@ class Reading(unittest.TestCase):
                     ]
                 )
             self.assertEqual((code, out.getvalue().strip()), (0, "3 rawfile"))
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+                fastfile.main(["--caller-cwd", tmp, "list", "mp_test.ff", "--json"])
+            values = {r["name"]: r.get("value", "-") for r in json.loads(out.getvalue())}
+            self.assertEqual(
+                (values["MENU_START_GAME"], values["CGAME_SPECTATORS"]), ("Start game", None)
+            )
+            self.assertEqual(values["maps/mp/_load.gsc"], "-")  # only a localized string has one
             with contextlib.redirect_stderr(io.StringIO()):
                 self.assertEqual(fastfile.main(["--caller-cwd", tmp, "info", "missing.ff"]), 2)
 
