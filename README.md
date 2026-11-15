@@ -1073,12 +1073,77 @@ Notes:
   the Windows equivalent; each registration uses that side's `bin/rea`.
 - GUI tools from WSL appear on the Windows desktop through WSLg.
 
+## Comparing two builds
+
+Two builds of one game (a patch, a later release, multiplayer against single player) are
+compared function by function with what the suite already has. Pick by the question:
+
+| Question | Tool | Notes |
+|---|---|---|
+| What changed between the two builds? | `ghidriff old.exe new.exe` | Markdown and JSON report: added, deleted, modified functions with a decompiled diff of each. `--engine VersionTrackingDiff` uses Ghidra's Version Tracking correlators instead of its own; `--bsim` is on by default |
+| Which function in the new build is this one? (with a function-by-function table) | `VTDiff.java` (Ghidra Version Tracking, headless) | Every function of the old build with its partner and the correlator that paired it: exact bytes, exact instructions (moved code), mnemonics, symbol name, references, then BSim for changed code |
+| Carry names and a header to a stripped later build | `rea-suite pe match` | See docs/PORT-TOOLS.md |
+| What exactly changed inside one pair? | REA `analyze_function` on each, then `compare_functions` | Per facet: pseudocode, assembly, calls, references, strings, CFG. `match_native_functions` pairs only unique symbols or identical bytes, so on a stripped build it leaves most functions unpaired; pair with VTDiff or ghidriff first |
+
+```sh
+# Both builds analyzed once into one project
+analyzeHeadless work/ghidra/diff rs -import old/RogueSpear.exe new/RogueSpear.exe
+# A third program to run the script on: Version Tracking refuses a program the run holds open
+head -c 64 /dev/zero > work/ghidra/anchor.bin
+analyzeHeadless work/ghidra/diff rs -import work/ghidra/anchor.bin -loader BinaryLoader \
+  -processor x86:LE:32:default -noanalysis
+analyzeHeadless work/ghidra/diff rs -process anchor.bin -noanalysis -readOnly \
+  -scriptPath common/ghidra_scripts -postScript VTDiff.java /RogueSpear.exe /RogueSpear.exe
+```
+
+(With two files of the same name, import them into two folders, `-import` with `-recursive` or
+`rea-ghidra`, and pass `/old/RogueSpear.exe /new/RogueSpear.exe`.)
+
+Every line starts with `VTDIFF`: `<old address> <old name> -> <new address> <new name> [correlator,
+score, length old->new]`, `-> UNMATCHED`, or `only in new:`. A function paired by
+`Exact Function Bytes Match` is unchanged; `Exact Function Instructions Match` is the same code
+moved (only addresses differ); a pair from a reference correlator or `BSim Function Matching`
+with a different length is a changed function: read both with REA or ghidriff's diff.
+
+Checked 2026-11-15 on two 32-bit MinGW builds of a small C program that differ in one function
+(Ghidra 12.1.4, Linux x86_64/WSL2): VTDiff paired 83 of 84 functions (68 exact bytes, 12 moved,
+3 by BSim, among them the changed one, 21 bytes against 37) in 6 s; ghidriff found the one
+modified function with both engines in about 47 s. macOS and Windows not run.
+
+A pair is a candidate, as `pe match`'s are. Reference correlators need accepted matches to grow
+from (the script accepts each match as it takes it); BSim reports its score as 0 here, so read the
+length and the code rather than the number.
+
+### Why not BinDiff
+
+Google's BinDiff (Apache-2.0) needs BinExport files, and for Ghidra those come from the BinExport
+extension. Its newest release is for Ghidra 11.0.3 (2024-04-17); it loads in 12.1.4 but fails on
+the first export (`NoSuchMethodError: DefinedDataIterator.definedStrings`), so 12.1.x needs a
+source build of BinExport's `main` (Gradle, third-party code), and that build fails against
+Ghidra 12.2 since 2026-10-22. BinDiff's own last release, 8 (2023-09-25), ships as a `.deb`,
+`.msi` and `.dmg` that the suite's tools.yml cannot unpack (only the `.dmg`). Version Tracking and
+ghidriff cover the use without either. Check again when BinExport publishes a release for the
+Ghidra pin (issue #4).
+
+Sources (read 2026-11-15):
+- https://github.com/google/binexport/releases (newest v12-20240417-ghidra_11.0.3; license Apache-2.0)
+- https://github.com/google/binexport/commit/8cec8e2cf ("Ghidra: Improve compatibility with version 12.x", 2026-09-01)
+- https://github.com/google/binexport/blob/main/.github/workflows/gradle.yml and its runs 38911269454
+  (2026-10-16, `latest` = 12.1.4: success) and 41255046049 (2026-11-01, `latest` = 12.2: failure);
+  their artifacts need a GitHub login and are not releases
+- https://github.com/google/binexport/blob/main/java/README.md (build needs JDK 21, Gradle; still names Ghidra 11.0.3)
+- https://github.com/google/bindiff/releases/tag/v8 (2023-09-25: bindiff_8_amd64.deb, bindiff8.msi, BinDiff8.dmg; Apache-2.0)
+- https://github.com/clearbluejar/ghidriff (installed 1.0.0, engines SimpleDiff, StructualGraphDiff, VersionTrackingDiff)
+- Ghidra 12.1.4's own `Ghidra/Features/VersionTracking/ghidra_scripts` (AutoVersionTrackingScript,
+  FindChangedFunctionsScript) and `AbstractGhidraVersionTrackingScript`
+
 ## Not included
 
 - **Ghidra MCP plugins** (GhidraMCP, ghidra-mcp, GhidrAssistMCP), **jadx-ai-mcp**:
   overlap with REA; pick at most one if needed.
-- **BinExport/BinDiff**: last binary releases target old Ghidra; ghidriff covers diffing
-  for now (issue [#4](https://git.falcon-net.nl/FalconNL93/rea-suite/issues/4)).
+- **BinExport/BinDiff**: BinExport's last release fails on Ghidra 12 and BinDiff's last (8, 2023) ships its
+  extension for Ghidra 10; "Comparing two builds" above covers the same questions (issue
+  [#4](https://git.falcon-net.nl/FalconNL93/rea-suite/issues/4), checked 2026-11-15).
 - **Ghidrathon** (archived; PyGhidra is built in), **efiSeek** (gone; firmware-utils),
   **frida-dexdump**, **fridump**, **de4dot**, **API Monitor**: unmaintained.
 - **rz-ghidra for the rizin CLI**: needs a shared Rizin build; Cutter bundles it.
