@@ -174,6 +174,57 @@ def cso(image: bytes, block: int = psp.SECTOR) -> bytes:
     return head + struct.pack(f"<{len(index)}I", *index) + bytes(body)
 
 
+def lz4(data: bytes) -> bytes:
+    """A greedy LZ4 block compressor, by the format's end rules (the last match starts 12 or more
+    bytes before the end, the last 5 bytes are literals), for fixtures."""
+
+    def length(n: int) -> bytes:
+        return b"\xff" * (n // 255) + bytes([n % 255])
+
+    out, seen, ip, anchor = bytearray(), {}, 0, 0
+    while ip + 12 <= len(data):
+        key = data[ip : ip + 4]
+        at, seen[key] = seen.get(key), ip
+        if at is None or ip - at > 0xFFFF:
+            ip += 1
+            continue
+        n = 4
+        while ip + n < len(data) - 5 and data[at + n] == data[ip + n]:
+            n += 1
+        lit, m = ip - anchor, n - 4
+        out.append(min(lit, 15) << 4 | min(m, 15))
+        out += length(lit - 15) if lit >= 15 else b""
+        out += data[anchor:ip] + struct.pack("<H", ip - at)
+        out += length(m - 15) if m >= 15 else b""
+        ip = anchor = ip + n
+    lit = len(data) - anchor
+    out.append(min(lit, 15) << 4)
+    out += (length(lit - 15) if lit >= 15 else b"") + data[anchor:]
+    return bytes(out)
+
+
+def zso(image: bytes, magic: bytes = b"ZISO", version: int = 1, block: int = psp.SECTOR) -> bytes:
+    """ZSO (LZ4 blocks, the top bit for a plain one) or CSO v2 (a block of `block` bytes or more
+    is plain; the top bit for LZ4, else deflate): blocks in turn LZ4, plain, deflate (v2)."""
+    blocks, index, body = len(image) // block, [], bytearray()
+    start = 0x18 + 4 * (blocks + 1)
+    for n in range(blocks):
+        chunk, flag = image[n * block : (n + 1) * block], 0
+        kind = n % 3 if version == 2 else n % 2
+        if kind == 0:
+            chunk, flag = lz4(chunk), (0x80000000 if version == 2 else 0)
+        elif kind == 1:
+            flag = 0 if version == 2 else 0x80000000
+        else:
+            packer = zlib.compressobj(9, zlib.DEFLATED, -15)
+            chunk = packer.compress(chunk) + packer.flush()
+        index.append((start + len(body)) | flag)
+        body += chunk
+    index.append(start + len(body))
+    head = struct.pack("<4sIQIBB2x", magic, 0x18, len(image), block, version, 0)
+    return head + struct.pack(f"<{len(index)}I", *index) + bytes(body)
+
+
 def written(tmp: str, name: str, data: bytes) -> Path:
     path = Path(tmp) / name
     path.write_bytes(data)
@@ -274,10 +325,29 @@ class Containers(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             from_iso = psp.info(written(tmp, "game.iso", image))
             from_cso = psp.info(written(tmp, "game.cso", cso(image)))
+            from_zso = psp.info(written(tmp, "game.zso", zso(image)))
+            from_v2 = psp.info(written(tmp, "game2.cso", zso(image, b"CISO", 2)))
         self.assertEqual(from_iso, from_cso)
+        self.assertEqual(from_iso, from_zso)
+        self.assertEqual(from_iso, from_v2)
         self.assertEqual(from_iso["param_sfo"]["DISC_ID"], "ULUS99999")
         self.assertEqual(from_iso["eboot_bin"]["kind"], "encrypted")
         self.assertEqual(from_iso["boot_bin"]["kind"], "empty")
+
+    def test_lz4_blocks(self):
+        from rea_suite import lz4block
+
+        text = b"abcabcabcabc" * 50 + bytes(range(256)) + b"z" * 300 + b"tail!"
+        self.assertEqual(lz4block.unpack(lz4(text), len(text)), text)
+        self.assertEqual(lz4block.unpack(b"\x50hello", 5), b"hello")
+        # an overlapping match: "a", then 9 more copied from one byte back
+        self.assertEqual(lz4block.unpack(b"\x15a\x01\x00\x10b", 11), b"a" * 10 + b"b")
+        for broken, why in [(b"\x50hel", "literals"), (b"\x15a\x05\x00\x10b", "before"),
+                            (b"\x50hello", "expected 6")]:  # fmt: skip
+            with self.assertRaisesRegex(ValueError, why):
+                lz4block.unpack(broken, 6 if why == "expected 6" else 11)
+        with self.assertRaisesRegex(ValueError, "version 3"):
+            psp.CsoImage(io.BytesIO(struct.pack("<4sIQIBB2x", b"CISO", 0x18, 2048, 2048, 3, 0)))
 
     def test_an_iso_without_psp_game_is_refused(self):
         image = iso({})

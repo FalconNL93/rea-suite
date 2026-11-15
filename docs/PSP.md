@@ -39,8 +39,11 @@ rea-suite psp info game.cso                                # the same from a CSO
 - A UMD image is ISO 9660: `PSP_GAME/PARAM.SFO` (title, disc id, firmware version), `PSP_GAME/SYSDIR/
   EBOOT.BIN` (the game, encrypted), `BOOT.BIN` (sometimes a plain copy, on many discs all zeros),
   `USRDIR/` (the data, often with more PRX modules), `SYSDIR/UPDATE/` (a firmware update, not the game).
-- CSO is a compressed ISO (CISO v1: deflated blocks with an index). `rea-suite psp` reads CSO v1; CSO v2
-  and ZSO (LZ4) are not read here. PPSSPP plays ISO and CSO.
+- CSO is a compressed ISO: an index of blocks, each raw deflate or stored plain (CISO v1). `rea-suite
+  psp` reads it, maxcso's CSO v2 (deflate or LZ4 per block) and ZSO (`ZISO`, LZ4 blocks), as
+  [maxcso's format notes](https://github.com/unknownbrackets/maxcso) describe them. LZ4 is decoded by
+  `lz4block.py` (pure Python, cross-checked against the `lz4` package both ways, 2026-11-15); checked
+  with synthetic images, not yet with a maxcso-made one. PPSSPP plays ISO and CSO.
 - Downloaded games and homebrew come as `EBOOT.PBP`: a container of PARAM.SFO, icons, sound and
   `DATA.PSP` (the module). `info` lists the sections. A PS1 classic's PBP has a disc image in `DATA.PSAR`
   instead (POPS); that is the PS1 route.
@@ -202,7 +205,6 @@ What a recompilation of a PSP game needs:
 ## Still missing
 
 - A run of `rea-suite oracle` against PPSSPP with a real game.
-- CSO v2 and ZSO in `rea-suite psp`.
 - A run of REA's PSP profile on a PSPDEV-built ELF with the extension installed.
 
 ## Sources (read 2026-11-13)

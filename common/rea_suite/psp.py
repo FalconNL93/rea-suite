@@ -28,7 +28,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
-from rea_suite import extcheck
+from rea_suite import extcheck, lz4block
 from rea_suite.nids import NidEntry, NidSource, NidTable
 
 PBP_MAGIC = b"\0PBP"
@@ -353,15 +353,24 @@ class IsoImage:
 
 
 class CsoImage:
-    """CISO v1 (`CISO`): blocks deflated without a zlib header, an index of block offsets whose
-    top bit marks a block stored plain. CSO v2 and ZSO (LZ4) are not read here."""
+    """A compressed UMD image (maxcso's README_CSO.md and README_ZSO.md): a header, an index of
+    block offsets (shifted left by `align`), then the blocks.
+
+    * CISO v0/v1: blocks are raw deflate; an index entry's top bit marks a block stored plain.
+    * CISO v2: a block whose stored length is `block` or more is plain; a shorter one is LZ4 when
+      its entry's top bit is set, else deflate.
+    * ZISO (ZSO): as v1, with LZ4 for deflate."""
 
     def __init__(self, f):
         self.f = f
         head = f.read(0x18)
         magic, header_size, total, block, version, align = struct.unpack("<4sIQIBB", head[:22])
-        if magic != b"CISO" or version > 1 or not block or block % SECTOR:
-            raise ValueError(f"CSO version {version} or block size {block}: only CSO v1 is read")
+        known = {b"CISO": (0, 1, 2), b"ZISO": (0, 1)}
+        if version not in known.get(magic, ()) or not block or block % SECTOR:
+            raise ValueError(
+                f"{magic!r} version {version}, block size {block}: CSO v1/v2 and ZSO are read"
+            )
+        self.magic, self.version = magic, version
         self.total, self.block, self.align = total, block, align
         count = (total + block - 1) // block + 1
         if count > (1 << 24):
@@ -374,8 +383,17 @@ class CsoImage:
         at, stop = (start & 0x7FFFFFFF) << self.align, (end & 0x7FFFFFFF) << self.align
         self.f.seek(at)
         raw = self.f.read(stop - at)
-        if start & 0x80000000:
-            return raw[: self.block]
+        size = min(self.block, self.total - n * self.block)
+        high = bool(start & 0x80000000)
+        if self.version == 2:
+            if len(raw) >= self.block:
+                return raw[:size]
+            if high:
+                return lz4block.unpack(raw, size)
+        elif high:
+            return raw[:size]
+        elif self.magic == b"ZISO":
+            return lz4block.unpack(raw, size)
         return zlib.decompressobj(-15).decompress(raw, self.block)
 
     def read(self, offset: int, size: int) -> bytes:
@@ -443,7 +461,7 @@ def umd(image: Image, names: dict[int, str] | None = None) -> dict:
 def info(path: Path, names: dict[int, str] | None = None) -> dict:
     with path.open("rb") as f:
         head = f.read(0x8800)
-        if head.startswith(b"CISO"):
+        if head[:4] in (b"CISO", b"ZISO"):
             f.seek(0)
             return umd(CsoImage(f), names)
         if head[0x8001:0x8006] == b"CD001":
