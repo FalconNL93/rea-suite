@@ -119,6 +119,26 @@ each a matter of minutes. An MSVC game also needs its C++ exceptions to work thr
 
 *Feeds:* the first frame, then the menu, then a level.
 
+### Console achievements left in a PC build
+
+A PC build of a console game often still calls the console's achievement and presence natives,
+answered by one shared stub. Lost's scripts call the same natives on the PC as on the Xbox 360
+(unlock, presence mode, context, property); on the PC all four point at one `xor eax, eax; ret`
+(the Lost port, 2026-11-13). To find and answer them:
+
+1. In the console build, find the unlock: the callers of `XUserWriteAchievements` (its own thread
+   in Lost), up to the script native that queues it. `rea-suite xbox360 spa` gives the achievement
+   and context ids from the title's SPA.
+2. In the PC build, find the same natives by the script VM's registration (their names or their
+   order in its table) and check that they point at one stub:
+   `rea-suite pe refs game/Game.exe <stub> --data` lists every data slot holding the stub, with
+   how many code pointers stand beside it (the native table). `pe rtti --slots` shows the same for
+   vtables.
+3. Patch the slots where the script VM is created, putting the port's own functions there, and
+   stop the game when a slot no longer holds the expected stub: a changed executable is then
+   never patched silently. The ids come straight from the scripts, with nothing matched between
+   the two builds.
+
 ## 6. The oracle: the original under Wine, or on Windows
 
 - **Wine on Linux** runs the original and logs every call into its DLLs (`WINEDEBUG=+relay,+seh`), file
