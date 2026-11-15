@@ -193,6 +193,19 @@ class RttiCompare(unittest.TestCase):
         self.assertEqual(vtables[("Impl", 8)].states, ["overridden", "pure"])
         self.assertEqual(vtables[("Other", 0)].states, ["new", "pure"])
 
+    def test_a_stub_shared_by_classes_is_marked(self) -> None:
+        vtables = self.compare()
+        stubs = rtti.shared_stubs(self.image, self.found, min_classes=2)
+        self.assertEqual(stubs, {self.at["stub"]: 2, self.at["a"]: 2})
+        rtti.mark_shared(self.found, stubs)
+        # a new or overridden slot holding it is marked; an inherited one stays inherited
+        self.assertEqual(vtables[("Other", 0)].states, ["new", "shared-stub"])
+        self.assertEqual(vtables[("Other", 0)].shared, {1: 2})
+        self.assertEqual(vtables[("Impl", 8)].states, ["overridden", "inherited"])
+        self.assertEqual(vtables[("Iface", 0)].states, ["pure", "shared-stub"])
+        self.assertEqual(rtti.shared_stubs(self.image, self.found), {})  # default: 3 classes
+        self.assertFalse(rtti.is_stub(self.image, self.at["purecall"]))  # a jmp is no stub
+
     def test_a_vtable_no_base_covers_in_a_class_with_virtual_bases_is_unknown(self) -> None:
         impl = self.by_name["Impl"]
         impl.bases[2].pdisp = 0  # Other as a virtual base

@@ -134,6 +134,14 @@ compiles to the base's code reads as `inherited`. Checked 2026-11-10 on a 61 MB 
 executable: 3,148 of 5,132 vtables matched a base, 715 pure slots through one `_purecall`
 thunk, in under two seconds.
 
+The same folding makes one stub (`ret 0`, `xor al, al; ret`, `xor eax, eax; ret`) the target of
+slots in hundreds of classes. Such a slot reads `shared-stub` instead of `new` or `overridden`,
+with the number of classes (`shared_stub_classes` in JSON), so the real overrides stand apart: a
+target that returns within three instructions and fills slots in `--shared-stub N` classes or more
+(default 3; 0 turns it off). A console build's natives answered on the PC by one stub show up the
+same way ([PC-WIN32.md](PC-WIN32.md)). Checked 2026-11-15 on Alan Wake Remastered's executable:
+1,141 of its 5,813 new and overridden slots, `ret 0` alone in 364 classes.
+
 Checked 2026-11-10 on a 61 MB x64 retail executable: 5,112 classes with their vtables in under a
 second; and on a 12 MB fixed-base x64 executable (no `.reloc`): 1,313 classes, 13,342 slots, 95
 classes with several vtables whose offsets match their bases' `mdisp`. x86 is covered by the

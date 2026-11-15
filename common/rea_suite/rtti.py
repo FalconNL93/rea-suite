@@ -64,6 +64,9 @@ class Vtable:
     base: str | None = None  # the base class whose vtable compare() set the slots against
     base_vtable: int | None = None  # RVA of that vtable
     states: list[str] = field(default_factory=list)  # per slot, after compare()
+    shared: dict[int, int] = field(
+        default_factory=dict
+    )  # slot index -> classes, after mark_shared()
 
     def as_json(self) -> dict:
         found = {
@@ -76,6 +79,8 @@ class Vtable:
             found["base"] = self.base
             found["base_vtable"] = None if self.base_vtable is None else f"{self.base_vtable:#x}"
             found["slot_states"] = self.states
+        if self.shared:
+            found["shared_stub_classes"] = {str(i): n for i, n in sorted(self.shared.items())}
         return found
 
 
@@ -322,6 +327,53 @@ def compare(found: list[Class], pure: set[int]) -> None:
                 slot_state(index, slot, match, pure, virtual)
                 for index, slot in enumerate(vtable.slots)
             ]
+
+
+def is_stub(image: Image, rva: int) -> bool:
+    """The code at rva returns within its first three instructions, calling and jumping nowhere
+    before: `ret`, `xor eax, eax; ret`, `mov al, 1; ret 4` (what an identical-code-folded
+    one-line override is)."""
+    cs = scan.disassembler(image)
+    try:
+        code = image.read(rva, 16)
+    except (ValueError, IndexError):
+        return False
+    for count, insn in enumerate(cs.disasm(code, image.va(rva))):
+        if insn.mnemonic in ("ret", "retn"):
+            return True
+        if count >= 2 or insn.mnemonic.startswith(("j", "call", "int")):
+            return False
+    return False
+
+
+def shared_stubs(image: Image, found: list[Class], min_classes: int = 3) -> dict[int, int]:
+    """Slot targets that fill slots in at least min_classes classes and are stubs (is_stub): the
+    target's RVA and its number of classes."""
+    classes: dict[int, set[str]] = {}
+    for cls in found:
+        for vtable in cls.vtables:
+            for slot in vtable.slots:
+                classes.setdefault(slot, set()).add(cls.mangled)
+    return {
+        slot: len(names)
+        for slot, names in classes.items()
+        if len(names) >= min_classes and is_stub(image, slot)
+    }
+
+
+def mark_shared(found: list[Class], stubs: dict[int, int]) -> None:
+    """A slot compare() called new or overridden that holds a shared stub becomes `shared-stub`,
+    so the real overrides stand apart; its vtable's `shared` gives the number of classes."""
+    for cls in found:
+        for vtable in cls.vtables:
+            for index, slot in enumerate(vtable.slots):
+                if (
+                    slot in stubs
+                    and index < len(vtable.states)
+                    and vtable.states[index] in ("new", "overridden")
+                ):
+                    vtable.states[index] = "shared-stub"
+                    vtable.shared[index] = stubs[slot]
 
 
 def slot_state(index: int, slot: int, base: Vtable | None, pure: set[int], virtual: bool) -> str:

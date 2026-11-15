@@ -157,6 +157,8 @@ def cmd_rtti(args, image: Image) -> int:
     found = rtti.classes(image)
     pure = rtti.purecalls(image) | {image.address(number(a)) for a in args.purecall}
     rtti.compare(found, pure)
+    if args.shared_stub:
+        rtti.mark_shared(found, rtti.shared_stubs(image, found, args.shared_stub))
     if args.cls:
         wanted = re.compile(args.cls)
         found = [c for c in found if wanted.search(c.name) or wanted.search(c.mangled)]
@@ -174,7 +176,8 @@ def cmd_rtti(args, image: Image) -> int:
             )
             if args.slots:
                 for index, (slot, state) in enumerate(zip(v.slots, v.states, strict=True)):
-                    print(f"    [{index}] {slot:#x}  {state}")
+                    shared = f" ({v.shared[index]} classes)" if index in v.shared else ""
+                    print(f"    [{index}] {slot:#x}  {state}{shared}")
     print(f"{len(found)} classes", file=sys.stderr)
     return 0
 
@@ -645,6 +648,14 @@ def parser() -> argparse.ArgumentParser:
         action="append",
         default=[],
         help="a statically linked _purecall stub (hex); an imported one is found; repeatable",
+    )
+    c.add_argument(
+        "--shared-stub",
+        type=int,
+        default=3,
+        metavar="N",
+        help="mark a stub (returns within 3 instructions) that fills slots in N or more classes "
+        "as shared-stub (default 3; 0: off)",
     )
     c = command("refs", "instructions that name an address or a string", cmd_refs)
     c.add_argument("address", nargs="?")
