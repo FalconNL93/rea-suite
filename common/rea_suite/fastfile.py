@@ -78,7 +78,8 @@ class Found:
     end: int = 0  # just past it
     data: bytes = b""  # a raw file's bytes
     rows: list[list[str]] = field(default_factory=list)  # a string table's
-    value: str = ""  # a localized string's
+    value: str | None = ""  # a localized string's; None when it is a shared string (below)
+    shared: int | None = None  # an encoded pointer to an earlier string, for a name or value
 
 
 @dataclass
@@ -196,7 +197,7 @@ def read_iw3_pc(data: bytes, fmt: Format) -> Zone:
             assets.append(IW3_ASSET_TYPES[kind] if kind < len(IW3_ASSET_TYPES) else f"type{kind}")
         at += 8 * asset_count
     wanted = Counter(assets)
-    found = scan(zone, at, wanted)
+    found = scan(zone, at, wanted, list(blocks.values()))
     return Zone(fmt.game, fmt.platform, fmt.magic.decode(), fmt.version, len(data) - 12, size, external,
                 blocks, strings, assets, at, found, len(zone), zone)  # fmt: skip
 
@@ -240,13 +241,32 @@ def text_at(zone: bytes, at: int, limit: int = 1 << 20) -> tuple[str, int] | Non
     return value, end + 1
 
 
-def scan(zone: bytes, start: int, wanted: Counter) -> list[Found]:
-    """The raw files, string tables and localized strings in the zone from start, by shape."""
+def encoded(pointer: int, blocks: list[int]) -> bool:
+    """A pointer to data already loaded: the block in the top four bits, the offset plus one
+    below, inside the block's size from the zone header (a localized value 0x4000659E: block 4)."""
+    block, offset = pointer >> 28, (pointer & 0x0FFFFFFF) - 1
+    return pointer != FOLLOWS and block < len(blocks) and 0 <= offset < blocks[block]
+
+
+def scan(zone: bytes, start: int, wanted: Counter, blocks: list[int] | None = None) -> list[Found]:
+    """The raw files, string tables and localized strings in the zone from start, by shape.
+    With the zone's block sizes, also the ones whose name or value is a shared string (an
+    encoded pointer where -1 would be): their -1 comes 4 or 8 bytes into the struct."""
     found: list[Found] = []
     n = len(zone)
+    last = start
     at = zone.find(FF4, start)
     while 0 <= at <= n - 12:
         hit = None
+        if blocks:
+            hit = shared_shape(zone, at, wanted, blocks, last)
+            if hit is not None:
+                item, end = hit
+                item.end = end
+                found.append(item)
+                last = end
+                at = zone.find(FF4, end)
+                continue
         a, b, c = struct.unpack_from("<III", zone, at)
         if wanted["rawfile"] and a == FOLLOWS and c == FOLLOWS and 0 <= b < n:
             hit = rawfile(zone, at, b)
@@ -258,10 +278,34 @@ def scan(zone: bytes, start: int, wanted: Counter) -> list[Found]:
             item, end = hit
             item.end = end
             found.append(item)
+            last = end
             at = zone.find(FF4, end)
         else:
             at = zone.find(FF4, at + 1)
     return found
+
+
+def shared_shape(
+    zone: bytes, ff: int, wanted: Counter, blocks: list[int], last: int
+) -> tuple[Found, int] | None:
+    """A localized string {shared value, -1, name} whose -1 is at ff, or a raw file {shared name,
+    len, -1, buffer} whose -1 is at ff; never starting before the last asset's end."""
+    if wanted["localize"] and ff - 4 >= last:
+        value = struct.unpack_from("<I", zone, ff - 4)[0]
+        if encoded(value, blocks):
+            name = cstring(zone, ff + 4, LOCALIZE_NAME)
+            if name is not None:
+                return Found("localize", name[0], ff - 4, value=None, shared=value), name[1]
+    if wanted["rawfile"] and ff - 8 >= last:
+        pointer, length = struct.unpack_from("<II", zone, ff - 8)
+        end = ff + 4 + length
+        if encoded(pointer, blocks) and 0 < length and end < len(zone) and zone[end] == 0:
+            data = zone[ff + 4 : end]
+            text = sum(1 for byte in data if 32 <= byte < 127 or byte in (9, 10, 13))
+            if text >= 0.95 * len(data) and b"\0" not in data:
+                name = f"shared-name-{ff - 8:08x}.txt"  # the name is an earlier string's
+                return Found("rawfile", name, ff - 8, data=data, shared=pointer), end + 1
+    return None
 
 
 def rawfile(zone: bytes, at: int, length: int) -> tuple[Found, int] | None:
@@ -326,12 +370,12 @@ def out_path(root: Path, name: str) -> Path:
 
 def extract(zone: Zone, root: Path, types: set[str]) -> dict[str, int]:
     written: Counter = Counter()
-    localized: dict[str, str] = {}
+    localized: dict[str, str | None] = {}
     for item in zone.found:
         if item.type not in types:
             continue
         if item.type == "localize":
-            localized[item.name] = item.value
+            localized[item.name] = item.value  # None: a shared string, not resolved
             continue
         path = out_path(root, item.name)
         path.parent.mkdir(parents=True, exist_ok=True)
