@@ -156,6 +156,31 @@ What a recompilation of a PS1 executable needs, whichever recompiler is used:
   captured and compiled at run time, the BIOS recompiled, frame rate above the guest's VBlank) is in
   [RECOMPILATION.md](RECOMPILATION.md).
 
+### PSXRecomp's debug server
+
+A PSXRecomp runtime carries a debug server: one JSON object a line over TCP on 127.0.0.1
+(`{"cmd": "ping"}`, the reply one line with `"ok"`), about 400 commands (`frame`, `read_ram`,
+`write_ram`, `get_registers`, `press`, `screenshot`, the GPU, SPU, CD-ROM and DMA states and
+traces). duke-nukem-ttk's `tools/psx_debug.py` sends one command and prints the reply. What trips a
+first session (Time to Kill, 2026-11-14):
+
+- A Release build's server is off unless `PSX_DEBUG_SERVER=1`, and a connection to it then hangs
+  instead of being refused: it looks like a hung game.
+- `{"cmd": "read_ram", "addr": "0x80000000", "len": 2097152}` (`0x200000`) returns all of RAM in one
+  hex line: the quick way to find where an overlay loads (search RAM for the file's bytes, also
+  without its first word, which the game may overwrite).
+- From WSL, a Windows build's server answers on 127.0.0.1, but `timeout` does not stop the Windows
+  process: send `{"cmd": "quit"}`, or use `taskkill.exe`.
+- `press` takes the pad word active-low (Start is 0xFFF7); menus want about 30 frames held at the
+  uncapped rate. `screenshot` is the game's picture, `present_shot` the window's frame with the
+  overlay.
+- `--headless` needs no display at all: leave xvfb out (under it the game exited after about 35 s
+  without a log line), unset `DISPLAY` and `WAYLAND_DISPLAY` and give an empty `XDG_RUNTIME_DIR`.
+  `<game> --help` starts the game: read the runtime's flags in its source.
+
+The server has no breakpoints, so `rea-suite oracle` cannot drive it the way it drives a GDB stub;
+its frame counter and `read_ram` are the sync point and the read a back end of its own would use.
+
 ## 8. Patching and rebuilding the CD
 
 ```sh
