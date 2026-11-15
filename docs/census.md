@@ -105,7 +105,10 @@ import it lists what the game calls and the answers leave `missing` or `stub` (`
 ones too; `--json`). An import of a DLL the runtime loaded as the game's own code (Lost's
 `binkw32.dll`) counts as answered by it. With a static and a runtime census it adds the static
 side's coverage: how many of the run's interface calls from the executable the static census found,
-and any it put on another interface.
+and any it put on another interface. When the answers carry `args` (and `returns_float`) per method and
+import, as winrt's do from 604436e, the diff checks each against the slot tables and
+`win32-imports.json` and lists every one that differs: a runtime that returns from a missing method
+or import by a wrong count pops the wrong number of bytes.
 
 ### The slot tables
 

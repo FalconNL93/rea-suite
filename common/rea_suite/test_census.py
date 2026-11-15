@@ -346,6 +346,27 @@ class Diff(unittest.TestCase):
         bink = next(g for g in rows if g.module == "binkw32.dll")
         self.assertEqual((bink.answer, bink.guest), ("implemented", True))
 
+    def test_the_runtime_s_counts_are_checked_against_the_sdk(self) -> None:
+        answers = doc(
+            "answers",
+            [{"name": "IDirect3DDevice9", "methods": [
+                {"slot": 118, "args": 2, "answer": "implemented"},  # CreateQuery: right
+                {"slot": 57, "args": 3, "answer": "implemented"},  # SetRenderState takes 2
+                {"slot": 16, "answer": "implemented"}]},  # no count: not checked
+             {"name": "NxActor", "methods": [{"slot": 17, "args": 1, "returns_float": True}]}],
+            [{"module": "KERNEL32.dll", "name": "CreateFileA", "args": 6}, {"module": "kernel32.dll", "name": "Sleep", "args": 1}],
+        )  # fmt: skip
+        found = census.check_counts(answers, census.Slots.load(), census.imports_table())
+        self.assertEqual(len(found), 3, found)
+        self.assertIn(
+            "IDirect3DDevice9::SetRenderState (slot 57): the runtime says 3 arguments, d3d9 says 2",
+            found,
+        )
+        self.assertTrue(any("NxActor::createShape" in f and "float" in f for f in found))
+        self.assertTrue(
+            any(f.startswith("kernel32.dll!CreateFileA: the runtime says 6") for f in found)
+        )
+
     def test_documents_are_checked(self) -> None:
         with self.assertRaises(census.CensusError):
             census.check({"schema": "rea-census/2", "kind": "static"})

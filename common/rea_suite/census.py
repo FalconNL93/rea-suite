@@ -47,6 +47,7 @@ class Method:
     riid: tuple[int, int] | None  # (IID argument, out-pointer argument) of a QueryInterface
     pops: int  # bytes the callee pops: stdcall and thiscall alike pop their stack arguments
     callbacks: tuple[tuple[int, int, int], ...] = ()  # (function arg, context arg, its parameter)
+    returns_float: bool = False
 
 
 @dataclass(frozen=True)
@@ -91,6 +92,7 @@ class Slots:
                         (m["riid"]["iid"], m["riid"]["out"]) if "riid" in m else None,
                         4 * (m["args"] + (0 if thiscall else 1)),
                         callbacks(m),
+                        bool(m.get("returns_float")),
                     )
                     for slot, m in enumerate(body["methods"])
                 ]  # fmt: skip
@@ -318,6 +320,42 @@ def static_coverage(censuses: list[dict]) -> dict | None:
     return {"reached": reached, "found": matched, "wrong": wrong, "missed": missed}
 
 
+def imports_table(directory: Path = TABLES) -> dict[str, dict]:
+    """win32-imports.json's functions (module!Name), or none when it is absent."""
+    path = directory / "win32-imports.json"
+    return json.loads(path.read_text(encoding="utf-8"))["functions"] if path.exists() else {}
+
+
+def check_counts(answers: dict, slots: Slots, imports: dict[str, dict]) -> list[str]:
+    """The answers' argument counts and float returns that differ from the SDK's (the slot
+    tables, win32-imports.json): a runtime that returns from a missing method or import by a
+    wrong count pops the wrong number of bytes. Only entries that carry `args` are checked."""
+    found = []
+    for i in answers.get("interfaces", []):
+        for m in i["methods"]:
+            ref = slots.method(i["name"], m["slot"])
+            if "args" not in m or ref is None:
+                continue
+            where = f"{i['name']}::{ref.name} (slot {m['slot']})"
+            if m["args"] != ref.args:
+                found.append(
+                    f"{where}: the runtime says {m['args']} arguments, {slots.sdk[i['name']]} says {ref.args}"
+                )
+            if bool(m.get("returns_float")) != ref.returns_float:
+                found.append(f"{where}: the runtime says it returns {'a float' if m.get('returns_float') else 'no float'}, "
+                             f"{slots.sdk[i['name']]} says {'a float' if ref.returns_float else 'no float'}")  # fmt: skip
+    for row in answers.get("imports", []):
+        key = f"{row['module'].lower()}!{row['name']}"
+        ref = imports.get(key)
+        if "args" not in row or ref is None or ref.get("args") is None:
+            continue
+        if row["args"] != ref["args"]:
+            found.append(
+                f"{key}: the runtime says {row['args']} arguments, the import table {ref['args']} ({ref['conv']})"
+            )
+    return found
+
+
 def diff_text(rows: list[Gap], warnings: list[str], every: bool) -> list[str]:
     lines = [f"warning: {w}" for w in warnings]
     shown = [g for g in rows if every or g.answer != "implemented"]
@@ -441,6 +479,7 @@ def main(argv: list[str] | None = None) -> int:
         answers = read(args.caller_cwd / args.answers)
         docs = [read(args.caller_cwd / c) for c in args.censuses]
         rows, warnings = diff(answers, docs)
+        counts = check_counts(answers, Slots.load(), imports_table())
         coverage = static_coverage(docs)
     except CensusError as e:
         print(f"census: {e}", file=sys.stderr)
@@ -448,7 +487,15 @@ def main(argv: list[str] | None = None) -> int:
     if args.json:
         shown = [g.as_json() for g in rows if args.all or g.answer != "implemented"]
         print(
-            json.dumps({"warnings": warnings, "rows": shown, "static_coverage": coverage}, indent=1)
+            json.dumps(
+                {
+                    "warnings": warnings,
+                    "rows": shown,
+                    "static_coverage": coverage,
+                    "count_mismatches": counts,
+                },
+                indent=1,
+            )
         )
         return 0
     print("\n".join(diff_text(rows, warnings, args.all)))
@@ -462,6 +509,10 @@ def main(argv: list[str] | None = None) -> int:
             print(
                 f"  wrong  {row['return']}  {row['interface']} slot {row['slot']}, static says {row['static']}"
             )
+    if counts:
+        print(f"{len(counts)} argument counts or float returns differ from the SDK's:")
+        for line in counts:
+            print(f"  {line}")
     return 0
 
 
