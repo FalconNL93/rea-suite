@@ -23,8 +23,17 @@
 // pointer+offset; "type" u8 u16 u32 u64 s8 s16 s32 s64 float double pointer utf8 utf16 ansi,
 // bytes:N, or array with "count" (a number or argN), "stride" (a number or {"x64": 16,
 // "ia32": 12}) and "fields" (reads with offsets into each element).
-// Messages: attached, pending, call, count, rate, limit, error; `ms` is the time in the process.
-// Counts are reported every interval_ms, so a count target needs one.
+// Every import of a module instead of (or beside) named targets:
+//   "imports": { "module": "Game.exe",          // default: the main module
+//                "dlls": ["d3d9.dll"],          // only these DLLs (default: all)
+//                "exclude": ["kernel32.dll!EnterCriticalSection"],  // hot ones not worth the cost
+//                "until": 1 }                   // drop a function's hook after N calls (0: never)
+// Only calls returning into the module count. The first call of each import is sent at once
+// (kind import, with its caller); totals per caller come with every report (kind imports;
+// callers as offsets into the module). `rea-suite census from-frida` turns the log into a
+// rea-census/1 runtime census (docs/census.md).
+// Messages: attached, pending, call, count, rate, limit, error, import, imports; `ms` is the time
+// in the process. Counts are reported every interval_ms, so a count target needs one.
 'use strict';
 
 const targets = [];
@@ -179,6 +188,56 @@ function hook(t, address, label) {
   send({ kind: 'attached', target: t.spec.name, via: label, address: address.toString(), at: where(address), ms: now() });
 }
 
+const imported = { spec: null, module: null, entries: new Map() };
+
+function importKey(imp) {
+  return `${imp.module.toLowerCase()}!${imp.name}`;
+}
+
+// Hook the module's imports whose address is bound; the rest is tried again later.
+function hookImports() {
+  const spec = imported.spec;
+  if (spec === null) return;
+  const module = imported.module || moduleOf(spec.module);
+  if (module === null) return;
+  imported.module = module;
+  const dlls = spec.dlls ? new Set(spec.dlls.map(d => d.toLowerCase())) : null;
+  const exclude = new Set((spec.exclude || []).map(e => e.toLowerCase()));
+  const inside = r => r.compare(module.base) >= 0 && r.compare(module.base.add(module.size)) < 0;
+  for (const imp of module.enumerateImports()) {
+    if (imp.type !== 'function' || !imp.module || !imp.name) continue;
+    const key = importKey(imp);
+    if (imported.entries.has(key) || (dlls && !dlls.has(imp.module.toLowerCase())) || exclude.has(key.toLowerCase())) continue;
+    if (!imp.address || imp.address.isNull() || Process.findModuleByAddress(imp.address) === null) continue;
+    const entry = { calls: 0, callers: {}, listener: null };
+    imported.entries.set(key, entry);
+    try {
+      entry.listener = Interceptor.attach(imp.address, {
+        onEnter() {
+          if (entry.listener === null || !inside(this.returnAddress)) return;
+          const offset = '0x' + this.returnAddress.sub(module.base).toString(16);
+          entry.callers[offset] = (entry.callers[offset] || 0) + 1;
+          if (entry.calls++ === 0) send({ kind: 'import', import: key, caller: `${module.name}+${offset}`, ms: now() });
+          if (spec.until && entry.calls >= spec.until) {
+            const listener = entry.listener;
+            entry.listener = null;
+            setTimeout(() => listener.detach(), 0);
+          }
+        }
+      });
+    } catch (e) {
+      send({ kind: 'error', target: key, error: String(e) });
+    }
+  }
+}
+
+function reportImports() {
+  if (imported.spec === null || imported.module === null) return;
+  const counts = {};
+  for (const [key, entry] of imported.entries) if (entry.calls > 0) counts[key] = { calls: entry.calls, callers: entry.callers };
+  send({ kind: 'imports', ms: now(), module: imported.module.name, hooked: imported.entries.size, counts });
+}
+
 // Resolve what can be resolved now; the rest waits for its module (or a bound IAT slot).
 function resolve() {
   for (const t of targets) {
@@ -216,6 +275,7 @@ function resolve() {
 }
 
 function report() {
+  reportImports();
   const counts = {};
   for (const t of targets) {
     counts[t.spec.name] = t.total;
@@ -226,7 +286,16 @@ function report() {
 
 rpc.exports = {
   configure(config) {
-    for (const spec of config.targets) {
+    if (config.imports) {
+      imported.spec = config.imports;
+      hookImports();
+      send({ kind: 'attached', target: 'imports', hooked: imported.entries.size, ms: now() });
+      Process.attachModuleObserver({ onAdded() { hookImports(); } });
+      // a spawned process binds its imports as it starts: try the unbound ones again
+      const timer = setInterval(hookImports, 500);
+      setTimeout(() => clearInterval(timer), 30000);
+    }
+    for (const spec of config.targets || []) {
       if (!spec.name) throw new Error('a target needs a name');
       const wants = [];
       for (const e of [].concat(spec.export || [])) wants.push({ export: e });

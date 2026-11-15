@@ -85,6 +85,28 @@ class Observer(unittest.TestCase):
         # three calls each, but only the first per variable is a change
         self.assertEqual(texts, ["REA_FRIDA_A=one", "REA_FRIDA_B=two"])
 
+    def test_imports_mode_counts_what_the_main_module_calls(self) -> None:
+        config = {"interval_ms": 200, "imports": {"until": 0}}
+        with tempfile.TemporaryDirectory() as tmp:
+            script = Path(tmp) / "target.py"
+            script.write_text(TARGET)
+            log = Path(tmp) / "log.jsonl"
+            with contextlib.redirect_stdout(io.StringIO()):
+                code = frida_run.main(
+                    [str(OBSERVER), "--config-json", json.dumps(config), "--log", str(log),
+                     "--quiet", "--seconds", "20", "--spawn", sys.executable, str(script)]
+                )  # fmt: skip
+            records = [json.loads(line) for line in log.read_text().splitlines()]
+        self.assertEqual(
+            code, 0, [r for r in records if r.get("kind") in ("error", "script-error")]
+        )
+        firsts = [r for r in records if r.get("kind") == "import"]
+        reports = [r for r in records if r.get("kind") == "imports" and r["counts"]]
+        self.assertTrue(firsts and reports, records[:5])
+        key, row = next(iter(reports[-1]["counts"].items()))
+        self.assertIn("!", key)
+        self.assertEqual(sum(row["callers"].values()), row["calls"])
+
 
 if __name__ == "__main__":
     unittest.main()

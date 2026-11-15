@@ -46,6 +46,8 @@
 #   rea-suite census diff <answers> <census>...  what a game calls (static or runtime census)
 #                                            that a runtime's answers leave missing, by
 #                                            interface (docs/census.md)
+#   rea-suite census from-frida <log> --exe <exe>  a runtime census of the imports a Windows
+#                                            run reached (observer.js imports mode)
 #   rea-suite zar info|list|extract <archive> ...  ZArchive .zar/.wua (Xenia's 360 games,
 #                                            Cemu's Wii U games): files listed, the ones named
 #                                            extracted, no build needed (--help)

@@ -582,6 +582,24 @@ rea-suite frida common/frida/observer.js --name Game.exe --config-json \
                 {"name": "Tick", "iat": "0x6c2018", "mode": "count", "only_from": "Game.exe"}]}'
 ```
 
+Every import a run reaches, not only the ones named: an `imports` config hooks each function the
+main module (or `"module"`) imports, counts the calls returning into that module per caller, sends
+each import's first call at once and the totals with every report. `"until": 1` drops a hook after
+its first call, so a long run pays only for what it has not seen yet; `"exclude"` leaves out hot
+functions, `"dlls"` keeps only some. `rea-suite census from-frida` turns the log into a
+rea-census/1 runtime census ([census.md](census.md)): what the original reached on Windows, to diff
+or seed with like winrt's census mode.
+
+```sh
+rea-suite frida common/frida/observer.js --spawn game/Game.exe --seconds 600 --log work/imports.jsonl \
+  --config-json '{"interval_ms": 5000, "imports": {"until": 1}}'
+rea-suite census from-frida work/imports.jsonl --exe game/Game.exe --out work/game.windows.json
+```
+
+Not yet run (2026-11-15): the converter has a unit test and the script parses, but Frida 17.26.2
+cannot attach on this WSL kernel (6.18; the getenv check above fails the same way), and no
+Windows run has been made. The opt-in test in `test_frida_run` covers the imports mode.
+
 Checked 2026-11-10 on Linux (frida 17.24.3): a spawned Python's `getenv` calls with argument and
 result strings, change mode per group, counts per caller and `only_from`; the opt-in test runs
 it (`REA_FRIDA_INTEGRATION=1 uv run --no-sync python -m unittest rea_suite.test_frida_run` in

@@ -18,6 +18,7 @@
     .\platforms\windows\rea-suite.ps1 steamstub <exe>...  # SteamStub DRM signs
     .\platforms\windows\rea-suite.ps1 pe <command> <exe> ...  # PE scans: RTTI, references, callers, strings, disasm, resources, census
     .\platforms\windows\rea-suite.ps1 census diff <answers> <census>...  # what a game calls that a runtime leaves missing
+    .\platforms\windows\rea-suite.ps1 census from-frida <log> --exe <exe>  # a runtime census of the imports a run reached
     .\platforms\windows\rea-suite.ps1 zar info|list|extract <archive> ...  # ZArchive .zar/.wua: list, extract the files named
     .\platforms\windows\rea-suite.ps1 rmdp list|extract|find|inner <index.bin> ...  # Remedy packages
     .\platforms\windows\rea-suite.ps1 yetibig info|list|blob|diff|refs|check <Yeti.big> ...  # YETI engine archives (Lost: Via Domus, GRAW)

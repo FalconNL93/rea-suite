@@ -95,6 +95,11 @@ generation; it learns the game's own classes from the vtables their constructors
 their virtual calls direct ones. Every `call [reg+off]` on an object it tied to an interface is a
 site. The module's description (`common/rea_suite/pecensus.py`) says how, and what it misses.
 
+On Windows, the original's own run gives a runtime census of the imports it reached:
+`rea-suite frida common/frida/observer.js` with an `imports` config, then `rea-suite census
+from-frida <log> --exe <Game.exe>` ([PORT-TOOLS.md](PORT-TOOLS.md#passive-observer)). Its sites are
+return addresses at the executable's preferred base, its answers `implemented` (Windows answered).
+
 `census diff` takes the answers first, then any static and runtime censuses. Per interface and per
 import it lists what the game calls and the answers leave `missing` or `stub` (`--all`: the answered
 ones too; `--json`). An import of a DLL the runtime loaded as the game's own code (Lost's

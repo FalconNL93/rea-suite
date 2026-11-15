@@ -230,6 +230,30 @@ def doc(kind: str, interfaces: list, imports: list = ()) -> dict:
     }
 
 
+class FromFrida(unittest.TestCase):
+    def test_an_imports_log_becomes_a_runtime_census(self) -> None:
+        lines = [
+            json.dumps({"kind": "import", "import": "d3d9.dll!Direct3DCreate9", "caller": "Game.exe+0x1006"}),
+            "not json",
+            json.dumps({"kind": "imports", "module": "Game.exe", "counts": {
+                "d3d9.dll!Direct3DCreate9": {"calls": 1, "callers": {"0x1006": 1}},
+                "KERNEL32.dll!Sleep": {"calls": 5, "callers": {"0x2000": 2, "0x1f00": 3}}}}),
+        ]  # fmt: skip
+        doc = census.check(census.from_frida(lines, "Game.exe", 0x400000))
+        rows = {(r["module"], r["name"]): r for r in doc["imports"]}
+        self.assertEqual(
+            rows[("d3d9.dll", "Direct3DCreate9")]["sites"],
+            [{"return": "0x401006", "count": 1, "image": "Game.exe", "first": True}],
+        )
+        self.assertEqual(
+            [s["return"] for s in rows[("kernel32.dll", "Sleep")]["sites"]],
+            ["0x401f00", "0x402000"],
+        )
+        self.assertEqual(doc["kind"], "runtime")
+        with self.assertRaises(census.CensusError):
+            census.from_frida(lines[:2], "Game.exe", 0x400000)
+
+
 class Diff(unittest.TestCase):
     answers = doc(
         "answers",
