@@ -59,10 +59,11 @@ counted, not read: walking to their data means reading every asset before them, 
 fewer are found than listed, `list --debug` shows where each found one lies and the gaps between
 them, with their first bytes in hex: the list keeps a type in runs, so a gap inside a run is where
 the unfound one lies, and its bytes show what shape it has. A name or value the zone already holds is
-stored as an encoded pointer to it (the block in the top four bits, the offset below): such a
-localized string is listed with a `null` value, such a raw file under `shared-name-<offset>.txt`
-(its bytes must be text), both checked against the block sizes in the zone's header; the pointer
-itself is not followed, which would need every asset before it read.
+stored as an encoded pointer to it (the block in the top four bits, the offset below). A localized
+string with such a value is listed with a `null` value, when its name is a localize key and the
+pointer decodes inside a block the zone header sizes. A raw file with such a name is not looked
+for: without following the pointer, which needs every asset before it read, its shape alone
+matches material data too, so it counts as not found (one per zone in Call of Duty 4's).
 Names come from the file: an extracted path keeps to the output folder (`..` and empty parts dropped,
 unsafe characters as `%XX`). IW3 on the Xbox 360 (version 1, big-endian), signed fastfiles
 (`IWff0100`), IW4 and later are recognized and refused by name, the places a second reader goes.

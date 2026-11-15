@@ -74,7 +74,9 @@ SAMPLE = [
     ("material", FF + u32(8) + FF + u32(0x2F) + FF + u32(2) + FF + u32(0x11) + FF + bytes(8)),
     # a name or value that is an earlier string: an encoded pointer (block 4, offset 0x122) for -1
     ("localize", u32(0x40000123) + FF + b"CGAME_SPECTATORS\0"),
-    ("rawfile", u32(0x40000200) + u32(5) + FF + b"hello\0"),
+    ("rawfile", u32(0x40000200) + u32(5) + FF + b"hello\0"),  # not found: its name is unresolved
+    # material data with the shared localize shape and a name that is no localize key
+    ("material", u32(0x40000300) + FF + b"P0\0" + bytes(4)),
     ("image", b"\x00" * 16),
 ]
 
@@ -95,8 +97,8 @@ class Reading(unittest.TestCase):
 
     def test_the_simple_assets_are_found_among_others(self) -> None:
         found = {(f.type, f.name) for f in self.zone.found}
-        shared = next(f for f in self.zone.found if f.type == "rawfile" and f.shared)
-        self.assertEqual((shared.data, shared.shared), (b"hello", 0x40000200))
+        self.assertFalse(any(f.type == "rawfile" and f.shared for f in self.zone.found))
+        self.assertNotIn("P0", {f.name for f in self.zone.found})
         spectators = next(f for f in self.zone.found if f.name == "CGAME_SPECTATORS")
         self.assertEqual((spectators.value, spectators.shared), (None, 0x40000123))
         self.assertEqual(
@@ -104,17 +106,17 @@ class Reading(unittest.TestCase):
             {("rawfile", "maps/mp/_load.gsc"), ("stringtable", "mp/statstable.csv"),
              ("localize", "MENU_START_GAME"), ("rawfile", "../../escape.cfg"),
              ("rawfile", "empty.cfg"), ("localize", "PLATFORM"), ("localize", "MENU_COPYRIGHT"),
-             ("localize", "CGAME_SPECTATORS"), ("rawfile", shared.name)},
+             ("localize", "CGAME_SPECTATORS")},
         )  # fmt: skip
         table = next(f for f in self.zone.found if f.type == "stringtable")
         self.assertEqual(table.rows, [["0", "rank"], ["1", "a,b"]])
-        self.assertEqual(self.zone.as_json()["by_type"]["rawfile"], {"listed": 4, "found": 4})
+        self.assertEqual(self.zone.as_json()["by_type"]["rawfile"], {"listed": 4, "found": 3})
 
     def test_extraction_stays_inside_its_folder(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "out"
             written = fastfile.extract(self.zone, root, set(fastfile.EXTRACTED))
-            self.assertEqual(written, {"rawfile": 4, "stringtable": 1, "localize": 4})
+            self.assertEqual(written, {"rawfile": 3, "stringtable": 1, "localize": 4})
             self.assertEqual((root / "maps/mp/_load.gsc").read_bytes(), b"main()\n{\n}\n")
             self.assertEqual((root / "escape.cfg").read_bytes(), b"bind x quit\n")  # `..` dropped
             self.assertEqual((root / "mp/statstable.csv").read_text(), '0,rank\n1,"a,b"\n')
@@ -135,7 +137,7 @@ class Reading(unittest.TestCase):
             2, ("rawfile", u32(0) + rawfile("hidden.gsc", b"x")[4:])
         )  # a name pointer of 0
         lines = fastfile.debug_lines(fastfile.read(fastfile_bytes(zone(hidden))))
-        self.assertIn("rawfile: 4 found of 5 listed, in 3 run(s) of the list", lines)
+        self.assertIn("rawfile: 3 found of 5 listed, in 3 run(s) of the list", lines)
         gap = next(
             i
             for i, line in enumerate(lines)
@@ -164,7 +166,7 @@ class Reading(unittest.TestCase):
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
                 self.assertEqual(fastfile.main(["--caller-cwd", tmp, "info", "mp_test.ff"]), 0)
-            self.assertIn("rawfile                 4 (4 found)", out.getvalue())
+            self.assertIn("rawfile                 4 (3 found)", out.getvalue())
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
                 code = fastfile.main(
@@ -179,7 +181,7 @@ class Reading(unittest.TestCase):
                         "rawfile",
                     ]
                 )
-            self.assertEqual((code, out.getvalue().strip()), (0, "4 rawfile"))
+            self.assertEqual((code, out.getvalue().strip()), (0, "3 rawfile"))
             with contextlib.redirect_stderr(io.StringIO()):
                 self.assertEqual(fastfile.main(["--caller-cwd", tmp, "info", "missing.ff"]), 2)
 

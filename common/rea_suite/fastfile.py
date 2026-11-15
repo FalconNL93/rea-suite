@@ -285,26 +285,23 @@ def scan(zone: bytes, start: int, wanted: Counter, blocks: list[int] | None = No
     return found
 
 
+SHARED_LOCALIZE_NAME = re.compile(rb"(?=[A-Z0-9_]*_)[A-Z0-9_]{3,128}\0")
+
+
 def shared_shape(
     zone: bytes, ff: int, wanted: Counter, blocks: list[int], last: int
 ) -> tuple[Found, int] | None:
-    """A localized string {shared value, -1, name} whose -1 is at ff, or a raw file {shared name,
-    len, -1, buffer} whose -1 is at ff; never starting before the last asset's end."""
+    """A localized string {shared value, -1, name} whose -1 is at ff, never starting before the
+    last asset's end. Its name must be a localize key: three characters or more of [A-Z0-9_] with
+    an underscore (cod4's zones: "48" and "P0" were material data). A raw file whose name is
+    shared is not looked for: without resolving the pointer its name cannot confirm a match, and
+    the shape alone matched material and technique data (cod4, 2026-11-15)."""
     if wanted["localize"] and ff - 4 >= last:
         value = struct.unpack_from("<I", zone, ff - 4)[0]
         if encoded(value, blocks):
-            name = cstring(zone, ff + 4, LOCALIZE_NAME)
+            name = cstring(zone, ff + 4, SHARED_LOCALIZE_NAME)
             if name is not None:
                 return Found("localize", name[0], ff - 4, value=None, shared=value), name[1]
-    if wanted["rawfile"] and ff - 8 >= last:
-        pointer, length = struct.unpack_from("<II", zone, ff - 8)
-        end = ff + 4 + length
-        if encoded(pointer, blocks) and 0 < length and end < len(zone) and zone[end] == 0:
-            data = zone[ff + 4 : end]
-            text = sum(1 for byte in data if 32 <= byte < 127 or byte in (9, 10, 13))
-            if text >= 0.95 * len(data) and b"\0" not in data:
-                name = f"shared-name-{ff - 8:08x}.txt"  # the name is an earlier string's
-                return Found("rawfile", name, ff - 8, data=data, shared=pointer), end + 1
     return None
 
 
