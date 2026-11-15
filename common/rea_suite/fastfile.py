@@ -187,7 +187,7 @@ def read_iw3_pc(data: bytes, fmt: Format) -> Zone:
             at = end + 1
     assets: list[str] = []
     if asset_count and assets_ptr == FOLLOWS:
-        at = (at + 3) & ~3
+        # right after the last string, unaligned (cod4's real zones, 2026-11-15)
         for i in range(asset_count):
             kind = u32(at + 8 * i)
             assets.append(IW3_ASSET_TYPES[kind] if kind < len(IW3_ASSET_TYPES) else f"type{kind}")
@@ -242,7 +242,7 @@ def scan(zone: bytes, start: int, wanted: Counter) -> list[Found]:
     while 0 <= at <= n - 12:
         hit = None
         a, b, c = struct.unpack_from("<III", zone, at)
-        if wanted["rawfile"] and a == FOLLOWS and c == FOLLOWS and 0 < b < n:
+        if wanted["rawfile"] and a == FOLLOWS and c == FOLLOWS and 0 <= b < n:
             hit = rawfile(zone, at, b)
         if hit is None and wanted["stringtable"] and a == FOLLOWS and at + 16 <= n:
             hit = stringtable(zone, at)
@@ -299,7 +299,7 @@ def localize(zone: bytes, at: int) -> tuple[Found, int] | None:
     if value is None:
         return None
     name = cstring(zone, value[1], LOCALIZE_NAME)
-    if name is None or "_" not in name[0]:
+    if name is None:
         return None
     return Found("localize", name[0], at, value=value[0]), name[1]
 

@@ -32,7 +32,8 @@ def zone(assets: list[tuple[str, bytes]], strings: list[str] = ("j_head",)) -> b
     asset's data in order."""
     body = u32(len(strings)) + FF + u32(len(assets)) + FF
     body += FF * len(strings) + b"".join(s.encode() + b"\0" for s in strings)
-    body += b"\0" * (-len(body) % 4)
+    # the assets' array follows the last string unaligned, as in the game's zones ("j_head" ends
+    # at an odd offset)
     body += b"".join(u32(type_id(kind)) + FF for kind, _ in assets)
     body += b"".join(data for _, data in assets)
     head = u32(len(body)) + u32(0) + b"".join(u32(0x1000 * (i + 1)) for i in range(9))
@@ -63,6 +64,8 @@ SAMPLE = [
     ("stringtable", stringtable("mp/statstable.csv", [["0", "rank"], ["1", "a,b"]])),
     ("localize", localize("MENU_START_GAME", "Start game")),
     ("rawfile", rawfile("../../escape.cfg", b"bind x quit\n")),
+    ("rawfile", rawfile("empty.cfg", b"")),  # a zero-length raw file
+    ("localize", localize("PLATFORM", "PC")),  # a name without an underscore
     ("image", b"\x00" * 16),
 ]
 
@@ -77,30 +80,33 @@ class Reading(unittest.TestCase):
         self.assertEqual(z.blocks["temp"], 0x1000)
         self.assertEqual(z.blocks["index"], 0x9000)
         self.assertEqual(z.strings, ["j_head"])
-        self.assertEqual(z.counts()["rawfile"], 2)
+        self.assertEqual(z.counts()["rawfile"], 3)
         self.assertEqual(z.assets[0], "material")
+        self.assertTrue(all(not kind.startswith("type") for kind in z.assets))  # each a known type
 
     def test_the_simple_assets_are_found_among_others(self) -> None:
         found = {(f.type, f.name) for f in self.zone.found}
         self.assertEqual(
             found,
             {("rawfile", "maps/mp/_load.gsc"), ("stringtable", "mp/statstable.csv"),
-             ("localize", "MENU_START_GAME"), ("rawfile", "../../escape.cfg")},
+             ("localize", "MENU_START_GAME"), ("rawfile", "../../escape.cfg"),
+             ("rawfile", "empty.cfg"), ("localize", "PLATFORM")},
         )  # fmt: skip
         table = next(f for f in self.zone.found if f.type == "stringtable")
         self.assertEqual(table.rows, [["0", "rank"], ["1", "a,b"]])
-        self.assertEqual(self.zone.as_json()["by_type"]["rawfile"], {"listed": 2, "found": 2})
+        self.assertEqual(self.zone.as_json()["by_type"]["rawfile"], {"listed": 3, "found": 3})
 
     def test_extraction_stays_inside_its_folder(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "out"
             written = fastfile.extract(self.zone, root, set(fastfile.EXTRACTED))
-            self.assertEqual(written, {"rawfile": 2, "stringtable": 1, "localize": 1})
+            self.assertEqual(written, {"rawfile": 3, "stringtable": 1, "localize": 2})
             self.assertEqual((root / "maps/mp/_load.gsc").read_bytes(), b"main()\n{\n}\n")
             self.assertEqual((root / "escape.cfg").read_bytes(), b"bind x quit\n")  # `..` dropped
             self.assertEqual((root / "mp/statstable.csv").read_text(), '0,rank\n1,"a,b"\n')
             self.assertEqual(
-                json.loads((root / "localize.json").read_text()), {"MENU_START_GAME": "Start game"}
+                json.loads((root / "localize.json").read_text()),
+                {"MENU_START_GAME": "Start game", "PLATFORM": "PC"},
             )
             self.assertFalse((Path(tmp) / "escape.cfg").exists())
 
@@ -123,7 +129,7 @@ class Reading(unittest.TestCase):
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
                 self.assertEqual(fastfile.main(["--caller-cwd", tmp, "info", "mp_test.ff"]), 0)
-            self.assertIn("rawfile                 2 (2 found)", out.getvalue())
+            self.assertIn("rawfile                 3 (3 found)", out.getvalue())
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
                 code = fastfile.main(
@@ -138,7 +144,7 @@ class Reading(unittest.TestCase):
                         "rawfile",
                     ]
                 )
-            self.assertEqual((code, out.getvalue().strip()), (0, "2 rawfile"))
+            self.assertEqual((code, out.getvalue().strip()), (0, "3 rawfile"))
             with contextlib.redirect_stderr(io.StringIO()):
                 self.assertEqual(fastfile.main(["--caller-cwd", tmp, "info", "missing.ff"]), 2)
 
@@ -149,10 +155,14 @@ class Sample(unittest.TestCase):
         z = fastfile.read(Path(os.environ["REA_FASTFILE_SAMPLE"]).read_bytes())
         self.assertEqual((z.game, z.platform), ("IW3", "pc"))
         self.assertTrue(z.assets)
+        # every type one of IW3's 33 (an array read at the wrong offset gives 0xFFFFFF00)
+        unknown = [kind for kind in z.assets if kind.startswith("type")]
+        self.assertEqual(unknown, [], f"{len(unknown)} assets of unknown types")
         listed, found = z.counts(), z.found_counts()
-        for kind in fastfile.EXTRACTED:
-            self.assertLessEqual(found[kind], listed[kind], kind)
         print("\n".join(fastfile.info_lines(z)))
+        for kind in fastfile.EXTRACTED:
+            names = sorted(f.name for f in z.found if f.type == kind)
+            self.assertLessEqual(found[kind], listed[kind], f"{kind}: {names}")
 
 
 if __name__ == "__main__":
