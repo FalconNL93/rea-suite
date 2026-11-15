@@ -55,6 +55,8 @@
 #              Optional extensions set `component: <name>`; deselection leaves installed copies.
 #              `commit: <full hash>` builds that commit's source instead (no release lookup;
 #              `build: true` required), for a fix that came after the newest release.
+# unpack:      `7z`: the assets are 7-Zip archives whatever their names (a self-extracting .exe);
+#              `unpack-only: [path...]` extracts just those files
 # plugins:     files from another release copied into the install dir:
 #              `copy: {<glob in archive>: <dir in install>}`.
 # sha256:      `{<asset name or platform>: <hex>}`: a download's expected SHA-256, for a pinned
@@ -872,6 +874,21 @@ tools:
       windows:
         qrenderdoc: qrenderdoc.exe
         renderdoccmd: renderdoccmd.exe
+
+  # chdman on Windows (component playstation): no Windows package installs it where the suite
+  # can find it (MAME's winget package needs an install location winget.json cannot give), so it
+  # comes from MAME's own release, a 7-Zip self-extracting .exe (`unpack: 7z`) holding chdman.exe.
+  # Linux and macOS have it from their packages (apt mame-tools, brew rom-tools).
+  mame-chdman:
+    github: mamedev/mame
+    version: latest
+    unpack: 7z
+    unpack-only: [chdman.exe]  # not MAME's other 550 MB
+    assets:
+      windows: '^mame\d+b_x64\.exe$'
+    bin:
+      windows:
+        chdman: chdman.exe
 
   # --- component: dos ---
 

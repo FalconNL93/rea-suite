@@ -512,7 +512,7 @@ been run on macOS arm64 and Linux x86_64 (WSL2, 2026-11-03); Windows execution r
 | pycdc, pycdas | Decompile and disassemble Python bytecode (.pyc) | tools.yml, built from source (component `build`) |
 | dumpsxiso, mkpsxiso | Extract/rebuild PS1 and PS2 CD images with layout XML (component `playstation`) | tools.yml, release binaries |
 | jPSXdec | PS1 media indexing/conversion, CLI and GUI (component `playstation`) | tools.yml, Java JAR |
-| chdman | CHD disc images to CUE/BIN or ISO (component `playstation`; not on Windows, [why](docs/PLAYSTATION.md#install)) | apt `mame-tools` / brew `rom-tools` |
+| chdman | CHD disc images to CUE/BIN or ISO (component `playstation`) | apt `mame-tools` / brew `rom-tools` / Windows: tools.yml (`chdman.exe` from MAME's release) |
 | PCSX-Redux (`pcsx-redux`) | PS1 emulator with a debugger, GDB server, Lua and a web API; starts without a Sony BIOS (component `playstation`) | tools.yml, distrib.app builds |
 | PCSX2 (`pcsx2`) | PS2 emulator with its EE/IOP debugger and PINE (component `playstation`) | tools.yml, release binaries |
 | splat (`splat`) | Split a PS1/PS2 (and N64, PSP) executable into assembly, data and a linker script for a decompilation (component `decomp`) | PyPI `splat64[mips]`, own uv environment |

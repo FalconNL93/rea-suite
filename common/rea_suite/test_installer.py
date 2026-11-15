@@ -40,6 +40,20 @@ class SevenZip(unittest.TestCase):
         archive.extract(packed, dest, 1)
         self.assertEqual((dest / "bin" / "tool.exe").read_bytes(), b"MZ")
 
+    @unittest.skipUnless(archive.seven_zip(), "7-Zip not installed")
+    def test_a_7z_archive_by_another_name_and_only_some_of_it(self) -> None:
+        source = self.root / "src"
+        source.mkdir()
+        (source / "chdman.exe").write_bytes(b"MZ")
+        (source / "mame.exe").write_bytes(b"MZ" * 100)
+        packed = self.root / "mame0289b_x64.exe"  # a self-extractor: a 7-Zip archive by its bytes
+        subprocess.run(
+            [archive.seven_zip(), "a", "-t7z", "-bso0", str(packed), "."], cwd=source, check=True
+        )
+        dest = self.root / "out"
+        archive.extract(packed, dest, 0, unpack="7z", only=["chdman.exe"])
+        self.assertEqual(sorted(p.name for p in dest.iterdir()), ["chdman.exe"])
+
     def test_a_7z_archive_without_7_zip_names_the_fix(self) -> None:
         with (
             patch.object(archive.shutil, "which", return_value=None),

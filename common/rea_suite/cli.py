@@ -45,6 +45,8 @@ class Tool:
     build: dict = field(default_factory=dict)
     follows_pip: bool = False
     sha256: dict[str, str] = field(default_factory=dict)  # asset name (or platform, for url) -> hex
+    unpack: str | None = None  # `7z`: the assets are 7-Zip archives whatever their names
+    unpack_only: list[str] = field(default_factory=list)  # with `unpack: 7z`: just these paths
 
     @classmethod
     def from_manifest(cls, name: str, spec: dict) -> Tool:
@@ -70,6 +72,8 @@ class Tool:
             ghidra_extensions=spec.get("ghidra-extensions") or {},
             plugins=spec.get("plugins") or {},
             sha256={str(k): str(v).lower() for k, v in (spec.get("sha256") or {}).items()},
+            unpack=spec.get("unpack"),
+            unpack_only=list(spec.get("unpack-only") or []),
         )
 
     @property
@@ -217,7 +221,7 @@ def install_github(tool: Tool, state: dict[str, str], force_latest: bool) -> Non
                 files[asset["name"]] = fetch(
                     asset["browser_download_url"], archive, expected, source
                 )
-                extract(archive, staging, tool.strip)
+                extract(archive, staging, tool.strip, tool.unpack, tool.unpack_only)
             record_digests(tool.name, tag, files)
         if dest.exists():
             shutil.rmtree(dest)
@@ -256,7 +260,7 @@ def install_url(tool: Tool, state: dict[str, str], force: bool) -> None:
         archive = Path(tmp) / url.rsplit("/", 1)[1]
         expected = tool.sha256.get(PLATFORM) or tool.sha256.get(archive.name)
         record = fetch(url, archive, expected, "tools.yml")
-        extract(archive, Path(tmp) / "x", tool.strip)
+        extract(archive, Path(tmp) / "x", tool.strip, tool.unpack, tool.unpack_only)
         record_digests(tool.name, tool.version, {archive.name: record})
         (Path(tmp) / "x").rename(dest)
     state[tool.name] = tool.version
@@ -614,7 +618,7 @@ def cmd_fetch(args: argparse.Namespace) -> None:
             archive = Path(tmp) / asset["name"]
             expected, source = expected_digest(tool, asset)
             files[asset["name"]] = fetch(asset["browser_download_url"], archive, expected, source)
-            extract(archive, into / "tool", tool.strip)
+            extract(archive, into / "tool", tool.strip, tool.unpack, tool.unpack_only)
     launchers = {}
     for name, entry in tool.bin.get(args.platform, {}).items():
         pattern = entry if isinstance(entry, str) else entry["path"]

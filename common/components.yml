@@ -81,10 +81,11 @@ components:
   playstation:
     description: PS1/PS2 - disc preparation (dumpsxiso/mkpsxiso, chdman), PS1 media (jPSXdec), the PCSX-Redux and PCSX2 emulators with their debuggers, and the exact-version PSX and Emotion Engine Ghidra loaders
     # chdman: CHD images (Redump sets are often CHD). Windows has no package with chdman
-    # on PATH (MAME's winget installer needs a location); see docs/PLAYSTATION.md.
+    # on PATH (MAME's winget installer needs a location): mame-chdman takes it from MAME's
+    # release (tools.yml); see docs/PLAYSTATION.md.
     apt: [mame-tools]
     brew: [rom-tools]
-    tools: [mkpsxiso, jpsxdec, pcsx-redux, pcsx2]
+    tools: [mkpsxiso, jpsxdec, pcsx-redux, pcsx2, mame-chdman]
 
   decomp:
     description: Decompilation projects - splat (split a MIPS executable into assembly and data; PS1, PS2, N64, PSP) and objdiff (match compiled objects against the original, function by function)

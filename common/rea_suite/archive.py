@@ -31,10 +31,16 @@ def _stripped(name: str, strip: int) -> str | None:
     return "/".join(parts[strip:])
 
 
-def extract(archive: Path, dest: Path, strip: int) -> None:
-    """Extract into dest (created if missing); non-archives such as .jar are copied as-is."""
+def extract(
+    archive: Path, dest: Path, strip: int, unpack: str | None = None, only: list[str] | None = None
+) -> None:
+    """Extract into dest (created if missing); non-archives such as .jar are copied as-is.
+    `unpack: 7z` takes the file for a 7-Zip archive whatever its name (MAME's release, a 7-Zip
+    self-extracting .exe); `only` (7-Zip archives) extracts just the files those paths name."""
     dest.mkdir(parents=True, exist_ok=True)
-    if archive.name.endswith(".xz") and not archive.name.endswith(".tar.xz"):
+    if unpack == "7z":
+        _extract_7z(archive, dest, strip, only)
+    elif archive.name.endswith(".xz") and not archive.name.endswith(".tar.xz"):
         # a single compressed file (frida-server-*.xz)
         target = dest / archive.name[:-3]
         with lzma.open(archive) as src, target.open("wb") as out:
@@ -84,13 +90,15 @@ def seven_zip() -> str | None:
     return found
 
 
-def _extract_7z(archive: Path, dest: Path, strip: int) -> None:
+def _extract_7z(archive: Path, dest: Path, strip: int, only: list[str] | None = None) -> None:
     """7-Zip archives (PCSX2's Windows release); Python has no reader of its own."""
     tool = seven_zip()
     if not tool:
         raise LookupError(f"{archive.name}: 7-Zip is needed; run rea-suite setup")
     with tempfile.TemporaryDirectory(dir=dest.parent) as tmp:
-        subprocess.run([tool, "x", "-y", "-bso0", "-bsp0", f"-o{tmp}", str(archive)], check=True)
+        subprocess.run(
+            [tool, "x", "-y", "-bso0", "-bsp0", f"-o{tmp}", str(archive), *(only or [])], check=True
+        )
         root = Path(tmp).resolve()
         for path in sorted(root.rglob("*")):
             if path.is_symlink() and not path.resolve().is_relative_to(root):

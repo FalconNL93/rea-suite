@@ -16,7 +16,7 @@ components selected. Selection runs setup.
 | Tool | Purpose | Component | Linux x86_64 / macOS ARM / Windows x64 |
 |---|---|---|---|
 | dumpsxiso / mkpsxiso | Extract 2352-byte CD BIN/CUE; keep an XML layout to rebuild the CD | playstation | release binaries |
-| chdman | CHD images to CUE/BIN (CD) or ISO (DVD) | playstation | apt `mame-tools`, brew `rom-tools`; **not on Windows** (MAME's winget installer needs an install location; its release `mame*b_x64.exe` holds `chdman.exe`) |
+| chdman | CHD images to CUE/BIN (CD) or ISO (DVD) | playstation | apt `mame-tools`, brew `rom-tools`; Windows: `chdman.exe` alone from MAME's release (`mame*b_x64.exe`, a 7-Zip self-extractor; tools.yml `mame-chdman`, checked against GitHub's digest), since MAME's winget installer needs an install location |
 | ghidra_psx_ldr | PS-X EXE loader, PSX processor with GTE, PsyQ library signatures | playstation | exact-version Ghidra extension |
 | Emotion Engine: Reloaded | PS2 EE R5900/MMI/VU0 macro instructions, STABS from `.mdebug` (bundled x86_64 `stdump`), PCSX2 savestate import | playstation | exact-version Ghidra extension |
 | jPSXdec | PS1 audio/video and supported image assets; CLI and GUI | playstation | Java JAR; current release is beta and has non-commercial terms |
@@ -99,7 +99,7 @@ Checked 2026-11-12 against the upstream repositories and release pages linked. T
 | [PCSX2](https://github.com/PCSX2/pcsx2) | PS2 debugger (EE/IOP), symbol import, PINE | yes. It has **no GDB stub** (none in its source tree, 2026-11-12) |
 | [mkpsxiso](https://github.com/Lameguy64/mkpsxiso) | PS1 CD extract and rebuild | yes |
 | [jPSXdec](https://github.com/m35/jpsxdec) | PS1 video, audio, images | yes |
-| [chdman](https://docs.mamedev.org/tools/chdman.html) | CHD to CUE/BIN or ISO | yes, Linux and macOS |
+| [chdman](https://docs.mamedev.org/tools/chdman.html) | CHD to CUE/BIN or ISO | yes (Windows from MAME's release) |
 | [armips](https://github.com/Kingcom/armips) | assemble patches into an executable | no: its newest release, v0.11.0 (2020-05-10), has one asset, a 32-bit Windows build; no Linux or macOS build exists (checked 2026-11-13) |
 | [psxrecomp](https://github.com/RetroPortingToolKit/psxrecomp), [RecompOne](https://github.com/BlackLabelHQ/RecompOne) | PS1 static recompilation (to C/C++; to C#) | no: a port takes one as its own dependency. psxrecomp (PolyForm Noncommercial) now has releases: v0.3.7-alpha (2026-11-07) with a Windows x86_64 CLI, a source zip and SHA256SUMS, plus nightlies. RecompOne (MIT) has none. Both moved; the old URLs redirect (checked 2026-11-13) |
 | [PS2Recomp](https://github.com/ran-j/PS2Recomp) | PS2 static recompilation (R5900 to C++, a runtime, IOP modules) | no: pre-release tags v0.2 to v0.4 (newest 2026-04-05) with no binaries, so in practice source only (CMake, submodules, tested mainly with MSVC), GPL; a port's own dependency (checked 2026-11-13) |
