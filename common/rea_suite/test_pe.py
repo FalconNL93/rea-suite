@@ -734,3 +734,48 @@ class Match(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DataRefs(unittest.TestCase):
+    """Pointers in data sections (samples.program_census: a vtable of three methods in .rdata)."""
+
+    def setUp(self) -> None:
+        self.data, self.at = samples.program_census()
+        self.image = Image(self.data)
+
+    def test_a_vtable_slot_is_a_data_reference(self) -> None:
+        rows = scan.data_refs(self.image, self.at["v_m1"] - self.image.base)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(
+            (rows[0]["section"], rows[0]["aligned"], rows[0]["code_neighbours"]),
+            (".rdata", True, 2),
+        )
+        self.assertIsNone(rows[0]["relocated"])  # a fixed-base image: no relocations to tell
+        self.assertEqual(scan.data_refs(self.image, self.at["f_unknown"] - self.image.base), [])
+
+    def test_the_control_makes_an_empty_answer_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            Path(tmp, "game.exe").write_bytes(self.data)
+            unknown, m0, nowhere = (f"{self.at[k]:#x}" for k in ("f_unknown", "v_m0", "f_unknown"))
+            code, out = run(
+                "--caller-cwd",
+                tmp,
+                "refs",
+                "game.exe",
+                unknown,
+                "--data",
+                "--control",
+                m0,
+                "--json",
+            )
+            self.assertEqual(code, 1)  # nothing, and the control was found: evidence of absence
+            self.assertEqual((json.loads(out)["data"], json.loads(out)["control"]["data"]), ([], 1))
+            code, _ = run(
+                "--caller-cwd", tmp, "refs", "game.exe", unknown, "--data", "--control", nowhere
+            )
+            self.assertEqual(code, 3)  # the control itself is not found: no evidence either way
+            code, out = run(
+                "--caller-cwd", tmp, "refs", "game.exe", f"{self.at['v_m2']:#x}", "--data"
+            )
+            self.assertEqual(code, 0)
+            self.assertIn("2 code pointers beside it", out)

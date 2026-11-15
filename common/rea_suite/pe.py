@@ -5,7 +5,9 @@
   rea-suite pe rtti <exe> [--class REGEX] [--slots] [--purecall ADDR]
                                                       MSVC classes: vtables, slots against
                                                       their bases' (overridden, inherited, pure)
-  rea-suite pe refs <exe> (<address> | --string TEXT) instructions naming an address or string
+  rea-suite pe refs <exe> (<address> | --string TEXT) [--data] [--control ADDR]
+                                                      instructions naming an address or string;
+                                                      --data: pointers to it in data sections
   rea-suite pe callers <exe> <function> [--no-jumps]  E8/E9 rel32 calls and jumps to a function
   rea-suite pe strings <exe> <start> <size>           strings the code in a range loads
   rea-suite pe imports <exe> [--dll D] [--function F] every call site of imported functions
@@ -199,15 +201,58 @@ def cmd_refs(args, image: Image) -> int:
     if args.string is not None and not targets:
         print(f"refs: string not found: {args.string!r}", file=sys.stderr)
         return 1
+    control = None
+    if args.control:
+        at = image.address(number(args.control))
+        control = {
+            "address": f"{image.va(at):#x}",
+            "code": len(scan.refs(image, at)),
+            "data": len(scan.data_refs(image, at)) if args.data else None,
+        }
     rows = [s for target in targets for s in scan.refs(image, target)]
+    data = (
+        [dict(d, target=f"{image.va(t):#x}") for t in targets for d in scan.data_refs(image, t)]
+        if args.data
+        else []
+    )
     if args.json:
-        print(json.dumps([s.as_json(image) for s in rows], indent=1))
+        if args.data or control:
+            print(
+                json.dumps(
+                    {"code": [s.as_json(image) for s in rows], "data": data, "control": control},
+                    indent=1,
+                )
+            )
+        else:
+            print(json.dumps([s.as_json(image) for s in rows], indent=1))
     else:
         if args.string is not None:
             print("string at " + ", ".join(f"{t:#x}" for t in targets))
         for s in rows:
             print(site_line(image)(s) + f"  -> {s.target:#x}")
-    return 0 if rows else 1
+        for d in data:
+            notes = [d["section"], "aligned" if d["aligned"] else "unaligned"]
+            if d["relocated"] is not None:
+                notes.append("relocated" if d["relocated"] else "not relocated")
+            if d["code_neighbours"]:
+                notes.append(f"{d['code_neighbours']} code pointers beside it")
+            print(f"{d['rva']}  data      {d['target']}  ({', '.join(notes)})")
+    if control is not None:
+        found = control["code"] + (control["data"] or 0)
+        print(
+            f"control {control['address']}: {control['code']} code"
+            + (f", {control['data']} data" if args.data else "")
+            + " references"
+            + (
+                ""
+                if found
+                else ": the search found nothing for a known address, so no answer is evidence"
+            ),
+            file=sys.stderr,
+        )
+        if not found:
+            return 3
+    return 0 if rows or data else 1
 
 
 def cmd_callers(args, image: Image) -> int:
@@ -601,6 +646,16 @@ def parser() -> argparse.ArgumentParser:
     c = command("refs", "instructions that name an address or a string", cmd_refs)
     c.add_argument("address", nargs="?")
     c.add_argument("--string", help="the string's text (ASCII or UTF-16, whole string)")
+    c.add_argument(
+        "--data",
+        action="store_true",
+        help="also the address stored as a pointer in data sections (tables, callbacks, vtables)",
+    )
+    c.add_argument(
+        "--control",
+        metavar="ADDR",
+        help="search a known address the same way first: an empty answer is evidence only if it is found",
+    )
     c = command("callers", "E8/E9 rel32 calls and jumps to a function", cmd_callers)
     c.add_argument("function")
     c.add_argument("--no-jumps", action="store_true", help="calls only")

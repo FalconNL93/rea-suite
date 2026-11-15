@@ -154,6 +154,18 @@ displacement) and x86 absolute addresses (operands and immediates, `push offset`
 matches the whole NUL-terminated string, ASCII or UTF-16LE. `callers` finds direct rel32 calls
 and jumps only; calls through a register or a vtable need `rea-suite pe rtti` or a decompiler.
 
+An address stored as data is found with `--data`: every pointer-sized copy of its VA in the
+non-executable sections (a vtable slot, a callback table, a global initialized with a function),
+each with its section, whether it is aligned, whether a base relocation covers it, and how many
+code pointers sit beside it (a table). `--control ADDR` runs the same search on an address known to
+be referenced first: when the control is found and the target is not, the empty answer is evidence
+that nothing in the file names the target (a function proved dead, no call home); when the control
+is not found either, the exit code is 3 and the answer proves nothing.
+
+```sh
+rea-suite pe refs game/Game.exe 0x4326d0 --data --control 0x4328f0   # Lost: no pointer to it anywhere
+```
+
 ### Every call site of an import DLL
 
 ```sh

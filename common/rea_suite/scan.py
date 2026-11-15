@@ -141,6 +141,51 @@ def refs(image: Image, target: int) -> list[Site]:
     return sorted(found.values(), key=lambda s: s.rva)
 
 
+def data_refs(image: Image, target: int) -> list[dict]:
+    """Every pointer-sized value in a non-executable section that equals target's VA: a function
+    pointer in a table, a callback, a vtable slot, a global initialized with an address. Each hit
+    says whether it is aligned, whether a base relocation covers it (the loader patches only real
+    pointers; a fixed-base image has none) and how many of its neighbours point into code too (a
+    vtable or a callback table). Code sections are left to refs(): their bytes are instructions."""
+    size = image.pointer_size
+    needle = image.va(target).to_bytes(size, "little")
+    relocated = image.relocations
+    found = []
+    for section in image.sections:
+        if section.executable:
+            continue
+        data = image.section_bytes(section)
+        at = data.find(needle)
+        while at >= 0:
+            rva = section.rva + at
+            found.append(
+                {
+                    "rva": f"{rva:#x}",
+                    "va": f"{image.va(rva):#x}",
+                    "section": section.name,
+                    "aligned": at % size == 0,
+                    "relocated": rva in relocated if relocated else None,
+                    "code_neighbours": code_neighbours(image, data, at, size),
+                }
+            )
+            at = data.find(needle, at + 1)
+    return found
+
+
+def code_neighbours(image: Image, data: bytes, at: int, size: int) -> int:
+    """How many of the pointer-sized values right before and after at point into code."""
+    count = 0
+    for step in (-size, size):
+        place = at + step
+        while 0 <= place and place + size <= len(data) and count < 64:
+            value = int.from_bytes(data[place : place + size], "little")
+            if value < image.base or not image.is_code(value - image.base):
+                break
+            count += 1
+            place += step
+    return count
+
+
 def confirm(image: Image, cs: Cs, anchor: int, after: int, va: int, found: dict, back: int) -> None:
     """Decode from up to `back` bytes before anchor (the ModRM or the address bytes); keep the
     longest instruction that spans the address bytes and names va."""
