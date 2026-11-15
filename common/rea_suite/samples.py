@@ -630,3 +630,176 @@ def program_match(new: bool, x64: bool = False) -> tuple[bytes, dict[str, int]]:
     image = pe([(".text", bytes(text)), (".rdata", bytes(data))], base=base, x64=x64,
                entry=at["main"])  # fmt: skip
     return image, at
+
+
+def import_directory(
+    dlls: dict[str, list[str]], rva: int
+) -> tuple[bytes, dict[str, int], tuple[int, int]]:
+    """An x86 import directory at rva: descriptors, lookup tables, IATs, names. Returns the bytes,
+    each function's IAT slot RVA by `dll!name`, and the import data directory (RVA, size)."""
+    count = len(dlls)
+    desc_size = 20 * (count + 1)
+    tables_at = rva + desc_size
+    table_sizes = [4 * (len(names) + 1) for names in dlls.values()]
+    names_at = tables_at + 2 * sum(table_sizes)
+    blob = bytearray()
+    hints: dict[str, int] = {}
+    for dll, names in dlls.items():
+        for name in names:
+            hints[f"{dll}!{name}"] = names_at + len(blob)
+            blob += b"\0\0" + name.encode() + b"\0"
+            if len(blob) % 2:
+                blob += b"\0"
+    dll_names: dict[str, int] = {}
+    for dll in dlls:
+        dll_names[dll] = names_at + len(blob)
+        blob += dll.encode() + b"\0"
+    out = bytearray(names_at - rva) + blob
+    slots: dict[str, int] = {}
+    at = tables_at
+    for i, (dll, names) in enumerate(dlls.items()):
+        lookup, iat = at, at + table_sizes[i]
+        for j, name in enumerate(names):
+            entry = struct.pack("<I", hints[f"{dll}!{name}"])
+            _put(out, lookup - rva + 4 * j, entry)
+            _put(out, iat - rva + 4 * j, entry)
+            slots[f"{dll}!{name}"] = iat + 4 * j
+        _put(out, 20 * i, struct.pack("<5I", lookup, 0, 0, dll_names[dll], iat))
+        at = iat + table_sizes[i]
+    return bytes(out), slots, (rva, desc_size)
+
+
+IID_IDIRECTINPUT8A = bytes.fromhex("3080 79bf 3a48 a24d aa99 5d64ed369700".replace(" ", ""))
+
+
+def program_census() -> tuple[bytes, dict[str, int]]:
+    """A small x86 program for the interface census: Direct3D 9 through a global and an
+    out-parameter into a global, a function that returns the device, DirectInput 8 by its IID,
+    DirectSound through a jmp thunk, PhysX 2.x by thiscall with the scene in a field of a global
+    object whose methods take it as `this`, and one call through an unknown object. Returns the
+    image and the VAs a test names (functions `f_*`, call sites `c_*`, globals `g_*`)."""
+    base, text, rdata, bss = 0x400000, 0x1000, 0x2000, 0x3000
+    dlls = {
+        "d3d9.dll": ["Direct3DCreate9"],
+        "DINPUT8.dll": ["DirectInput8Create"],
+        "DSOUND.dll": ["DirectSoundCreate8"],
+        "PhysXLoader.dll": ["NxCreatePhysicsSDK"],
+    }
+    imports, slots, directory = import_directory(dlls, rdata + 0x100)
+    iat = {k.split("!")[1]: base + v for k, v in slots.items()}
+    g = {name: base + bss + 4 * i for i, name in enumerate(
+        ["g_d3d", "g_dev", "g_di", "g_kbd", "g_ds", "g_sdk", "g_world", "g_scene", "g_rend"])}  # fmt: skip
+    iid = base + rdata
+    at: dict[str, int] = dict(g)
+    code = bytearray(b"\xcc" * 0x400)
+    pos = 0
+
+    def u32(v: int) -> bytes:
+        return struct.pack("<I", v & 0xFFFFFFFF)
+
+    def fn(name: str) -> None:
+        nonlocal pos
+        pos = (pos + 15) & ~15
+        at[name] = base + text + pos
+
+    def emit(data: bytes, mark: str | None = None) -> None:
+        nonlocal pos
+        if mark:
+            at[mark] = base + text + pos
+        _put(code, pos, data)
+        pos += len(data)
+
+    def call_rel(target: int, mark: str | None = None) -> None:
+        emit(b"\xe8" + struct.pack("<i", target - (base + text + pos + 5)), mark)
+
+    fn("f_d3d")
+    emit(b"\x6a\x20")  # push 32
+    emit(b"\xff\x15" + u32(iat["Direct3DCreate9"]), "c_create9")
+    emit(b"\xa3" + u32(g["g_d3d"]))  # mov [g_d3d], eax
+    emit(b"\xc3")
+    fn("f_device")
+    emit(b"\xa1" + u32(g["g_d3d"]))  # mov eax, [g_d3d]
+    emit(b"\x68" + u32(g["g_dev"]))  # push offset g_dev: ppReturnedDeviceInterface
+    emit(b"\x6a\x00" * 5)  # pp, flags, hwnd, type, adapter
+    emit(b"\x8b\x08\x50")  # mov ecx, [eax]; push eax
+    emit(b"\xff\x51\x40", "c_createdevice")  # call [ecx+0x40]: IDirect3D9::CreateDevice
+    emit(b"\xc3")
+    fn("f_getdev")
+    emit(b"\xa1" + u32(g["g_dev"]) + b"\xc3")  # mov eax, [g_dev]; ret
+    fn("f_query")
+    call_rel(at["f_getdev"])
+    emit(b"\x6a\x00\x6a\x09")  # push 0 (ppQuery); push 9 (D3DQUERYTYPE_EVENT... any)
+    emit(b"\x8b\x10\x50")  # mov edx, [eax]; push eax
+    emit(b"\xff\x92" + u32(0x1D8), "c_createquery")  # call [edx+0x1d8]: slot 118
+    emit(b"\xc3")
+    fn("f_dinput")
+    emit(b"\x6a\x00\x68" + u32(g["g_di"]) + b"\x68" + u32(iid) + b"\x68" + u32(0x800) + b"\x6a\x00")
+    emit(b"\xff\x15" + u32(iat["DirectInput8Create"]), "c_di8create")
+    emit(b"\xa1" + u32(g["g_di"]))  # mov eax, [g_di]
+    emit(b"\x6a\x00\x68" + u32(g["g_kbd"]) + b"\x6a\x00")  # punk, lplpDevice, rguid
+    emit(b"\x8b\x08\x50")
+    emit(b"\xff\x51\x0c", "c_dicreatedevice")  # IDirectInput8A::CreateDevice
+    emit(b"\x8b\x0d" + u32(g["g_kbd"]))  # mov ecx, [g_kbd]
+    emit(b"\x6a\x00\x6a\x00\x6a\x00\x8b\x01\x51")  # 3 args; mov eax, [ecx]; push ecx
+    emit(b"\xff\x50\x38", "c_getobjectinfo")  # IDirectInputDevice8A::GetObjectInfo
+    emit(b"\xc3")
+    fn("f_thunk")
+    emit(b"\xff\x25" + u32(iat["DirectSoundCreate8"]))  # jmp [DirectSoundCreate8]
+    fn("f_dsound")
+    emit(b"\x6a\x00\x68" + u32(g["g_ds"]) + b"\x6a\x00")
+    call_rel(at["f_thunk"], "c_dscreate")
+    emit(b"\x8b\x0d" + u32(g["g_ds"]) + b"\x6a\x00\x6a\x00\x6a\x00\x8b\x01\x51")
+    emit(b"\xff\x50\x0c", "c_createsoundbuffer")  # IDirectSound8::CreateSoundBuffer
+    emit(b"\xc3")
+    fn("f_physx")
+    emit(b"\x6a\x00" * 5)
+    emit(b"\xff\x15" + u32(iat["NxCreatePhysicsSDK"]), "c_nxcreate")
+    emit(b"\x83\xc4\x14")  # add esp, 0x14 (cdecl)
+    emit(b"\xa3" + u32(g["g_sdk"]) + b"\xc3")
+    fn("f_world_init")  # this: the world object
+    emit(b"\x57\x8b\xf9")  # push edi; mov edi, ecx
+    emit(
+        b"\x8b\x0d" + u32(g["g_sdk"]) + b"\x6a\x00\x8b\x01"
+    )  # mov ecx, [g_sdk]; push 0; mov eax, [ecx]
+    emit(b"\xff\x50\x10", "c_createscene")  # NxPhysicsSDK::createScene
+    emit(b"\x89\x47\x08\x5f\xc3")  # mov [edi+8], eax; pop edi; ret
+    fn("f_world_spawn")  # this: the world object
+    emit(b"\x8b\x49\x08\x6a\x00\x8b\x01")  # mov ecx, [ecx+8]; push 0; mov eax, [ecx]
+    emit(b"\xff\x50\x18", "c_createactor")  # NxScene::createActor
+    emit(b"\x8b\xc8\x6a\x00\x8b\x11")  # mov ecx, eax; push 0; mov edx, [ecx]
+    emit(b"\xff\x52\x44", "c_createshape")  # NxActor::createShape
+    emit(b"\xc3")
+    fn("f_world")
+    emit(b"\xb9" + u32(g["g_world"]))  # mov ecx, offset g_world
+    call_rel(at["f_world_init"])
+    emit(b"\xb9" + u32(g["g_world"]))
+    call_rel(at["f_world_spawn"])
+    emit(b"\xc3")
+    fn("f_rend_init")  # the renderer in EDI (link-time code generation): the device at +0x10
+    emit(b"\x55\xa1" + u32(g["g_d3d"]))  # push ebp; mov eax, [g_d3d]
+    emit(b"\x8d\x6f\x10\x55")  # lea ebp, [edi+0x10]; push ebp
+    emit(b"\x6a\x00" * 5 + b"\x8b\x08\x50")
+    emit(b"\xff\x51\x40", "c_rend_createdevice")
+    emit(b"\x5d\xc3")  # pop ebp; ret
+    fn("f_rend")
+    emit(b"\x57\x8b\x3d" + u32(g["g_rend"]))  # push edi; mov edi, [g_rend]
+    call_rel(at["f_rend_init"])
+    emit(b"\x5f\xc3")
+    fn("f_rend_draw")
+    emit(b"\xa1" + u32(g["g_rend"]) + b"\x8b\x48\x10")  # mov eax, [g_rend]; mov ecx, [eax+0x10]
+    emit(b"\x6a\x01\x6a\x07\x8b\x11\x51")  # push 1; push 7; mov edx, [ecx]; push ecx
+    emit(b"\xff\x92" + u32(0xE4), "c_setrenderstate")  # IDirect3DDevice9::SetRenderState
+    emit(b"\xc3")
+    fn("f_unknown")
+    emit(b"\x8b\x44\x24\x04\x8b\x08\x50")  # mov eax, [esp+4]; mov ecx, [eax]; push eax
+    emit(b"\xff\x51\x08", "c_unknown")  # call [ecx+8]: no interface known
+    emit(b"\xc2\x04\x00")  # ret 4
+    data = bytearray(0x100) + imports
+    _put(data, 0, IID_IDIRECTINPUT8A)
+    image = pe(
+        [(".text", bytes(code[:pos])), (".rdata", bytes(data)), (".data", bytes(0x40))],
+        base=base,
+        directories={1: directory},
+        flags={".data": 0xC0000040},
+    )
+    return image, at

@@ -10,3 +10,8 @@ useDefault = true
 # description = "why this is not a secret"
 # paths = ['''path/regex''']
 # regexes = ['''value/regex''']
+
+[[allowlists]]
+description = "the census slot tables record the SHA-256 of each SDK header they were generated from"
+paths = ['''common/rea_suite/data/census/[^/]+\.json''']
+regexes = ['''\b[0-9a-f]{64}\b''']

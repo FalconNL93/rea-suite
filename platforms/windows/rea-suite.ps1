@@ -16,7 +16,8 @@
     .\platforms\windows\rea-suite.ps1 psp info|nid|check <file>  # PSP EBOOT.PBP, PRX with NIDs, PARAM.SFO, ISO, CSO
     .\platforms\windows\rea-suite.ps1 functions <config> check|add|find|convert  # a port's function index and gate
     .\platforms\windows\rea-suite.ps1 steamstub <exe>...  # SteamStub DRM signs
-    .\platforms\windows\rea-suite.ps1 pe <command> <exe> ...  # PE scans: RTTI, references, callers, strings, disasm, resources
+    .\platforms\windows\rea-suite.ps1 pe <command> <exe> ...  # PE scans: RTTI, references, callers, strings, disasm, resources, census
+    .\platforms\windows\rea-suite.ps1 census diff <answers> <census>...  # what a game calls that a runtime leaves missing
     .\platforms\windows\rea-suite.ps1 zar info|list|extract <archive> ...  # ZArchive .zar/.wua: list, extract the files named
     .\platforms\windows\rea-suite.ps1 rmdp list|extract|find|inner <index.bin> ...  # Remedy packages
     .\platforms\windows\rea-suite.ps1 yetibig info|list|blob|diff|refs|check <Yeti.big> ...  # YETI engine archives (Lost: Via Domus, GRAW)
@@ -39,7 +40,7 @@
 #>
 #Requires -Version 7
 param(
-    [Parameter(Position = 0)][ValidateSet('setup', 'select', 'winget', 'update', 'reinstall', 'agents', 'analyze', 'playstation', 'xbox', 'xbox360', 'ps3', 'gamecube', 'psp', 'functions', 'steamstub', 'pe', 'zar', 'rmdp', 'yetibig', 'le', 'frida', 'dosbox', 'oracle', 'pad', 'run', 'doctor', 'status', 'tools', 'clean', 'lint', 'check')][string]$Command = 'setup',
+    [Parameter(Position = 0)][ValidateSet('setup', 'select', 'winget', 'update', 'reinstall', 'agents', 'analyze', 'playstation', 'xbox', 'xbox360', 'ps3', 'gamecube', 'psp', 'functions', 'steamstub', 'pe', 'census', 'zar', 'rmdp', 'yetibig', 'le', 'frida', 'dosbox', 'oracle', 'pad', 'run', 'doctor', 'status', 'tools', 'clean', 'lint', 'check')][string]$Command = 'setup',
     [Parameter(Position = 1, ValueFromRemainingArguments)][string[]]$Rest = @()
 )
 $ErrorActionPreference = 'Stop'
@@ -240,6 +241,7 @@ switch ($Command) {
     'pad' { & uv run --offline --no-sync common\rea_suite\vigem_pad.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'run' { & uv run --offline --no-sync common\rea_suite\run_harness.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'pe' { & uv run --offline --no-sync common\rea_suite\pe.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
+    'census' { & uv run --offline --no-sync common\rea_suite\census.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'zar' { & uv run --offline --no-sync common\rea_suite\zar.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'rmdp' { & uv run --offline --no-sync common\rea_suite\rmdp.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }
     'yetibig' { & uv run --offline --no-sync common\rea_suite\yetibig.py --caller-cwd $CallerCwd @Rest; exit $LASTEXITCODE }

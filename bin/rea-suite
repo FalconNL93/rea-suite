@@ -41,7 +41,11 @@
 #   rea-suite steamstub <exe>...            SteamStub DRM signs (.bind, entropy, timestamps)
 #   rea-suite pe <command> <exe> ...        PE scans without a project: MSVC RTTI classes and
 #                                            vtables, references, callers, strings, disassembly,
-#                                            resources; containing functions on x86 (--help)
+#                                            resources; containing functions on x86; census:
+#                                            the interface methods a game calls (--help)
+#   rea-suite census diff <answers> <census>...  what a game calls (static or runtime census)
+#                                            that a runtime's answers leave missing, by
+#                                            interface (docs/census.md)
 #   rea-suite zar info|list|extract <archive> ...  ZArchive .zar/.wua (Xenia's 360 games,
 #                                            Cemu's Wii U games): files listed, the ones named
 #                                            extracted, no build needed (--help)
@@ -652,6 +656,7 @@ case "$cmd" in
   pad) uv run --offline --no-sync common/rea_suite/vigem_pad.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   run) uv run --offline --no-sync common/rea_suite/run_harness.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   pe) uv run --offline --no-sync common/rea_suite/pe.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
+  census) uv run --offline --no-sync common/rea_suite/census.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   zar) uv run --offline --no-sync common/rea_suite/zar.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   rmdp) uv run --offline --no-sync common/rea_suite/rmdp.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;
   yetibig) uv run --offline --no-sync common/rea_suite/yetibig.py --caller-cwd "$CALLER_CWD" "${args[@]}" ;;

@@ -1,0 +1,2700 @@
+{
+ "schema": "rea-census-slots/1",
+ "sdk": "d3d9",
+ "source": {
+  "headers": "mingw-w64",
+  "files": {
+   "d3d9.h": "4fd5b2e4340046f31cfb5cc0c3f276074a205b8daf0a76583e4f3819a5f4deaf"
+  }
+ },
+ "conv": "stdcall",
+ "interfaces": {
+  "IDirect3D9": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "RegisterSoftwareDevice",
+     "args": 1
+    },
+    {
+     "name": "GetAdapterCount",
+     "args": 0
+    },
+    {
+     "name": "GetAdapterIdentifier",
+     "args": 3
+    },
+    {
+     "name": "GetAdapterModeCount",
+     "args": 2
+    },
+    {
+     "name": "EnumAdapterModes",
+     "args": 4
+    },
+    {
+     "name": "GetAdapterDisplayMode",
+     "args": 2
+    },
+    {
+     "name": "CheckDeviceType",
+     "args": 5
+    },
+    {
+     "name": "CheckDeviceFormat",
+     "args": 6
+    },
+    {
+     "name": "CheckDeviceMultiSampleType",
+     "args": 6
+    },
+    {
+     "name": "CheckDepthStencilMatch",
+     "args": 5
+    },
+    {
+     "name": "CheckDeviceFormatConversion",
+     "args": 4
+    },
+    {
+     "name": "GetDeviceCaps",
+     "args": 3
+    },
+    {
+     "name": "GetAdapterMonitor",
+     "args": 1
+    },
+    {
+     "name": "CreateDevice",
+     "args": 6,
+     "out": [
+      {
+       "stack": 6,
+       "interface": "IDirect3DDevice9"
+      }
+     ]
+    }
+   ]
+  },
+  "IDirect3DVolume9": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "GetDevice",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3DDevice9"
+      }
+     ]
+    },
+    {
+     "name": "SetPrivateData",
+     "args": 4
+    },
+    {
+     "name": "GetPrivateData",
+     "args": 3
+    },
+    {
+     "name": "FreePrivateData",
+     "args": 1
+    },
+    {
+     "name": "GetContainer",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "GetDesc",
+     "args": 1
+    },
+    {
+     "name": "LockBox",
+     "args": 3
+    },
+    {
+     "name": "UnlockBox",
+     "args": 0
+    }
+   ]
+  },
+  "IDirect3DSwapChain9": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "Present",
+     "args": 5
+    },
+    {
+     "name": "GetFrontBufferData",
+     "args": 1
+    },
+    {
+     "name": "GetBackBuffer",
+     "args": 3,
+     "out": [
+      {
+       "stack": 3,
+       "interface": "IDirect3DSurface9"
+      }
+     ]
+    },
+    {
+     "name": "GetRasterStatus",
+     "args": 1
+    },
+    {
+     "name": "GetDisplayMode",
+     "args": 1
+    },
+    {
+     "name": "GetDevice",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3DDevice9"
+      }
+     ]
+    },
+    {
+     "name": "GetPresentParameters",
+     "args": 1
+    }
+   ]
+  },
+  "IDirect3DResource9": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "GetDevice",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3DDevice9"
+      }
+     ]
+    },
+    {
+     "name": "SetPrivateData",
+     "args": 4
+    },
+    {
+     "name": "GetPrivateData",
+     "args": 3
+    },
+    {
+     "name": "FreePrivateData",
+     "args": 1
+    },
+    {
+     "name": "SetPriority",
+     "args": 1
+    },
+    {
+     "name": "GetPriority",
+     "args": 0
+    },
+    {
+     "name": "PreLoad",
+     "args": 0
+    },
+    {
+     "name": "GetType",
+     "args": 0
+    }
+   ]
+  },
+  "IDirect3DSurface9": {
+   "base": "IDirect3DResource9",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "GetDevice",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3DDevice9"
+      }
+     ]
+    },
+    {
+     "name": "SetPrivateData",
+     "args": 4
+    },
+    {
+     "name": "GetPrivateData",
+     "args": 3
+    },
+    {
+     "name": "FreePrivateData",
+     "args": 1
+    },
+    {
+     "name": "SetPriority",
+     "args": 1
+    },
+    {
+     "name": "GetPriority",
+     "args": 0
+    },
+    {
+     "name": "PreLoad",
+     "args": 0
+    },
+    {
+     "name": "GetType",
+     "args": 0
+    },
+    {
+     "name": "GetContainer",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "GetDesc",
+     "args": 1
+    },
+    {
+     "name": "LockRect",
+     "args": 3
+    },
+    {
+     "name": "UnlockRect",
+     "args": 0
+    },
+    {
+     "name": "GetDC",
+     "args": 1
+    },
+    {
+     "name": "ReleaseDC",
+     "args": 1
+    }
+   ]
+  },
+  "IDirect3DVertexBuffer9": {
+   "base": "IDirect3DResource9",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "GetDevice",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3DDevice9"
+      }
+     ]
+    },
+    {
+     "name": "SetPrivateData",
+     "args": 4
+    },
+    {
+     "name": "GetPrivateData",
+     "args": 3
+    },
+    {
+     "name": "FreePrivateData",
+     "args": 1
+    },
+    {
+     "name": "SetPriority",
+     "args": 1
+    },
+    {
+     "name": "GetPriority",
+     "args": 0
+    },
+    {
+     "name": "PreLoad",
+     "args": 0
+    },
+    {
+     "name": "GetType",
+     "args": 0
+    },
+    {
+     "name": "Lock",
+     "args": 4
+    },
+    {
+     "name": "Unlock",
+     "args": 0
+    },
+    {
+     "name": "GetDesc",
+     "args": 1
+    }
+   ]
+  },
+  "IDirect3DIndexBuffer9": {
+   "base": "IDirect3DResource9",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "GetDevice",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3DDevice9"
+      }
+     ]
+    },
+    {
+     "name": "SetPrivateData",
+     "args": 4
+    },
+    {
+     "name": "GetPrivateData",
+     "args": 3
+    },
+    {
+     "name": "FreePrivateData",
+     "args": 1
+    },
+    {
+     "name": "SetPriority",
+     "args": 1
+    },
+    {
+     "name": "GetPriority",
+     "args": 0
+    },
+    {
+     "name": "PreLoad",
+     "args": 0
+    },
+    {
+     "name": "GetType",
+     "args": 0
+    },
+    {
+     "name": "Lock",
+     "args": 4
+    },
+    {
+     "name": "Unlock",
+     "args": 0
+    },
+    {
+     "name": "GetDesc",
+     "args": 1
+    }
+   ]
+  },
+  "IDirect3DBaseTexture9": {
+   "base": "IDirect3DResource9",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "GetDevice",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3DDevice9"
+      }
+     ]
+    },
+    {
+     "name": "SetPrivateData",
+     "args": 4
+    },
+    {
+     "name": "GetPrivateData",
+     "args": 3
+    },
+    {
+     "name": "FreePrivateData",
+     "args": 1
+    },
+    {
+     "name": "SetPriority",
+     "args": 1
+    },
+    {
+     "name": "GetPriority",
+     "args": 0
+    },
+    {
+     "name": "PreLoad",
+     "args": 0
+    },
+    {
+     "name": "GetType",
+     "args": 0
+    },
+    {
+     "name": "SetLOD",
+     "args": 1
+    },
+    {
+     "name": "GetLOD",
+     "args": 0
+    },
+    {
+     "name": "GetLevelCount",
+     "args": 0
+    },
+    {
+     "name": "SetAutoGenFilterType",
+     "args": 1
+    },
+    {
+     "name": "GetAutoGenFilterType",
+     "args": 0
+    },
+    {
+     "name": "GenerateMipSubLevels",
+     "args": 0
+    }
+   ]
+  },
+  "IDirect3DCubeTexture9": {
+   "base": "IDirect3DBaseTexture9",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "GetDevice",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3DDevice9"
+      }
+     ]
+    },
+    {
+     "name": "SetPrivateData",
+     "args": 4
+    },
+    {
+     "name": "GetPrivateData",
+     "args": 3
+    },
+    {
+     "name": "FreePrivateData",
+     "args": 1
+    },
+    {
+     "name": "SetPriority",
+     "args": 1
+    },
+    {
+     "name": "GetPriority",
+     "args": 0
+    },
+    {
+     "name": "PreLoad",
+     "args": 0
+    },
+    {
+     "name": "GetType",
+     "args": 0
+    },
+    {
+     "name": "SetLOD",
+     "args": 1
+    },
+    {
+     "name": "GetLOD",
+     "args": 0
+    },
+    {
+     "name": "GetLevelCount",
+     "args": 0
+    },
+    {
+     "name": "SetAutoGenFilterType",
+     "args": 1
+    },
+    {
+     "name": "GetAutoGenFilterType",
+     "args": 0
+    },
+    {
+     "name": "GenerateMipSubLevels",
+     "args": 0
+    },
+    {
+     "name": "GetLevelDesc",
+     "args": 2
+    },
+    {
+     "name": "GetCubeMapSurface",
+     "args": 3,
+     "out": [
+      {
+       "stack": 3,
+       "interface": "IDirect3DSurface9"
+      }
+     ]
+    },
+    {
+     "name": "LockRect",
+     "args": 5
+    },
+    {
+     "name": "UnlockRect",
+     "args": 2
+    },
+    {
+     "name": "AddDirtyRect",
+     "args": 2
+    }
+   ]
+  },
+  "IDirect3DTexture9": {
+   "base": "IDirect3DBaseTexture9",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "GetDevice",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3DDevice9"
+      }
+     ]
+    },
+    {
+     "name": "SetPrivateData",
+     "args": 4
+    },
+    {
+     "name": "GetPrivateData",
+     "args": 3
+    },
+    {
+     "name": "FreePrivateData",
+     "args": 1
+    },
+    {
+     "name": "SetPriority",
+     "args": 1
+    },
+    {
+     "name": "GetPriority",
+     "args": 0
+    },
+    {
+     "name": "PreLoad",
+     "args": 0
+    },
+    {
+     "name": "GetType",
+     "args": 0
+    },
+    {
+     "name": "SetLOD",
+     "args": 1
+    },
+    {
+     "name": "GetLOD",
+     "args": 0
+    },
+    {
+     "name": "GetLevelCount",
+     "args": 0
+    },
+    {
+     "name": "SetAutoGenFilterType",
+     "args": 1
+    },
+    {
+     "name": "GetAutoGenFilterType",
+     "args": 0
+    },
+    {
+     "name": "GenerateMipSubLevels",
+     "args": 0
+    },
+    {
+     "name": "GetLevelDesc",
+     "args": 2
+    },
+    {
+     "name": "GetSurfaceLevel",
+     "args": 2,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirect3DSurface9"
+      }
+     ]
+    },
+    {
+     "name": "LockRect",
+     "args": 4
+    },
+    {
+     "name": "UnlockRect",
+     "args": 1
+    },
+    {
+     "name": "AddDirtyRect",
+     "args": 1
+    }
+   ]
+  },
+  "IDirect3DVolumeTexture9": {
+   "base": "IDirect3DBaseTexture9",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "GetDevice",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3DDevice9"
+      }
+     ]
+    },
+    {
+     "name": "SetPrivateData",
+     "args": 4
+    },
+    {
+     "name": "GetPrivateData",
+     "args": 3
+    },
+    {
+     "name": "FreePrivateData",
+     "args": 1
+    },
+    {
+     "name": "SetPriority",
+     "args": 1
+    },
+    {
+     "name": "GetPriority",
+     "args": 0
+    },
+    {
+     "name": "PreLoad",
+     "args": 0
+    },
+    {
+     "name": "GetType",
+     "args": 0
+    },
+    {
+     "name": "SetLOD",
+     "args": 1
+    },
+    {
+     "name": "GetLOD",
+     "args": 0
+    },
+    {
+     "name": "GetLevelCount",
+     "args": 0
+    },
+    {
+     "name": "SetAutoGenFilterType",
+     "args": 1
+    },
+    {
+     "name": "GetAutoGenFilterType",
+     "args": 0
+    },
+    {
+     "name": "GenerateMipSubLevels",
+     "args": 0
+    },
+    {
+     "name": "GetLevelDesc",
+     "args": 2
+    },
+    {
+     "name": "GetVolumeLevel",
+     "args": 2,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirect3DVolume9"
+      }
+     ]
+    },
+    {
+     "name": "LockBox",
+     "args": 4
+    },
+    {
+     "name": "UnlockBox",
+     "args": 1
+    },
+    {
+     "name": "AddDirtyBox",
+     "args": 1
+    }
+   ]
+  },
+  "IDirect3DVertexDeclaration9": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "GetDevice",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3DDevice9"
+      }
+     ]
+    },
+    {
+     "name": "GetDeclaration",
+     "args": 2
+    }
+   ]
+  },
+  "IDirect3DVertexShader9": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "GetDevice",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3DDevice9"
+      }
+     ]
+    },
+    {
+     "name": "GetFunction",
+     "args": 2
+    }
+   ]
+  },
+  "IDirect3DPixelShader9": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "GetDevice",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3DDevice9"
+      }
+     ]
+    },
+    {
+     "name": "GetFunction",
+     "args": 2
+    }
+   ]
+  },
+  "IDirect3DStateBlock9": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "GetDevice",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3DDevice9"
+      }
+     ]
+    },
+    {
+     "name": "Capture",
+     "args": 0
+    },
+    {
+     "name": "Apply",
+     "args": 0
+    }
+   ]
+  },
+  "IDirect3DQuery9": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "GetDevice",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3DDevice9"
+      }
+     ]
+    },
+    {
+     "name": "GetType",
+     "args": 0
+    },
+    {
+     "name": "GetDataSize",
+     "args": 0
+    },
+    {
+     "name": "Issue",
+     "args": 1
+    },
+    {
+     "name": "GetData",
+     "args": 3
+    }
+   ]
+  },
+  "IDirect3DDevice9": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "TestCooperativeLevel",
+     "args": 0
+    },
+    {
+     "name": "GetAvailableTextureMem",
+     "args": 0
+    },
+    {
+     "name": "EvictManagedResources",
+     "args": 0
+    },
+    {
+     "name": "GetDirect3D",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3D9"
+      }
+     ]
+    },
+    {
+     "name": "GetDeviceCaps",
+     "args": 1
+    },
+    {
+     "name": "GetDisplayMode",
+     "args": 2
+    },
+    {
+     "name": "GetCreationParameters",
+     "args": 1
+    },
+    {
+     "name": "SetCursorProperties",
+     "args": 3
+    },
+    {
+     "name": "SetCursorPosition",
+     "args": 3
+    },
+    {
+     "name": "ShowCursor",
+     "args": 1
+    },
+    {
+     "name": "CreateAdditionalSwapChain",
+     "args": 2,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirect3DSwapChain9"
+      }
+     ]
+    },
+    {
+     "name": "GetSwapChain",
+     "args": 2,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirect3DSwapChain9"
+      }
+     ]
+    },
+    {
+     "name": "GetNumberOfSwapChains",
+     "args": 0
+    },
+    {
+     "name": "Reset",
+     "args": 1
+    },
+    {
+     "name": "Present",
+     "args": 4
+    },
+    {
+     "name": "GetBackBuffer",
+     "args": 4,
+     "out": [
+      {
+       "stack": 4,
+       "interface": "IDirect3DSurface9"
+      }
+     ]
+    },
+    {
+     "name": "GetRasterStatus",
+     "args": 2
+    },
+    {
+     "name": "SetDialogBoxMode",
+     "args": 1
+    },
+    {
+     "name": "SetGammaRamp",
+     "args": 3
+    },
+    {
+     "name": "GetGammaRamp",
+     "args": 2
+    },
+    {
+     "name": "CreateTexture",
+     "args": 8,
+     "out": [
+      {
+       "stack": 7,
+       "interface": "IDirect3DTexture9"
+      }
+     ]
+    },
+    {
+     "name": "CreateVolumeTexture",
+     "args": 9,
+     "out": [
+      {
+       "stack": 8,
+       "interface": "IDirect3DVolumeTexture9"
+      }
+     ]
+    },
+    {
+     "name": "CreateCubeTexture",
+     "args": 7,
+     "out": [
+      {
+       "stack": 6,
+       "interface": "IDirect3DCubeTexture9"
+      }
+     ]
+    },
+    {
+     "name": "CreateVertexBuffer",
+     "args": 6,
+     "out": [
+      {
+       "stack": 5,
+       "interface": "IDirect3DVertexBuffer9"
+      }
+     ]
+    },
+    {
+     "name": "CreateIndexBuffer",
+     "args": 6,
+     "out": [
+      {
+       "stack": 5,
+       "interface": "IDirect3DIndexBuffer9"
+      }
+     ]
+    },
+    {
+     "name": "CreateRenderTarget",
+     "args": 8,
+     "out": [
+      {
+       "stack": 7,
+       "interface": "IDirect3DSurface9"
+      }
+     ]
+    },
+    {
+     "name": "CreateDepthStencilSurface",
+     "args": 8,
+     "out": [
+      {
+       "stack": 7,
+       "interface": "IDirect3DSurface9"
+      }
+     ]
+    },
+    {
+     "name": "UpdateSurface",
+     "args": 4
+    },
+    {
+     "name": "UpdateTexture",
+     "args": 2
+    },
+    {
+     "name": "GetRenderTargetData",
+     "args": 2
+    },
+    {
+     "name": "GetFrontBufferData",
+     "args": 2
+    },
+    {
+     "name": "StretchRect",
+     "args": 5
+    },
+    {
+     "name": "ColorFill",
+     "args": 3
+    },
+    {
+     "name": "CreateOffscreenPlainSurface",
+     "args": 6,
+     "out": [
+      {
+       "stack": 5,
+       "interface": "IDirect3DSurface9"
+      }
+     ]
+    },
+    {
+     "name": "SetRenderTarget",
+     "args": 2
+    },
+    {
+     "name": "GetRenderTarget",
+     "args": 2,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirect3DSurface9"
+      }
+     ]
+    },
+    {
+     "name": "SetDepthStencilSurface",
+     "args": 1
+    },
+    {
+     "name": "GetDepthStencilSurface",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3DSurface9"
+      }
+     ]
+    },
+    {
+     "name": "BeginScene",
+     "args": 0
+    },
+    {
+     "name": "EndScene",
+     "args": 0
+    },
+    {
+     "name": "Clear",
+     "args": 6
+    },
+    {
+     "name": "SetTransform",
+     "args": 2
+    },
+    {
+     "name": "GetTransform",
+     "args": 2
+    },
+    {
+     "name": "MultiplyTransform",
+     "args": 2
+    },
+    {
+     "name": "SetViewport",
+     "args": 1
+    },
+    {
+     "name": "GetViewport",
+     "args": 1
+    },
+    {
+     "name": "SetMaterial",
+     "args": 1
+    },
+    {
+     "name": "GetMaterial",
+     "args": 1
+    },
+    {
+     "name": "SetLight",
+     "args": 2
+    },
+    {
+     "name": "GetLight",
+     "args": 2
+    },
+    {
+     "name": "LightEnable",
+     "args": 2
+    },
+    {
+     "name": "GetLightEnable",
+     "args": 2
+    },
+    {
+     "name": "SetClipPlane",
+     "args": 2
+    },
+    {
+     "name": "GetClipPlane",
+     "args": 2
+    },
+    {
+     "name": "SetRenderState",
+     "args": 2
+    },
+    {
+     "name": "GetRenderState",
+     "args": 2
+    },
+    {
+     "name": "CreateStateBlock",
+     "args": 2,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirect3DStateBlock9"
+      }
+     ]
+    },
+    {
+     "name": "BeginStateBlock",
+     "args": 0
+    },
+    {
+     "name": "EndStateBlock",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3DStateBlock9"
+      }
+     ]
+    },
+    {
+     "name": "SetClipStatus",
+     "args": 1
+    },
+    {
+     "name": "GetClipStatus",
+     "args": 1
+    },
+    {
+     "name": "GetTexture",
+     "args": 2,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirect3DBaseTexture9"
+      }
+     ]
+    },
+    {
+     "name": "SetTexture",
+     "args": 2
+    },
+    {
+     "name": "GetTextureStageState",
+     "args": 3
+    },
+    {
+     "name": "SetTextureStageState",
+     "args": 3
+    },
+    {
+     "name": "GetSamplerState",
+     "args": 3
+    },
+    {
+     "name": "SetSamplerState",
+     "args": 3
+    },
+    {
+     "name": "ValidateDevice",
+     "args": 1
+    },
+    {
+     "name": "SetPaletteEntries",
+     "args": 2
+    },
+    {
+     "name": "GetPaletteEntries",
+     "args": 2
+    },
+    {
+     "name": "SetCurrentTexturePalette",
+     "args": 1
+    },
+    {
+     "name": "GetCurrentTexturePalette",
+     "args": 1
+    },
+    {
+     "name": "SetScissorRect",
+     "args": 1
+    },
+    {
+     "name": "GetScissorRect",
+     "args": 1
+    },
+    {
+     "name": "SetSoftwareVertexProcessing",
+     "args": 1
+    },
+    {
+     "name": "GetSoftwareVertexProcessing",
+     "args": 0
+    },
+    {
+     "name": "SetNPatchMode",
+     "args": 1
+    },
+    {
+     "name": "GetNPatchMode",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "DrawPrimitive",
+     "args": 3
+    },
+    {
+     "name": "DrawIndexedPrimitive",
+     "args": 6
+    },
+    {
+     "name": "DrawPrimitiveUP",
+     "args": 4
+    },
+    {
+     "name": "DrawIndexedPrimitiveUP",
+     "args": 8
+    },
+    {
+     "name": "ProcessVertices",
+     "args": 6
+    },
+    {
+     "name": "CreateVertexDeclaration",
+     "args": 2,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirect3DVertexDeclaration9"
+      }
+     ]
+    },
+    {
+     "name": "SetVertexDeclaration",
+     "args": 1
+    },
+    {
+     "name": "GetVertexDeclaration",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3DVertexDeclaration9"
+      }
+     ]
+    },
+    {
+     "name": "SetFVF",
+     "args": 1
+    },
+    {
+     "name": "GetFVF",
+     "args": 1
+    },
+    {
+     "name": "CreateVertexShader",
+     "args": 2,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirect3DVertexShader9"
+      }
+     ]
+    },
+    {
+     "name": "SetVertexShader",
+     "args": 1
+    },
+    {
+     "name": "GetVertexShader",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3DVertexShader9"
+      }
+     ]
+    },
+    {
+     "name": "SetVertexShaderConstantF",
+     "args": 3
+    },
+    {
+     "name": "GetVertexShaderConstantF",
+     "args": 3
+    },
+    {
+     "name": "SetVertexShaderConstantI",
+     "args": 3
+    },
+    {
+     "name": "GetVertexShaderConstantI",
+     "args": 3
+    },
+    {
+     "name": "SetVertexShaderConstantB",
+     "args": 3
+    },
+    {
+     "name": "GetVertexShaderConstantB",
+     "args": 3
+    },
+    {
+     "name": "SetStreamSource",
+     "args": 4
+    },
+    {
+     "name": "GetStreamSource",
+     "args": 4,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirect3DVertexBuffer9"
+      }
+     ]
+    },
+    {
+     "name": "SetStreamSourceFreq",
+     "args": 2
+    },
+    {
+     "name": "GetStreamSourceFreq",
+     "args": 2
+    },
+    {
+     "name": "SetIndices",
+     "args": 1
+    },
+    {
+     "name": "GetIndices",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3DIndexBuffer9"
+      }
+     ]
+    },
+    {
+     "name": "CreatePixelShader",
+     "args": 2,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirect3DPixelShader9"
+      }
+     ]
+    },
+    {
+     "name": "SetPixelShader",
+     "args": 1
+    },
+    {
+     "name": "GetPixelShader",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3DPixelShader9"
+      }
+     ]
+    },
+    {
+     "name": "SetPixelShaderConstantF",
+     "args": 3
+    },
+    {
+     "name": "GetPixelShaderConstantF",
+     "args": 3
+    },
+    {
+     "name": "SetPixelShaderConstantI",
+     "args": 3
+    },
+    {
+     "name": "GetPixelShaderConstantI",
+     "args": 3
+    },
+    {
+     "name": "SetPixelShaderConstantB",
+     "args": 3
+    },
+    {
+     "name": "GetPixelShaderConstantB",
+     "args": 3
+    },
+    {
+     "name": "DrawRectPatch",
+     "args": 3
+    },
+    {
+     "name": "DrawTriPatch",
+     "args": 3
+    },
+    {
+     "name": "DeletePatch",
+     "args": 1
+    },
+    {
+     "name": "CreateQuery",
+     "args": 2,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirect3DQuery9"
+      }
+     ]
+    }
+   ]
+  },
+  "IDirect3D9Ex": {
+   "base": "IDirect3D9",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "RegisterSoftwareDevice",
+     "args": 1
+    },
+    {
+     "name": "GetAdapterCount",
+     "args": 0
+    },
+    {
+     "name": "GetAdapterIdentifier",
+     "args": 3
+    },
+    {
+     "name": "GetAdapterModeCount",
+     "args": 2
+    },
+    {
+     "name": "EnumAdapterModes",
+     "args": 4
+    },
+    {
+     "name": "GetAdapterDisplayMode",
+     "args": 2
+    },
+    {
+     "name": "CheckDeviceType",
+     "args": 5
+    },
+    {
+     "name": "CheckDeviceFormat",
+     "args": 6
+    },
+    {
+     "name": "CheckDeviceMultiSampleType",
+     "args": 6
+    },
+    {
+     "name": "CheckDepthStencilMatch",
+     "args": 5
+    },
+    {
+     "name": "CheckDeviceFormatConversion",
+     "args": 4
+    },
+    {
+     "name": "GetDeviceCaps",
+     "args": 3
+    },
+    {
+     "name": "GetAdapterMonitor",
+     "args": 1
+    },
+    {
+     "name": "CreateDevice",
+     "args": 6,
+     "out": [
+      {
+       "stack": 6,
+       "interface": "IDirect3DDevice9"
+      }
+     ]
+    },
+    {
+     "name": "GetAdapterModeCountEx",
+     "args": 2
+    },
+    {
+     "name": "EnumAdapterModesEx",
+     "args": 4
+    },
+    {
+     "name": "GetAdapterDisplayModeEx",
+     "args": 3
+    },
+    {
+     "name": "CreateDeviceEx",
+     "args": 7,
+     "out": [
+      {
+       "stack": 7,
+       "interface": "IDirect3DDevice9Ex"
+      }
+     ]
+    },
+    {
+     "name": "GetAdapterLUID",
+     "args": 2
+    }
+   ]
+  },
+  "IDirect3DSwapChain9Ex": {
+   "base": "IDirect3DSwapChain9",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "Present",
+     "args": 5
+    },
+    {
+     "name": "GetFrontBufferData",
+     "args": 1
+    },
+    {
+     "name": "GetBackBuffer",
+     "args": 3,
+     "out": [
+      {
+       "stack": 3,
+       "interface": "IDirect3DSurface9"
+      }
+     ]
+    },
+    {
+     "name": "GetRasterStatus",
+     "args": 1
+    },
+    {
+     "name": "GetDisplayMode",
+     "args": 1
+    },
+    {
+     "name": "GetDevice",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3DDevice9"
+      }
+     ]
+    },
+    {
+     "name": "GetPresentParameters",
+     "args": 1
+    },
+    {
+     "name": "GetLastPresentCount",
+     "args": 1
+    },
+    {
+     "name": "GetPresentStats",
+     "args": 1
+    },
+    {
+     "name": "GetDisplayModeEx",
+     "args": 2
+    }
+   ]
+  },
+  "IDirect3DDevice9Ex": {
+   "base": "IDirect3DDevice9",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "TestCooperativeLevel",
+     "args": 0
+    },
+    {
+     "name": "GetAvailableTextureMem",
+     "args": 0
+    },
+    {
+     "name": "EvictManagedResources",
+     "args": 0
+    },
+    {
+     "name": "GetDirect3D",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3D9"
+      }
+     ]
+    },
+    {
+     "name": "GetDeviceCaps",
+     "args": 1
+    },
+    {
+     "name": "GetDisplayMode",
+     "args": 2
+    },
+    {
+     "name": "GetCreationParameters",
+     "args": 1
+    },
+    {
+     "name": "SetCursorProperties",
+     "args": 3
+    },
+    {
+     "name": "SetCursorPosition",
+     "args": 3
+    },
+    {
+     "name": "ShowCursor",
+     "args": 1
+    },
+    {
+     "name": "CreateAdditionalSwapChain",
+     "args": 2,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirect3DSwapChain9"
+      }
+     ]
+    },
+    {
+     "name": "GetSwapChain",
+     "args": 2,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirect3DSwapChain9"
+      }
+     ]
+    },
+    {
+     "name": "GetNumberOfSwapChains",
+     "args": 0
+    },
+    {
+     "name": "Reset",
+     "args": 1
+    },
+    {
+     "name": "Present",
+     "args": 4
+    },
+    {
+     "name": "GetBackBuffer",
+     "args": 4,
+     "out": [
+      {
+       "stack": 4,
+       "interface": "IDirect3DSurface9"
+      }
+     ]
+    },
+    {
+     "name": "GetRasterStatus",
+     "args": 2
+    },
+    {
+     "name": "SetDialogBoxMode",
+     "args": 1
+    },
+    {
+     "name": "SetGammaRamp",
+     "args": 3
+    },
+    {
+     "name": "GetGammaRamp",
+     "args": 2
+    },
+    {
+     "name": "CreateTexture",
+     "args": 8,
+     "out": [
+      {
+       "stack": 7,
+       "interface": "IDirect3DTexture9"
+      }
+     ]
+    },
+    {
+     "name": "CreateVolumeTexture",
+     "args": 9,
+     "out": [
+      {
+       "stack": 8,
+       "interface": "IDirect3DVolumeTexture9"
+      }
+     ]
+    },
+    {
+     "name": "CreateCubeTexture",
+     "args": 7,
+     "out": [
+      {
+       "stack": 6,
+       "interface": "IDirect3DCubeTexture9"
+      }
+     ]
+    },
+    {
+     "name": "CreateVertexBuffer",
+     "args": 6,
+     "out": [
+      {
+       "stack": 5,
+       "interface": "IDirect3DVertexBuffer9"
+      }
+     ]
+    },
+    {
+     "name": "CreateIndexBuffer",
+     "args": 6,
+     "out": [
+      {
+       "stack": 5,
+       "interface": "IDirect3DIndexBuffer9"
+      }
+     ]
+    },
+    {
+     "name": "CreateRenderTarget",
+     "args": 8,
+     "out": [
+      {
+       "stack": 7,
+       "interface": "IDirect3DSurface9"
+      }
+     ]
+    },
+    {
+     "name": "CreateDepthStencilSurface",
+     "args": 8,
+     "out": [
+      {
+       "stack": 7,
+       "interface": "IDirect3DSurface9"
+      }
+     ]
+    },
+    {
+     "name": "UpdateSurface",
+     "args": 4
+    },
+    {
+     "name": "UpdateTexture",
+     "args": 2
+    },
+    {
+     "name": "GetRenderTargetData",
+     "args": 2
+    },
+    {
+     "name": "GetFrontBufferData",
+     "args": 2
+    },
+    {
+     "name": "StretchRect",
+     "args": 5
+    },
+    {
+     "name": "ColorFill",
+     "args": 3
+    },
+    {
+     "name": "CreateOffscreenPlainSurface",
+     "args": 6,
+     "out": [
+      {
+       "stack": 5,
+       "interface": "IDirect3DSurface9"
+      }
+     ]
+    },
+    {
+     "name": "SetRenderTarget",
+     "args": 2
+    },
+    {
+     "name": "GetRenderTarget",
+     "args": 2,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirect3DSurface9"
+      }
+     ]
+    },
+    {
+     "name": "SetDepthStencilSurface",
+     "args": 1
+    },
+    {
+     "name": "GetDepthStencilSurface",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3DSurface9"
+      }
+     ]
+    },
+    {
+     "name": "BeginScene",
+     "args": 0
+    },
+    {
+     "name": "EndScene",
+     "args": 0
+    },
+    {
+     "name": "Clear",
+     "args": 6
+    },
+    {
+     "name": "SetTransform",
+     "args": 2
+    },
+    {
+     "name": "GetTransform",
+     "args": 2
+    },
+    {
+     "name": "MultiplyTransform",
+     "args": 2
+    },
+    {
+     "name": "SetViewport",
+     "args": 1
+    },
+    {
+     "name": "GetViewport",
+     "args": 1
+    },
+    {
+     "name": "SetMaterial",
+     "args": 1
+    },
+    {
+     "name": "GetMaterial",
+     "args": 1
+    },
+    {
+     "name": "SetLight",
+     "args": 2
+    },
+    {
+     "name": "GetLight",
+     "args": 2
+    },
+    {
+     "name": "LightEnable",
+     "args": 2
+    },
+    {
+     "name": "GetLightEnable",
+     "args": 2
+    },
+    {
+     "name": "SetClipPlane",
+     "args": 2
+    },
+    {
+     "name": "GetClipPlane",
+     "args": 2
+    },
+    {
+     "name": "SetRenderState",
+     "args": 2
+    },
+    {
+     "name": "GetRenderState",
+     "args": 2
+    },
+    {
+     "name": "CreateStateBlock",
+     "args": 2,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirect3DStateBlock9"
+      }
+     ]
+    },
+    {
+     "name": "BeginStateBlock",
+     "args": 0
+    },
+    {
+     "name": "EndStateBlock",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3DStateBlock9"
+      }
+     ]
+    },
+    {
+     "name": "SetClipStatus",
+     "args": 1
+    },
+    {
+     "name": "GetClipStatus",
+     "args": 1
+    },
+    {
+     "name": "GetTexture",
+     "args": 2,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirect3DBaseTexture9"
+      }
+     ]
+    },
+    {
+     "name": "SetTexture",
+     "args": 2
+    },
+    {
+     "name": "GetTextureStageState",
+     "args": 3
+    },
+    {
+     "name": "SetTextureStageState",
+     "args": 3
+    },
+    {
+     "name": "GetSamplerState",
+     "args": 3
+    },
+    {
+     "name": "SetSamplerState",
+     "args": 3
+    },
+    {
+     "name": "ValidateDevice",
+     "args": 1
+    },
+    {
+     "name": "SetPaletteEntries",
+     "args": 2
+    },
+    {
+     "name": "GetPaletteEntries",
+     "args": 2
+    },
+    {
+     "name": "SetCurrentTexturePalette",
+     "args": 1
+    },
+    {
+     "name": "GetCurrentTexturePalette",
+     "args": 1
+    },
+    {
+     "name": "SetScissorRect",
+     "args": 1
+    },
+    {
+     "name": "GetScissorRect",
+     "args": 1
+    },
+    {
+     "name": "SetSoftwareVertexProcessing",
+     "args": 1
+    },
+    {
+     "name": "GetSoftwareVertexProcessing",
+     "args": 0
+    },
+    {
+     "name": "SetNPatchMode",
+     "args": 1
+    },
+    {
+     "name": "GetNPatchMode",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "DrawPrimitive",
+     "args": 3
+    },
+    {
+     "name": "DrawIndexedPrimitive",
+     "args": 6
+    },
+    {
+     "name": "DrawPrimitiveUP",
+     "args": 4
+    },
+    {
+     "name": "DrawIndexedPrimitiveUP",
+     "args": 8
+    },
+    {
+     "name": "ProcessVertices",
+     "args": 6
+    },
+    {
+     "name": "CreateVertexDeclaration",
+     "args": 2,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirect3DVertexDeclaration9"
+      }
+     ]
+    },
+    {
+     "name": "SetVertexDeclaration",
+     "args": 1
+    },
+    {
+     "name": "GetVertexDeclaration",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3DVertexDeclaration9"
+      }
+     ]
+    },
+    {
+     "name": "SetFVF",
+     "args": 1
+    },
+    {
+     "name": "GetFVF",
+     "args": 1
+    },
+    {
+     "name": "CreateVertexShader",
+     "args": 2,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirect3DVertexShader9"
+      }
+     ]
+    },
+    {
+     "name": "SetVertexShader",
+     "args": 1
+    },
+    {
+     "name": "GetVertexShader",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3DVertexShader9"
+      }
+     ]
+    },
+    {
+     "name": "SetVertexShaderConstantF",
+     "args": 3
+    },
+    {
+     "name": "GetVertexShaderConstantF",
+     "args": 3
+    },
+    {
+     "name": "SetVertexShaderConstantI",
+     "args": 3
+    },
+    {
+     "name": "GetVertexShaderConstantI",
+     "args": 3
+    },
+    {
+     "name": "SetVertexShaderConstantB",
+     "args": 3
+    },
+    {
+     "name": "GetVertexShaderConstantB",
+     "args": 3
+    },
+    {
+     "name": "SetStreamSource",
+     "args": 4
+    },
+    {
+     "name": "GetStreamSource",
+     "args": 4,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirect3DVertexBuffer9"
+      }
+     ]
+    },
+    {
+     "name": "SetStreamSourceFreq",
+     "args": 2
+    },
+    {
+     "name": "GetStreamSourceFreq",
+     "args": 2
+    },
+    {
+     "name": "SetIndices",
+     "args": 1
+    },
+    {
+     "name": "GetIndices",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3DIndexBuffer9"
+      }
+     ]
+    },
+    {
+     "name": "CreatePixelShader",
+     "args": 2,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirect3DPixelShader9"
+      }
+     ]
+    },
+    {
+     "name": "SetPixelShader",
+     "args": 1
+    },
+    {
+     "name": "GetPixelShader",
+     "args": 1,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3DPixelShader9"
+      }
+     ]
+    },
+    {
+     "name": "SetPixelShaderConstantF",
+     "args": 3
+    },
+    {
+     "name": "GetPixelShaderConstantF",
+     "args": 3
+    },
+    {
+     "name": "SetPixelShaderConstantI",
+     "args": 3
+    },
+    {
+     "name": "GetPixelShaderConstantI",
+     "args": 3
+    },
+    {
+     "name": "SetPixelShaderConstantB",
+     "args": 3
+    },
+    {
+     "name": "GetPixelShaderConstantB",
+     "args": 3
+    },
+    {
+     "name": "DrawRectPatch",
+     "args": 3
+    },
+    {
+     "name": "DrawTriPatch",
+     "args": 3
+    },
+    {
+     "name": "DeletePatch",
+     "args": 1
+    },
+    {
+     "name": "CreateQuery",
+     "args": 2,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirect3DQuery9"
+      }
+     ]
+    },
+    {
+     "name": "SetConvolutionMonoKernel",
+     "args": 4
+    },
+    {
+     "name": "ComposeRects",
+     "args": 8
+    },
+    {
+     "name": "PresentEx",
+     "args": 5
+    },
+    {
+     "name": "GetGPUThreadPriority",
+     "args": 1
+    },
+    {
+     "name": "SetGPUThreadPriority",
+     "args": 1
+    },
+    {
+     "name": "WaitForVBlank",
+     "args": 1
+    },
+    {
+     "name": "CheckResourceResidency",
+     "args": 2,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "IDirect3DResource9"
+      }
+     ]
+    },
+    {
+     "name": "SetMaximumFrameLatency",
+     "args": 1
+    },
+    {
+     "name": "GetMaximumFrameLatency",
+     "args": 1
+    },
+    {
+     "name": "CheckDeviceState",
+     "args": 1
+    },
+    {
+     "name": "CreateRenderTargetEx",
+     "args": 9,
+     "out": [
+      {
+       "stack": 7,
+       "interface": "IDirect3DSurface9"
+      }
+     ]
+    },
+    {
+     "name": "CreateOffscreenPlainSurfaceEx",
+     "args": 7,
+     "out": [
+      {
+       "stack": 5,
+       "interface": "IDirect3DSurface9"
+      }
+     ]
+    },
+    {
+     "name": "CreateDepthStencilSurfaceEx",
+     "args": 9,
+     "out": [
+      {
+       "stack": 7,
+       "interface": "IDirect3DSurface9"
+      }
+     ]
+    },
+    {
+     "name": "ResetEx",
+     "args": 2
+    },
+    {
+     "name": "GetDisplayModeEx",
+     "args": 3
+    }
+   ]
+  }
+ },
+ "functions": {
+  "Direct3DCreate9": {
+   "args": 1,
+   "returns": "IDirect3D9",
+   "module": "d3d9.dll",
+   "out": []
+  },
+  "Direct3DCreate9Ex": {
+   "args": 2,
+   "out": [
+    {
+     "stack": 1,
+     "interface": "IDirect3D9Ex"
+    }
+   ],
+   "module": "d3d9.dll",
+   "returns": null
+  }
+ },
+ "iids": {
+  "IDirect3D9": "cacbbd81d4646d42ae8dad0147f4275c",
+  "IDirect3DDevice9": "963b22d07abffd4392bda43b0d82b9eb",
+  "IDirect3DResource9": "5dc0ee057d8f6243b999d1baf357c704",
+  "IDirect3DVertexBuffer9": "b5b14bb670fdf64dbf9119d0a12455e3",
+  "IDirect3DVolume9": "e616f424671fa74ab88ed33f6f3128a1",
+  "IDirect3DSwapChain9": "f2504979fcad8a45905e10a10b0b503b",
+  "IDirect3DSurface9": "3aaffb0cf69f9a4299b3a2796af8b89b",
+  "IDirect3DIndexBuffer9": "5ed69d7cf7d32945acee785830acde35",
+  "IDirect3DBaseTexture9": "7ea80c583c1d544d991db7d3e3c298ce",
+  "IDirect3DTexture9": "2712c385e53d004f9b3af11ac38c18b5",
+  "IDirect3DCubeTexture9": "812ff3ff53d93a47922393d652aba93f",
+  "IDirect3DVolumeTexture9": "6c52182589e71141a7b947ef328d13e6",
+  "IDirect3DVertexDeclaration9": "9cc513ddfa369840a8fbc7ed39dc8546",
+  "IDirect3DVertexShader9": "7e55c5ef656213468a9443857889eb36",
+  "IDirect3DPixelShader9": "dcdb3b6d025b1544b852ce5e8bccb289",
+  "IDirect3DStateBlock9": "e54f7cb00d31a84ba23c4f0f206f218b",
+  "IDirect3DQuery9": "601477d995a6264fbbd327b840b541cc",
+  "IDirect3D9Ex": "41721702fc690c408ff193a44df6861d",
+  "IDirect3DSwapChain9Ex": "af6c88913d1c2e4da0ab3e4c7d8d3303",
+  "IDirect3DDevice9Ex": "ce108bb149265a40870f95f777d4313a"
+ }
+}

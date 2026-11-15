@@ -49,7 +49,7 @@ The rules:
     (decimal) for an import by ordinal (`dsound.dll` `#11`).
 - **`sdk`** names the header the slots come from (`d3d9`, `d3dx9`, `dinput8`, `dsound`, `physx-2.6.4`).
   An interface whose layout changed between SDK versions has one table per version; the diff warns when
-  the two sides name different ones.
+  the two sides name different ones. Optional: winrt's runtime and answers files don't carry it yet.
 - **Addresses** are `"0x"` strings, VAs in the game's image. `return` is the address after the call
   instruction: the return address winrt sees. `function` is the start of the function the call lies in,
   or null.
@@ -61,11 +61,17 @@ The rules:
   `"first": true`. Each method and import carries `answer`, what winrt did when the game called it:
   `implemented` (a host function ran), `stub` (it failed on purpose, as `DIERR_UNSUPPORTED`) or `missing`
   (no host function; census mode returned a failure). A run in census mode may take paths Windows would
-  not, after such a failure: its list is what the run reached.
+  not, after such a failure: its list is what the run reached. Census mode can return from a missing
+  method only when winrt knows its argument count; a slot without one still stops the run. The suite's
+  slot tables (`common/rea_suite/data/census/*.json`, `args` per method, from the SDK headers) give
+  those counts.
 - **Kind `answers`**: no sites. Each method and import carries `answer`: `implemented`, `stub` or
   `missing` (a thunk without a host function). A method that isn't listed has no thunk, and the diff
-  counts it as missing too. `source` names the runtime (`{"name": "winrt", "commit": "…"}`).
-- **Extra members** are allowed anywhere and kept by readers that don't know them. A reader refuses a
+  counts it as missing too. `source` names the runtime (`{"name": "winrt"}`, with `"commit"` when the
+  build knows its own).
+- **Extra members** are allowed anywhere and kept by readers that don't know them. winrt's files carry
+  `calls` (an entry's total), `image` and `offset` on a site, `images` (`name`, `base`, `size`) in a
+  runtime's `source`, and `game` in `producer`. A reader refuses a
   `schema` other than `rea-census/1`; a change that breaks a reader takes `rea-census/2`.
 
 ## Commands

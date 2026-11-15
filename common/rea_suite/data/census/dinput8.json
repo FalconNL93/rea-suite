@@ -1,0 +1,1777 @@
+{
+ "schema": "rea-census-slots/1",
+ "sdk": "dinput8",
+ "source": {
+  "headers": "mingw-w64",
+  "files": {
+   "dinput.h": "2c282f07c2867c65a74ba3bf3d837931b190f558cdd89ff221572eaf3c428f60"
+  }
+ },
+ "conv": "stdcall",
+ "interfaces": {
+  "IDirectInputEffect": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "Initialize",
+     "args": 3
+    },
+    {
+     "name": "GetEffectGuid",
+     "args": 1
+    },
+    {
+     "name": "GetParameters",
+     "args": 2
+    },
+    {
+     "name": "SetParameters",
+     "args": 2
+    },
+    {
+     "name": "Start",
+     "args": 2
+    },
+    {
+     "name": "Stop",
+     "args": 0
+    },
+    {
+     "name": "GetEffectStatus",
+     "args": 1
+    },
+    {
+     "name": "Download",
+     "args": 0
+    },
+    {
+     "name": "Unload",
+     "args": 0
+    },
+    {
+     "name": "Escape",
+     "args": 1
+    }
+   ]
+  },
+  "IDirectInputDeviceA": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "GetCapabilities",
+     "args": 1
+    },
+    {
+     "name": "EnumObjects",
+     "args": 3,
+     "callbacks": [
+      {
+       "function": 1,
+       "context": 2,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "GetProperty",
+     "args": 2
+    },
+    {
+     "name": "SetProperty",
+     "args": 2
+    },
+    {
+     "name": "Acquire",
+     "args": 0
+    },
+    {
+     "name": "Unacquire",
+     "args": 0
+    },
+    {
+     "name": "GetDeviceState",
+     "args": 2
+    },
+    {
+     "name": "GetDeviceData",
+     "args": 4
+    },
+    {
+     "name": "SetDataFormat",
+     "args": 1
+    },
+    {
+     "name": "SetEventNotification",
+     "args": 1
+    },
+    {
+     "name": "SetCooperativeLevel",
+     "args": 2
+    },
+    {
+     "name": "GetObjectInfo",
+     "args": 3
+    },
+    {
+     "name": "GetDeviceInfo",
+     "args": 1
+    },
+    {
+     "name": "RunControlPanel",
+     "args": 2
+    },
+    {
+     "name": "Initialize",
+     "args": 3
+    }
+   ]
+  },
+  "IDirectInputDeviceW": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "GetCapabilities",
+     "args": 1
+    },
+    {
+     "name": "EnumObjects",
+     "args": 3,
+     "callbacks": [
+      {
+       "function": 1,
+       "context": 2,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "GetProperty",
+     "args": 2
+    },
+    {
+     "name": "SetProperty",
+     "args": 2
+    },
+    {
+     "name": "Acquire",
+     "args": 0
+    },
+    {
+     "name": "Unacquire",
+     "args": 0
+    },
+    {
+     "name": "GetDeviceState",
+     "args": 2
+    },
+    {
+     "name": "GetDeviceData",
+     "args": 4
+    },
+    {
+     "name": "SetDataFormat",
+     "args": 1
+    },
+    {
+     "name": "SetEventNotification",
+     "args": 1
+    },
+    {
+     "name": "SetCooperativeLevel",
+     "args": 2
+    },
+    {
+     "name": "GetObjectInfo",
+     "args": 3
+    },
+    {
+     "name": "GetDeviceInfo",
+     "args": 1
+    },
+    {
+     "name": "RunControlPanel",
+     "args": 2
+    },
+    {
+     "name": "Initialize",
+     "args": 3
+    }
+   ]
+  },
+  "IDirectInputDevice2A": {
+   "base": "IDirectInputDeviceA",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "GetCapabilities",
+     "args": 1
+    },
+    {
+     "name": "EnumObjects",
+     "args": 3,
+     "callbacks": [
+      {
+       "function": 1,
+       "context": 2,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "GetProperty",
+     "args": 2
+    },
+    {
+     "name": "SetProperty",
+     "args": 2
+    },
+    {
+     "name": "Acquire",
+     "args": 0
+    },
+    {
+     "name": "Unacquire",
+     "args": 0
+    },
+    {
+     "name": "GetDeviceState",
+     "args": 2
+    },
+    {
+     "name": "GetDeviceData",
+     "args": 4
+    },
+    {
+     "name": "SetDataFormat",
+     "args": 1
+    },
+    {
+     "name": "SetEventNotification",
+     "args": 1
+    },
+    {
+     "name": "SetCooperativeLevel",
+     "args": 2
+    },
+    {
+     "name": "GetObjectInfo",
+     "args": 3
+    },
+    {
+     "name": "GetDeviceInfo",
+     "args": 1
+    },
+    {
+     "name": "RunControlPanel",
+     "args": 2
+    },
+    {
+     "name": "Initialize",
+     "args": 3
+    },
+    {
+     "name": "CreateEffect",
+     "args": 4,
+     "out": [
+      {
+       "stack": 3,
+       "interface": "IDirectInputEffect"
+      }
+     ]
+    },
+    {
+     "name": "EnumEffects",
+     "args": 3,
+     "callbacks": [
+      {
+       "function": 1,
+       "context": 2,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "GetEffectInfo",
+     "args": 2
+    },
+    {
+     "name": "GetForceFeedbackState",
+     "args": 1
+    },
+    {
+     "name": "SendForceFeedbackCommand",
+     "args": 1
+    },
+    {
+     "name": "EnumCreatedEffectObjects",
+     "args": 3,
+     "callbacks": [
+      {
+       "function": 1,
+       "context": 2,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "Escape",
+     "args": 1
+    },
+    {
+     "name": "Poll",
+     "args": 0
+    },
+    {
+     "name": "SendDeviceData",
+     "args": 4
+    }
+   ]
+  },
+  "IDirectInputDevice2W": {
+   "base": "IDirectInputDeviceW",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "GetCapabilities",
+     "args": 1
+    },
+    {
+     "name": "EnumObjects",
+     "args": 3,
+     "callbacks": [
+      {
+       "function": 1,
+       "context": 2,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "GetProperty",
+     "args": 2
+    },
+    {
+     "name": "SetProperty",
+     "args": 2
+    },
+    {
+     "name": "Acquire",
+     "args": 0
+    },
+    {
+     "name": "Unacquire",
+     "args": 0
+    },
+    {
+     "name": "GetDeviceState",
+     "args": 2
+    },
+    {
+     "name": "GetDeviceData",
+     "args": 4
+    },
+    {
+     "name": "SetDataFormat",
+     "args": 1
+    },
+    {
+     "name": "SetEventNotification",
+     "args": 1
+    },
+    {
+     "name": "SetCooperativeLevel",
+     "args": 2
+    },
+    {
+     "name": "GetObjectInfo",
+     "args": 3
+    },
+    {
+     "name": "GetDeviceInfo",
+     "args": 1
+    },
+    {
+     "name": "RunControlPanel",
+     "args": 2
+    },
+    {
+     "name": "Initialize",
+     "args": 3
+    },
+    {
+     "name": "CreateEffect",
+     "args": 4,
+     "out": [
+      {
+       "stack": 3,
+       "interface": "IDirectInputEffect"
+      }
+     ]
+    },
+    {
+     "name": "EnumEffects",
+     "args": 3,
+     "callbacks": [
+      {
+       "function": 1,
+       "context": 2,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "GetEffectInfo",
+     "args": 2
+    },
+    {
+     "name": "GetForceFeedbackState",
+     "args": 1
+    },
+    {
+     "name": "SendForceFeedbackCommand",
+     "args": 1
+    },
+    {
+     "name": "EnumCreatedEffectObjects",
+     "args": 3,
+     "callbacks": [
+      {
+       "function": 1,
+       "context": 2,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "Escape",
+     "args": 1
+    },
+    {
+     "name": "Poll",
+     "args": 0
+    },
+    {
+     "name": "SendDeviceData",
+     "args": 4
+    }
+   ]
+  },
+  "IDirectInputDevice7A": {
+   "base": "IDirectInputDevice2A",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "GetCapabilities",
+     "args": 1
+    },
+    {
+     "name": "EnumObjects",
+     "args": 3,
+     "callbacks": [
+      {
+       "function": 1,
+       "context": 2,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "GetProperty",
+     "args": 2
+    },
+    {
+     "name": "SetProperty",
+     "args": 2
+    },
+    {
+     "name": "Acquire",
+     "args": 0
+    },
+    {
+     "name": "Unacquire",
+     "args": 0
+    },
+    {
+     "name": "GetDeviceState",
+     "args": 2
+    },
+    {
+     "name": "GetDeviceData",
+     "args": 4
+    },
+    {
+     "name": "SetDataFormat",
+     "args": 1
+    },
+    {
+     "name": "SetEventNotification",
+     "args": 1
+    },
+    {
+     "name": "SetCooperativeLevel",
+     "args": 2
+    },
+    {
+     "name": "GetObjectInfo",
+     "args": 3
+    },
+    {
+     "name": "GetDeviceInfo",
+     "args": 1
+    },
+    {
+     "name": "RunControlPanel",
+     "args": 2
+    },
+    {
+     "name": "Initialize",
+     "args": 3
+    },
+    {
+     "name": "CreateEffect",
+     "args": 4,
+     "out": [
+      {
+       "stack": 3,
+       "interface": "IDirectInputEffect"
+      }
+     ]
+    },
+    {
+     "name": "EnumEffects",
+     "args": 3,
+     "callbacks": [
+      {
+       "function": 1,
+       "context": 2,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "GetEffectInfo",
+     "args": 2
+    },
+    {
+     "name": "GetForceFeedbackState",
+     "args": 1
+    },
+    {
+     "name": "SendForceFeedbackCommand",
+     "args": 1
+    },
+    {
+     "name": "EnumCreatedEffectObjects",
+     "args": 3,
+     "callbacks": [
+      {
+       "function": 1,
+       "context": 2,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "Escape",
+     "args": 1
+    },
+    {
+     "name": "Poll",
+     "args": 0
+    },
+    {
+     "name": "SendDeviceData",
+     "args": 4
+    },
+    {
+     "name": "EnumEffectsInFile",
+     "args": 4,
+     "callbacks": [
+      {
+       "function": 2,
+       "context": 3,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "WriteEffectToFile",
+     "args": 4
+    }
+   ]
+  },
+  "IDirectInputDevice7W": {
+   "base": "IDirectInputDevice2W",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "GetCapabilities",
+     "args": 1
+    },
+    {
+     "name": "EnumObjects",
+     "args": 3,
+     "callbacks": [
+      {
+       "function": 1,
+       "context": 2,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "GetProperty",
+     "args": 2
+    },
+    {
+     "name": "SetProperty",
+     "args": 2
+    },
+    {
+     "name": "Acquire",
+     "args": 0
+    },
+    {
+     "name": "Unacquire",
+     "args": 0
+    },
+    {
+     "name": "GetDeviceState",
+     "args": 2
+    },
+    {
+     "name": "GetDeviceData",
+     "args": 4
+    },
+    {
+     "name": "SetDataFormat",
+     "args": 1
+    },
+    {
+     "name": "SetEventNotification",
+     "args": 1
+    },
+    {
+     "name": "SetCooperativeLevel",
+     "args": 2
+    },
+    {
+     "name": "GetObjectInfo",
+     "args": 3
+    },
+    {
+     "name": "GetDeviceInfo",
+     "args": 1
+    },
+    {
+     "name": "RunControlPanel",
+     "args": 2
+    },
+    {
+     "name": "Initialize",
+     "args": 3
+    },
+    {
+     "name": "CreateEffect",
+     "args": 4,
+     "out": [
+      {
+       "stack": 3,
+       "interface": "IDirectInputEffect"
+      }
+     ]
+    },
+    {
+     "name": "EnumEffects",
+     "args": 3,
+     "callbacks": [
+      {
+       "function": 1,
+       "context": 2,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "GetEffectInfo",
+     "args": 2
+    },
+    {
+     "name": "GetForceFeedbackState",
+     "args": 1
+    },
+    {
+     "name": "SendForceFeedbackCommand",
+     "args": 1
+    },
+    {
+     "name": "EnumCreatedEffectObjects",
+     "args": 3,
+     "callbacks": [
+      {
+       "function": 1,
+       "context": 2,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "Escape",
+     "args": 1
+    },
+    {
+     "name": "Poll",
+     "args": 0
+    },
+    {
+     "name": "SendDeviceData",
+     "args": 4
+    },
+    {
+     "name": "EnumEffectsInFile",
+     "args": 4,
+     "callbacks": [
+      {
+       "function": 2,
+       "context": 3,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "WriteEffectToFile",
+     "args": 4
+    }
+   ]
+  },
+  "IDirectInputDevice8A": {
+   "base": "IDirectInputDevice7A",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "GetCapabilities",
+     "args": 1
+    },
+    {
+     "name": "EnumObjects",
+     "args": 3,
+     "callbacks": [
+      {
+       "function": 1,
+       "context": 2,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "GetProperty",
+     "args": 2
+    },
+    {
+     "name": "SetProperty",
+     "args": 2
+    },
+    {
+     "name": "Acquire",
+     "args": 0
+    },
+    {
+     "name": "Unacquire",
+     "args": 0
+    },
+    {
+     "name": "GetDeviceState",
+     "args": 2
+    },
+    {
+     "name": "GetDeviceData",
+     "args": 4
+    },
+    {
+     "name": "SetDataFormat",
+     "args": 1
+    },
+    {
+     "name": "SetEventNotification",
+     "args": 1
+    },
+    {
+     "name": "SetCooperativeLevel",
+     "args": 2
+    },
+    {
+     "name": "GetObjectInfo",
+     "args": 3
+    },
+    {
+     "name": "GetDeviceInfo",
+     "args": 1
+    },
+    {
+     "name": "RunControlPanel",
+     "args": 2
+    },
+    {
+     "name": "Initialize",
+     "args": 3
+    },
+    {
+     "name": "CreateEffect",
+     "args": 4,
+     "out": [
+      {
+       "stack": 3,
+       "interface": "IDirectInputEffect"
+      }
+     ]
+    },
+    {
+     "name": "EnumEffects",
+     "args": 3,
+     "callbacks": [
+      {
+       "function": 1,
+       "context": 2,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "GetEffectInfo",
+     "args": 2
+    },
+    {
+     "name": "GetForceFeedbackState",
+     "args": 1
+    },
+    {
+     "name": "SendForceFeedbackCommand",
+     "args": 1
+    },
+    {
+     "name": "EnumCreatedEffectObjects",
+     "args": 3,
+     "callbacks": [
+      {
+       "function": 1,
+       "context": 2,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "Escape",
+     "args": 1
+    },
+    {
+     "name": "Poll",
+     "args": 0
+    },
+    {
+     "name": "SendDeviceData",
+     "args": 4
+    },
+    {
+     "name": "EnumEffectsInFile",
+     "args": 4,
+     "callbacks": [
+      {
+       "function": 2,
+       "context": 3,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "WriteEffectToFile",
+     "args": 4
+    },
+    {
+     "name": "BuildActionMap",
+     "args": 3
+    },
+    {
+     "name": "SetActionMap",
+     "args": 3
+    },
+    {
+     "name": "GetImageInfo",
+     "args": 1
+    }
+   ]
+  },
+  "IDirectInputDevice8W": {
+   "base": "IDirectInputDevice7W",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "GetCapabilities",
+     "args": 1
+    },
+    {
+     "name": "EnumObjects",
+     "args": 3,
+     "callbacks": [
+      {
+       "function": 1,
+       "context": 2,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "GetProperty",
+     "args": 2
+    },
+    {
+     "name": "SetProperty",
+     "args": 2
+    },
+    {
+     "name": "Acquire",
+     "args": 0
+    },
+    {
+     "name": "Unacquire",
+     "args": 0
+    },
+    {
+     "name": "GetDeviceState",
+     "args": 2
+    },
+    {
+     "name": "GetDeviceData",
+     "args": 4
+    },
+    {
+     "name": "SetDataFormat",
+     "args": 1
+    },
+    {
+     "name": "SetEventNotification",
+     "args": 1
+    },
+    {
+     "name": "SetCooperativeLevel",
+     "args": 2
+    },
+    {
+     "name": "GetObjectInfo",
+     "args": 3
+    },
+    {
+     "name": "GetDeviceInfo",
+     "args": 1
+    },
+    {
+     "name": "RunControlPanel",
+     "args": 2
+    },
+    {
+     "name": "Initialize",
+     "args": 3
+    },
+    {
+     "name": "CreateEffect",
+     "args": 4,
+     "out": [
+      {
+       "stack": 3,
+       "interface": "IDirectInputEffect"
+      }
+     ]
+    },
+    {
+     "name": "EnumEffects",
+     "args": 3,
+     "callbacks": [
+      {
+       "function": 1,
+       "context": 2,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "GetEffectInfo",
+     "args": 2
+    },
+    {
+     "name": "GetForceFeedbackState",
+     "args": 1
+    },
+    {
+     "name": "SendForceFeedbackCommand",
+     "args": 1
+    },
+    {
+     "name": "EnumCreatedEffectObjects",
+     "args": 3,
+     "callbacks": [
+      {
+       "function": 1,
+       "context": 2,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "Escape",
+     "args": 1
+    },
+    {
+     "name": "Poll",
+     "args": 0
+    },
+    {
+     "name": "SendDeviceData",
+     "args": 4
+    },
+    {
+     "name": "EnumEffectsInFile",
+     "args": 4,
+     "callbacks": [
+      {
+       "function": 2,
+       "context": 3,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "WriteEffectToFile",
+     "args": 4
+    },
+    {
+     "name": "BuildActionMap",
+     "args": 3
+    },
+    {
+     "name": "SetActionMap",
+     "args": 3
+    },
+    {
+     "name": "GetImageInfo",
+     "args": 1
+    }
+   ]
+  },
+  "IDirectInputA": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "CreateDevice",
+     "args": 3,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirectInputDeviceA"
+      }
+     ]
+    },
+    {
+     "name": "EnumDevices",
+     "args": 4,
+     "callbacks": [
+      {
+       "function": 2,
+       "context": 3,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "GetDeviceStatus",
+     "args": 1
+    },
+    {
+     "name": "RunControlPanel",
+     "args": 2
+    },
+    {
+     "name": "Initialize",
+     "args": 2
+    }
+   ]
+  },
+  "IDirectInputW": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "CreateDevice",
+     "args": 3,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirectInputDeviceW"
+      }
+     ]
+    },
+    {
+     "name": "EnumDevices",
+     "args": 4,
+     "callbacks": [
+      {
+       "function": 2,
+       "context": 3,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "GetDeviceStatus",
+     "args": 1
+    },
+    {
+     "name": "RunControlPanel",
+     "args": 2
+    },
+    {
+     "name": "Initialize",
+     "args": 2
+    }
+   ]
+  },
+  "IDirectInput2A": {
+   "base": "IDirectInputA",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "CreateDevice",
+     "args": 3,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirectInputDeviceA"
+      }
+     ]
+    },
+    {
+     "name": "EnumDevices",
+     "args": 4,
+     "callbacks": [
+      {
+       "function": 2,
+       "context": 3,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "GetDeviceStatus",
+     "args": 1
+    },
+    {
+     "name": "RunControlPanel",
+     "args": 2
+    },
+    {
+     "name": "Initialize",
+     "args": 2
+    },
+    {
+     "name": "FindDevice",
+     "args": 3
+    }
+   ]
+  },
+  "IDirectInput2W": {
+   "base": "IDirectInputW",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "CreateDevice",
+     "args": 3,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirectInputDeviceW"
+      }
+     ]
+    },
+    {
+     "name": "EnumDevices",
+     "args": 4,
+     "callbacks": [
+      {
+       "function": 2,
+       "context": 3,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "GetDeviceStatus",
+     "args": 1
+    },
+    {
+     "name": "RunControlPanel",
+     "args": 2
+    },
+    {
+     "name": "Initialize",
+     "args": 2
+    },
+    {
+     "name": "FindDevice",
+     "args": 3
+    }
+   ]
+  },
+  "IDirectInput7A": {
+   "base": "IDirectInput2A",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "CreateDevice",
+     "args": 3,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirectInputDeviceA"
+      }
+     ]
+    },
+    {
+     "name": "EnumDevices",
+     "args": 4,
+     "callbacks": [
+      {
+       "function": 2,
+       "context": 3,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "GetDeviceStatus",
+     "args": 1
+    },
+    {
+     "name": "RunControlPanel",
+     "args": 2
+    },
+    {
+     "name": "Initialize",
+     "args": 2
+    },
+    {
+     "name": "FindDevice",
+     "args": 3
+    },
+    {
+     "name": "CreateDeviceEx",
+     "args": 4,
+     "riid": {
+      "iid": 2,
+      "out": 3
+     }
+    }
+   ]
+  },
+  "IDirectInput7W": {
+   "base": "IDirectInput2W",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "CreateDevice",
+     "args": 3,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirectInputDeviceW"
+      }
+     ]
+    },
+    {
+     "name": "EnumDevices",
+     "args": 4,
+     "callbacks": [
+      {
+       "function": 2,
+       "context": 3,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "GetDeviceStatus",
+     "args": 1
+    },
+    {
+     "name": "RunControlPanel",
+     "args": 2
+    },
+    {
+     "name": "Initialize",
+     "args": 2
+    },
+    {
+     "name": "FindDevice",
+     "args": 3
+    },
+    {
+     "name": "CreateDeviceEx",
+     "args": 4,
+     "riid": {
+      "iid": 2,
+      "out": 3
+     }
+    }
+   ]
+  },
+  "IDirectInput8A": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "CreateDevice",
+     "args": 3,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirectInputDevice8A"
+      }
+     ]
+    },
+    {
+     "name": "EnumDevices",
+     "args": 4,
+     "callbacks": [
+      {
+       "function": 2,
+       "context": 3,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "GetDeviceStatus",
+     "args": 1
+    },
+    {
+     "name": "RunControlPanel",
+     "args": 2
+    },
+    {
+     "name": "Initialize",
+     "args": 2
+    },
+    {
+     "name": "FindDevice",
+     "args": 3
+    },
+    {
+     "name": "EnumDevicesBySemantics",
+     "args": 5,
+     "callbacks": [
+      {
+       "function": 3,
+       "context": 4,
+       "param": 4
+      }
+     ]
+    },
+    {
+     "name": "ConfigureDevices",
+     "args": 4,
+     "callbacks": [
+      {
+       "function": 1,
+       "context": 4,
+       "param": 1
+      }
+     ]
+    }
+   ]
+  },
+  "IDirectInput8W": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "CreateDevice",
+     "args": 3,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirectInputDevice8W"
+      }
+     ]
+    },
+    {
+     "name": "EnumDevices",
+     "args": 4,
+     "callbacks": [
+      {
+       "function": 2,
+       "context": 3,
+       "param": 1
+      }
+     ]
+    },
+    {
+     "name": "GetDeviceStatus",
+     "args": 1
+    },
+    {
+     "name": "RunControlPanel",
+     "args": 2
+    },
+    {
+     "name": "Initialize",
+     "args": 2
+    },
+    {
+     "name": "FindDevice",
+     "args": 3
+    },
+    {
+     "name": "EnumDevicesBySemantics",
+     "args": 5,
+     "callbacks": [
+      {
+       "function": 3,
+       "context": 4,
+       "param": 4
+      }
+     ]
+    },
+    {
+     "name": "ConfigureDevices",
+     "args": 4,
+     "callbacks": [
+      {
+       "function": 1,
+       "context": 4,
+       "param": 1
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "functions": {
+  "DirectInput8Create": {
+   "args": 5,
+   "riid": {
+    "iid": 2,
+    "out": 3
+   },
+   "module": "dinput8.dll",
+   "returns": null,
+   "out": []
+  },
+  "DirectInputCreateA": {
+   "args": 4,
+   "out": [
+    {
+     "stack": 2,
+     "interface": "IDirectInputA"
+    }
+   ],
+   "module": "dinput8.dll",
+   "returns": null
+  },
+  "DirectInputCreateW": {
+   "args": 4,
+   "out": [
+    {
+     "stack": 2,
+     "interface": "IDirectInputW"
+    }
+   ],
+   "module": "dinput8.dll",
+   "returns": null
+  },
+  "DirectInputCreateEx": {
+   "args": 5,
+   "riid": {
+    "iid": 2,
+    "out": 3
+   },
+   "module": "dinput8.dll",
+   "returns": null,
+   "out": []
+  }
+ },
+ "iids": {
+  "IDirectInputA": "601352898aaacf11bfc7444553540000",
+  "IDirectInputW": "611352898aaacf11bfc7444553540000",
+  "IDirectInput2A": "62e644598aaacf11bfc7444553540000",
+  "IDirectInput2W": "63e644598aaacf11bfc7444553540000",
+  "IDirectInput7A": "84b64c9a6d23d3118e9d00c04f6844ae",
+  "IDirectInput7W": "85b64c9a6d23d3118e9d00c04f6844ae",
+  "IDirectInput8A": "308079bf3a48a24daa995d64ed369700",
+  "IDirectInput8W": "318079bf3a48a24daa995d64ed369700",
+  "IDirectInputDeviceA": "80e644592ec9cf11bfc7444553540000",
+  "IDirectInputDeviceW": "81e644592ec9cf11bfc7444553540000",
+  "IDirectInputDevice2A": "82e644592ec9cf11bfc7444553540000",
+  "IDirectInputDevice2W": "83e644592ec9cf11bfc7444553540000",
+  "IDirectInputDevice7A": "bcc6d7575623d3118e9d00c04f6844ae",
+  "IDirectInputDevice7W": "bdc6d7575623d3118e9d00c04f6844ae",
+  "IDirectInputDevice8A": "8010d45415dc3348a41b748f73a38179",
+  "IDirectInputDevice8W": "8110d45415dc3348a41b748f73a38179",
+  "IDirectInputEffect": "c0f7e1e7d288d0119ad000a0c9a06e35"
+ }
+}

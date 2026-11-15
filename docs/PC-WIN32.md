@@ -91,7 +91,9 @@ from 22 DLLs, 261 not answered on 2026-11-12. Three censuses go beyond the impor
   mnemonic (`objdump -d` over `.text`): Lost has about 110,000 of 1.08 million using XMM or MMX
   registers, 74 mnemonics, SSE1 and MMX only. That made SSE winrt's largest item for it, ahead of
   Direct3D 9. Rogue Spear, an MSVC 6 game, is x87 only.
-- **COM interfaces.** One import (`Direct3DCreate9`) hides hundreds of methods. Count the calls by
+- **COM interfaces.** One import (`Direct3DCreate9`) hides hundreds of methods. `rea-suite pe census`
+  lists them by interface and slot, and `rea-suite census diff` against winrt's answers gives the
+  methods still to answer ([census.md](census.md)). Count the calls by
   vtable offset through the object the game keeps (Lost: 804 calls on `IDirect3DDevice9` from 147
   functions, constant uploads second only to render states, `SetStreamSourceFreq` meaning instancing).
   The counts decide whether a fixed-function layer is enough; for Lost it was not.

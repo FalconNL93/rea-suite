@@ -17,6 +17,8 @@
   rea-suite pe resources <exe> [--type T] [--name N] [--extract DIR]
                                                       dialogs, menus, strings, version,
                                                       accelerators; icons and cursors exported
+  rea-suite pe census <exe> [--unresolved] [--out FILE]  interface methods and imports the code
+                                                      calls (rea-census/1, docs/census.md)
   rea-suite pe match <old> <new> --functions T --functions-new T [--header H --header-out F]
                                                       a known build's functions and data found
                                                       in a later build of the same code
@@ -40,7 +42,7 @@ import re
 import sys
 from pathlib import Path
 
-from rea_suite import pefunctions, pematch, peresources, rtti, scan, sites
+from rea_suite import census, pefunctions, pematch, peresources, rtti, scan, sites
 from rea_suite.pemodel import Image
 
 
@@ -522,6 +524,33 @@ def cmd_match(args, image: Image) -> int:
     return 0 if result.functions else 1
 
 
+def cmd_census(args, image: Image) -> int:
+    try:
+        doc = census.static_census(
+            image, pefunctions.of(image), passes=args.passes, unresolved_sites=args.unresolved
+        )
+    except census.CensusError as exc:
+        print(f"census: {exc}", file=sys.stderr)
+        return 2
+    doc["source"]["name"] = args.exe.name
+    text = json.dumps(doc, indent=1) + "\n"
+    if args.out:
+        (args.caller_cwd / args.out).write_text(text, encoding="utf-8")
+    else:
+        sys.stdout.write(text)
+    for i in doc["interfaces"]:
+        sites = sum(len(m["sites"]) for m in i["methods"])
+        print(f"{i['name']}: {len(i['methods'])} methods, {sites} sites", file=sys.stderr)
+    c = doc["coverage"]
+    print(
+        f"coverage: {c['resolved']} of {c['indirect_calls']} indirect calls resolved, "
+        f"{c['unresolved']} not; {len(doc['imports'])} imports called; "
+        f"{c['functions']} functions ({c['function_source']}), {doc['producer']['passes']} passes",
+        file=sys.stderr,
+    )
+    return 0
+
+
 def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="rea-suite pe",
@@ -616,6 +645,12 @@ def parser() -> argparse.ArgumentParser:
         metavar="DIR",
         help="write icons (.ico/.cur and .png), bitmaps, manifests, the rest raw, resources.json",
     )
+    c = command("census", "interface methods and imports the code calls (rea-census/1)", cmd_census)
+    c.add_argument("--passes", type=int, default=12, help="at most this many passes (default 12)")
+    c.add_argument(
+        "--unresolved", action="store_true", help="list the unresolved indirect calls in coverage"
+    )
+    c.add_argument("--out", type=Path, help="write the document here instead of stdout")
     c = command("match", "a known build's functions and data in a later build", cmd_match)
     c.add_argument("new", type=Path, help="the later build")
     c.add_argument(

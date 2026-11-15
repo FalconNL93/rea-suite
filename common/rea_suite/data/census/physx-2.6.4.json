@@ -1,0 +1,6378 @@
+{
+ "schema": "rea-census-slots/1",
+ "sdk": "physx-2.6.4",
+ "source": {
+  "headers": "PhysX SDK (physx-2.6.4), preprocessed as a Win32 build",
+  "files": {
+   "Physics/NxActor.h": "f8fd764afa8dde101666e46102a1626c03b6a509ffdcda11f2977fe270e9dc0e",
+   "Physics/NxActorDesc.h": "f67753f74f5f078f355fcbf5c7675f4f5a01e6c26b032187a1671dca14cbc21d",
+   "Physics/NxAllocateable.h": "fc0014d8656a08f78d53917ad4644e8ceade5deb29a2bf195b45715d542a65f0",
+   "Physics/NxBodyDesc.h": "222c1d85b57d5b9cf7b2e1ad68488b8334f2876a228f63cd3cf6575935af668b",
+   "Physics/NxBoxShape.h": "1a274ac73d8abd47ed78926413ea0fb164eeb90ce68bc22484fc0ac8a7c8114d",
+   "Physics/NxBoxShapeDesc.h": "e18fc418eb251e39368aea73a08cd07a9ce9f8324620c6e01c1562f0220dd854",
+   "Physics/NxCCDSkeleton.h": "b174950ac3a2f8bbd7027f5e9d34d549eede0d9073db3715c1a8b19a8a45e871",
+   "Physics/NxCapsuleShape.h": "bbb66860e6afd23af08c829a624c6054aa9e556a7cd70e43a9fcc1cc641530d4",
+   "Physics/NxCapsuleShapeDesc.h": "a00227e6a56d467978d5cc63b62dd2894af3803783c3203479ff10ece76bc880",
+   "Physics/NxCompartment.h": "871302b385cb2b27f7d9eea4522a1ceaa805e5d31031f2c9866c2f01e07fcd07",
+   "Physics/NxCompartmentDesc.h": "ec07200f775506e1a77cfdec87fbbcce7ea2da0c37ba4bb7746646e2afb0c70f",
+   "Physics/NxContactStreamIterator.h": "f6078b8937c4f529f9e7ad5515940a1106dde987856c07348cee6137449517fc",
+   "Physics/NxConvexHull.h": "6ba5341bfe04373f50910ca7bd29c67afc9e40b5c823398e400c1ac2ecebfb6c",
+   "Physics/NxConvexMesh.h": "156e1bb4c9f76039cf9caee59f1994d80b70b01ac51d895ffc85eb5d977be39b",
+   "Physics/NxConvexMeshDesc.h": "992155ff8d63b456206c1efc908b00a20eb41b2118dc13f35086951e0416d683",
+   "Physics/NxConvexShape.h": "af0490c8b07fbd2a4c1eed35a0a7ce3548ed2bee6bde9099653886fbbce15d1c",
+   "Physics/NxConvexShapeDesc.h": "7963d9585fd388f8ff0015dc9e59d074ca7fc83f223d565c9c4609eec2aef2c8",
+   "Physics/NxCylindricalJoint.h": "c5255a166a77f0cb6bb15b866b48897a82ab9361e5998348526d16d06408e3c8",
+   "Physics/NxCylindricalJointDesc.h": "c708e53927d4e322cf13780d8ecc45195fbe4bc8d133570e59860331be0db988",
+   "Physics/NxD6Joint.h": "d74c3d83a39a0e739410f75a14260e75cc9cfb2f7124d1651fbaff0db80b992f",
+   "Physics/NxD6JointDesc.h": "e4d7c029355347e6a904c1218e319b36f294ee424ddc3b79b890e04910165d95",
+   "Physics/NxDistanceJoint.h": "1ae720db5b587506bd81bf81e4c57167ce10650d49ba75ab71642372e691c60c",
+   "Physics/NxDistanceJointDesc.h": "525a2d24105cf95ec22dc7ff5f4f29d505485fc554d766b26df2232d759d4e4c",
+   "Physics/NxEffector.h": "8a39b9e74d48653c686aeeb3e11b7d2ab70a86f5b50ce45bf6a8c011b7f1f26e",
+   "Physics/NxExportedUtils.h": "b2610572c8882e05a385fe684510deec421a90a6b09cbe3de1ecdc725193c87d",
+   "Physics/NxFixedJoint.h": "24298abcd3a1e4f2061a0e281abf569a4df93598eb742b57d909647f3a227893",
+   "Physics/NxFixedJointDesc.h": "db41c234aceef251fe89ca423e3805882e37624ea0b477bac9046b5253c4aa39",
+   "Physics/NxHeightField.h": "f7068c0a523d24d7e9d78067a35d051ac0527a0fdda7602044df1a903d44dca2",
+   "Physics/NxHeightFieldDesc.h": "badeaf8570f3d5ee1a95889bcdbb6ae2e09865876e6271b8e36c349860433a98",
+   "Physics/NxHeightFieldSample.h": "81d8829abdd526a9f18c931ea64c59e5279dce9baace74ac4fa2c7b9f88d07bb",
+   "Physics/NxHeightFieldShape.h": "45cde300e79ca0887dba53a3f367637d60150758c8129431ef88592d4c06ebc4",
+   "Physics/NxHeightFieldShapeDesc.h": "f3ddbdb150f93233f95e307fe21551babe69e4e09ce7010bca8e9e82b6d2b591",
+   "Physics/NxInertiaTensor.h": "f25b0721345f5edc1e08ce3d983fa3605ad48d36bf52e106b44826bd69b45cf4",
+   "Physics/NxInterface.h": "161f241e923932a55dae1499a4e8fb10c242cc74189a021e1ac3b1b3c2e389dc",
+   "Physics/NxInterfaceStats.h": "2c0ded34a36ea3416dd00d8c0f87238d9e3560e9a8152dee2899962a9d1331f4",
+   "Physics/NxIntersectionBoxBox.h": "ea0d3ba450419866ac472ef8587f671542e1361bfd8c74fc17898d6e87ee79d8",
+   "Physics/NxIntersectionPointTriangle.h": "168ad1e847bab1cb71a6641035fee93bf2c35128ae717b25371252be296b6fad",
+   "Physics/NxIntersectionRayPlane.h": "125c1fbff58e4462ca22a675b885821ac69c441c3569df9d580edb58a59b7f33",
+   "Physics/NxIntersectionRaySphere.h": "e53c0f4bbb98ed6caab2d5a410114ea19a697a0ceed265058a2183180c24e312",
+   "Physics/NxIntersectionRayTriangle.h": "1c2d9cfe89154a191af41abb5953b1e3a58f5cc7a2df6e2d897966e691dc9d9c",
+   "Physics/NxIntersectionSegmentBox.h": "b6be2be8cea4e8d204be03de0b2fa1afc57df7d31db7a27a941f085aa9239698",
+   "Physics/NxIntersectionSegmentCapsule.h": "0f12719ba476e51237c40dd0718496bde9b3dfd99dba934cacece4cac38e1fd6",
+   "Physics/NxIntersectionSweptSpheres.h": "275f5598a9b9614e5caa364622c93d7e585e491f575f0e9f3c0c18e46663a3ad",
+   "Physics/NxJoint.h": "5c1f43bf041a9770da04cd0f82a7dd120e3d123d2f7dc834b7ff7a59850e496f",
+   "Physics/NxJointDesc.h": "485f74554798d643021e47d0386c8a562e83b04bb3f4f3a77cc549e8319db62d",
+   "Physics/NxJointLimitDesc.h": "32968000fdecb4fc676603688f125582dc0c7c8fe6d12e07d21a42748de8ca91",
+   "Physics/NxJointLimitPairDesc.h": "05b823ba624462a28f5aa4eadc9b0738d740cddb1fbb5a458b0c2220908f718b",
+   "Physics/NxJointLimitSoftDesc.h": "f31fdadce369ac2e4e02e78613d1ba7103e74e37b6b2c87164dd223b95c60999",
+   "Physics/NxJointLimitSoftPairDesc.h": "e1aae52493eeeb95383cb17730f3b748cfeeb95d5f0e05d9a860a26446332a08",
+   "Physics/NxMaterial.h": "6118b428c78351e0409e28e9f49aa18a156e38a7c287eec5e7483b47452d1185",
+   "Physics/NxMaterialDesc.h": "149aadffaf09ec7487c6255cdefd65a43a35a328d194e9839f5d80eb26b689c2",
+   "Physics/NxMotorDesc.h": "6498f7eadcd64c76d75470d0c26887fa4bf6a166e5c755f2822727dd024a9c89",
+   "Physics/NxPMap.h": "b1887f2640c2c23487ed38ff6a3a5dc0aad8658f797b78d1f28d9603ddc7ad7b",
+   "Physics/NxPhysics.h": "ed4af7a42ed65ac25626c6b67546ef979689d672582cf97b40ac3f7a0404252a",
+   "Physics/NxPhysicsSDK.h": "896c2044d8420a4c2d356689d4874530640679fe1cd4520da1505f99ed762749",
+   "Physics/NxPlaneShape.h": "3f4aa0a95ae3ed6436acf23fdc69e817ddcbb3f728cb58ef271bdd5e4b36d536",
+   "Physics/NxPlaneShapeDesc.h": "b91e23808e50362097825a3298c8d78fdbe04088f9600015d98857bebbb27c8a",
+   "Physics/NxPointInPlaneJoint.h": "9b950fba67491b35f42ff3110856c2071029bb7093eba1a704dd4f28d4159597",
+   "Physics/NxPointInPlaneJointDesc.h": "24bde694e8b5070a13c01e6990f8274e342866b2525aa9a9048a15728a5ec0bc",
+   "Physics/NxPointOnLineJoint.h": "6e27f1503ae72c14725249d3f04807547fc48433376b82952d7cd272ee02132e",
+   "Physics/NxPointOnLineJointDesc.h": "e670d08dad37e339ef4782cd28d17218783f69e8ef3332ddb44dd5515bd694c2",
+   "Physics/NxPrismaticJoint.h": "c6d6684facf66c51a19370d23da81467cf2cd11de5ccd1bf0c55f417f5c1585a",
+   "Physics/NxPrismaticJointDesc.h": "f0ec3d113bf17352cc8620f56ce448b4ecccb06dc1c6674d432537bcd4906589",
+   "Physics/NxPulleyJoint.h": "bd105919a578315c99cc2bbb29e8ebc7862513aa73945fed6262e4e1c0a7dd82",
+   "Physics/NxPulleyJointDesc.h": "afe797cac07ffa977246c121fc2abfe55a0dc31f12d201c46dcf466cccb7e4ee",
+   "Physics/NxRevoluteJoint.h": "2a08d211c01a0475b054877cf250dc479ac471212af9e3b38376585bd02255dd",
+   "Physics/NxRevoluteJointDesc.h": "b807a0e012892a61f0f7c770919755b040646991bf0a223c04199bb506b8baf6",
+   "Physics/NxScene.h": "7ada70244bdf145549357d44deaf8c2e0d97b55f144c7fdfd4980fce3875dd0a",
+   "Physics/NxSceneDesc.h": "298c24b61ae1b5272baaabc8a9dfad2633c18b86f36c179904e608105c5b3dda",
+   "Physics/NxSceneStats.h": "3936437660a74a05b155fbebc20a64b1fa34a750c62fdb94b5ef570c7dd2c257",
+   "Physics/NxSceneStats2.h": "b1c9138736020ac967e94f8785c885ff620d3ba4b8ad4fe5cc380d98dcb664b2",
+   "Physics/NxScheduler.h": "8714c5c0d9cb00045427edce9e66f4989a532645ceab21047a486ce8fafffa41",
+   "Physics/NxShape.h": "8b4ebdf050803baa6e680aa83880119b5fec3c87d2a7d914be54c967f89a3d32",
+   "Physics/NxShapeDesc.h": "6ab49e25c1ac0f08961c8cbfefb7980d12b8dea0d86ae341e2e9807fb8c16c2f",
+   "Physics/NxSmoothNormals.h": "57c05a4ec611ed9da7f79b59cf347a15523b2df8257f28ecf1c875227c9de03b",
+   "Physics/NxSphereShape.h": "ba0621eaf218ddc34a6c98ed78cd695fb50987918c19b675eaf1e833a49f0633",
+   "Physics/NxSphereShapeDesc.h": "4f4fd51375ef2d827608eb65952ff07c9fc70db5b5cec81b437c7d863687cf49",
+   "Physics/NxSphericalJoint.h": "2009c64d4355514be975c324d34384bfa5bd68d65178801dd8811dab799df630",
+   "Physics/NxSphericalJointDesc.h": "b8c37467106300a63db65fac32b14d970592fb466f255921f955fba6c8de86ec",
+   "Physics/NxSpringAndDamperEffector.h": "a30ff5e5b5e415705dfa01b5679ba3c3c9fb8ea329a41d0ba04101860367e254",
+   "Physics/NxSpringAndDamperEffectorDesc.h": "419f506f0bde204847de6a4fe04497732989460c4f8545bdb62a74593222582e",
+   "Physics/NxSpringDesc.h": "1fbeb2ae7f6cfcba7e8757ab5d55d839b62a3b753ac3da6db021ea739abff473",
+   "Physics/NxTriangle.h": "892f0b6b3d86eb585182d194645fed060d4ebe0abbeaff2825e00a464ef6210b",
+   "Physics/NxTriangleMesh.h": "ec42b1cd11009ea5a4110ea79ed0380e8d31696b4ac8c233d4a2dbea5cb5b72f",
+   "Physics/NxTriangleMeshDesc.h": "1e6d6d3618abfa5d60a6ea4ebc9280297b8629a0b3fdf54f9e260615bf2a7613",
+   "Physics/NxTriangleMeshShape.h": "bd8619125726a1d0c7e253e9858750f9513a43a5d5db2beff33823837f20b085",
+   "Physics/NxTriangleMeshShapeDesc.h": "e7c372bd599777b0859cca330209762e37d374a073097ee34a5228306cf7d12d",
+   "Physics/NxUserContactReport.h": "6589e66ada24319f3c6e88e4db04481019cd6c88b870a22c5ab1d7d8c45cd235",
+   "Physics/NxUserEntityReport.h": "b857cf29950ed8674c8a8f791751945e11d4b3183e8ea35c20e2b24e063f80be",
+   "Physics/NxUserNotify.h": "d07b798024512da25a868407fed3c6aa508166fae5e63a9bf63d2fe16adcb94e",
+   "Physics/NxUserRaycastReport.h": "70464afa9c2d14fe495947ac027b2ea77ade7d266812a24d0b7345463fc76819",
+   "Physics/NxUtilLib.h": "2e68e3543e763adb8fba2cb48143b7f2c0580b94e9d9ea2d8fe837043e184a41",
+   "Physics/NxWheelShape.h": "74299b2d77b54551ee9f1a2cb30c5d38e762b1c29937a9319468109c02949495",
+   "Physics/NxWheelShapeDesc.h": "8cf96c95f10248116a334a27659e056a4540673d8ac1b62f5fa9b2e7d2cda399",
+   "Physics/Nxp.h": "3678c7f9cbdfaec6012af292fb5c246d088a9976a252e704b9e8705b2a5f66b0",
+   "Foundation/Nx.h": "c8b947f264b91f2789cf80d002e3025247326b48768656cb42b4b23f28550a35",
+   "Foundation/Nx12F32.h": "6a8a8fefa6c3d9402fef89c5a80a1a85546be30d8dd6071310c0fd64b8bc8f5a",
+   "Foundation/Nx16F32.h": "de049e9ec7d6db3c6c8ebcc3b7cf50de5d5fe3e5f624d88f4266348c5bbea5ab",
+   "Foundation/Nx9F32.h": "3892222ff44bb4df0d37f455d84d070cee5f49c7a0ec8a453fe2609974e15673",
+   "Foundation/NxAllocatorDefault.h": "450d28658b59e31affaea69fb4810b4bc4dc9ddcffabea900d92c86c66f8a4b5",
+   "Foundation/NxArray.h": "778b3eac0e413d2555ab053b2b09f969607a4a349981219ad38fda95005d9346",
+   "Foundation/NxAssert.h": "f945a5d086f0e513222643d45fa78eb4127b76c763617321cee56cc969b31f2b",
+   "Foundation/NxBitField.h": "d5e7bccf5fd22200bea7e4ab53e1520c40beebd3ac46e8e3b5ec3c635497ac34",
+   "Foundation/NxBounds3.h": "7ac98e37c9dde6f6be7bba30eb245aed5ce5f89ec9701e6bde1de2523e97c9f3",
+   "Foundation/NxBox.h": "738708246e8436b56185e93f9aa051480230d9387c3b41d18416542e8b028fc6",
+   "Foundation/NxBuildNumber.h": "3fd0e63fb6aedd5742899d9593775a255acd89e743e163be09062a24bac6c84c",
+   "Foundation/NxCapsule.h": "30e35c7e770b451dba47768d1931181f1426911f1b8ee476873bd1df5417c16c",
+   "Foundation/NxDebugRenderable.h": "8e3f8ac75a034beee6cecd9632964c9befb825cc508455f7cf5d88770be2993d",
+   "Foundation/NxException.h": "f841f35e0f63e3bd31efab0d30a75ed91d5a76d85162280830d84f93cdbfc0d1",
+   "Foundation/NxFPU.h": "b02d18e87534d43227f2ae6b2694d4dcd2e8d2992ca724c0d5f0aac7c09a6272",
+   "Foundation/NxFoundation.h": "310200b524c6771164e90e5b0da603730bc9d0ecc08f4497a22a1f642b92cb42",
+   "Foundation/NxFoundationSDK.h": "a93b97f8590a0f2484aef035ed9ec927701446d14fd736996e1cde79595e9a6d",
+   "Foundation/NxI16Vec3.h": "71d86c5e1535271fef4fef9f8c3dbc7a5791f35856c17ba27bb53fab660a7766",
+   "Foundation/NxMat33.h": "be43d9d5c884fd14b3c97d5297ede748282efa80d164c3d4f69f9eb31f983943",
+   "Foundation/NxMat34.h": "ac1a0a54aa7f648f16202e075151ab3e2b0c5662a1131e5f0af6f4b940222f13",
+   "Foundation/NxMath.h": "4e4284b5cad0996f1791d4a9f1943deb66a1a2ab8f5a3ca3e3d0a3a8cf2f829e",
+   "Foundation/NxPlane.h": "2ab7f33e9b3c36c28e4c824fb7f498ee23ef2ddd4c647b9a831349be31cb9ad7",
+   "Foundation/NxPool.h": "160d2d83d0d71d56e3b4944dccf4b478e53786fc93c77bf7e6c223bcbce99591",
+   "Foundation/NxProfiler.h": "8949efb383449858e0f25627ffaad68295937794e424c604dd1606cb0ad5e507",
+   "Foundation/NxQuat.h": "1c91c97323d680aa94bab66fa944e7ed6a17c48222632dd0f15a2597d2a1fee5",
+   "Foundation/NxQuickSort.h": "db0ed55dc9a3687931896fa199d308238459684058e4da225f1c7f0d72bdcfe9",
+   "Foundation/NxRay.h": "acc626aeefaa1f365b1af6fca1d15618fa187ea93e5f2e68978ddaa5ccf943b6",
+   "Foundation/NxRemoteDebugger.h": "b05ccd42cb4bf067447f74b318bd8f4afc094fa6863e62df150d62942da67ca9",
+   "Foundation/NxSegment.h": "f884d1c82a09006ba96c28979bb85dba1197df5886f08fd9edbd7e413abaa0df",
+   "Foundation/NxSimpleTriangleMesh.h": "bbbc10e6e4cfb6b0fc496f0b3849ec7ee3f534b62172a06d6a3bacb4132f5950",
+   "Foundation/NxSimpleTypes.h": "cc4ba60df9cd9e3828d5cb408d8f4838248bee4c5f171d8135dc5910e0603a2e",
+   "Foundation/NxSphere.h": "caaaa070e1136a0268b0581a0bb1b1f6b239f1e70aeef850720d84540f6135e9",
+   "Foundation/NxStream.h": "831bfeea2e40c013237e5fe37e1d449642c6d1c2bd3a75bc2b4b0892c57dad82",
+   "Foundation/NxUserAllocator.h": "76ee2c808cbe839c0eedc0a38a56d740a39a96a33c638791c2df1b3d4dd9f59f",
+   "Foundation/NxUserAllocatorDefault.h": "e2dc1262baad3c26477e368702b3fce427803ee21cd06e93a251d2878b479b24",
+   "Foundation/NxUserOutputStream.h": "00d36a9aae41ce0cdfb349b716916e30b568aa6f94138055bbd621825349c67d",
+   "Foundation/NxUtilities.h": "bea33f0e90f92010b1ba1403f3813483cf11537bebbd7d654dad50c9e5274a65",
+   "Foundation/NxVec3.h": "e137404d1ecc3cbd426805df79700886c1f02434d1d6d4627c08d70fbe2a4439",
+   "Foundation/NxVersionNumber.h": "e402bc8d79026656079145987402c3b8ad32eae1fbe30a076466a2da8bce11f8",
+   "Foundation/NxVolumeIntegration.h": "aa627d406a6c58dd1b23f966427d757c19a68fb1aa8b2ecd728b18fdd662c1a6",
+   "Foundation/Nxf.h": "29f254c4812ec72a732a4e29b7c21222a36f231f563d7f96cda84b73233b2614",
+   "PhysXLoader/PhysXLoader.h": "f5d543590a531758807531cc39231d329e0c1a5f345ebc9e8417de888d9b7682",
+   "PhysXLoader/Win32RegistryAccess.h": "eb1ceac45bc4a5fc8f11abc4f19a8b0f863547549b11edb202f30e6f2789d00f",
+   "Cooking/NxCooking.h": "bb1a9ddafd6ed351e7cca11716145efb9ea1ea5b6795009fe7361e82109c357f",
+   "Cooking/Nxc.h": "9ee646e85c83e2d220db3490e7c5065ecd3061eb50028b2ac1a955afd47ac2a0",
+   "Cooking/fw-convex-cooker.h": "4d2bc0f93c47e1fca7c47a5c355f9a00e471fe322746b6089b60869659761714",
+   "NxCharacter/BoxController.h": "04ec7adbb31ac9f6f22aa1567d96449799452406acea09302bdd13cd972406f2",
+   "NxCharacter/CapsuleController.h": "1b49821a523d40a27d791876015c9163998470edfe01c99352f759e7cebd7089",
+   "NxCharacter/CharacterController.h": "439e8436fd9339b0df0c5fb7b55cb9465d9bb47172107371a150b1e7b4820486",
+   "NxCharacter/Controller.h": "5fa5a3268c151ef619fc1973b518fbcf52f919074b6f730eb2f4ebe7ede08aae",
+   "NxCharacter/ControllerManager.h": "571c248fb7c2c14f8b1ad1590327259cd13261c2889d973169c358e27e6f2692",
+   "NxCharacter/NxBoxController.h": "e35aefd187356c6ccf13f6af2b60f10618e17d1d78936b4d8c9a90b7ce0cd75a",
+   "NxCharacter/NxCapsuleController.h": "c75ee659386d9a281f0647938bb46d458aa63ebf8efcff69116e3da062df1615",
+   "NxCharacter/NxCharacter.h": "5955b6849754df08437166e00785022efe65962e6dd7808a0cb486ec67ab2a20",
+   "NxCharacter/NxController.h": "bd14b47c8112b42e01e6d4a43ae302144adcf500083e8ac74db701cfa82dc58e",
+   "NxCharacter/NxExtended.h": "60d4b54bb05a427cb167b14985ac26e30d77fac5c4914c194ef0634aa3f8a217"
+  }
+ },
+ "conv": "thiscall",
+ "interfaces": {
+  "NxActor": {
+   "base": null,
+   "methods": [
+    {
+     "name": "~NxActor",
+     "args": 0
+    },
+    {
+     "name": "getScene",
+     "args": 0,
+     "returns": "NxScene"
+    },
+    {
+     "name": "saveToDesc",
+     "args": 1
+    },
+    {
+     "name": "setName",
+     "args": 1
+    },
+    {
+     "name": "getName",
+     "args": 0
+    },
+    {
+     "name": "setGlobalPose",
+     "args": 1
+    },
+    {
+     "name": "setGlobalPosition",
+     "args": 1
+    },
+    {
+     "name": "setGlobalOrientation",
+     "args": 1
+    },
+    {
+     "name": "setGlobalOrientationQuat",
+     "args": 1
+    },
+    {
+     "name": "getGlobalPose",
+     "args": 1
+    },
+    {
+     "name": "getGlobalPosition",
+     "args": 1
+    },
+    {
+     "name": "getGlobalOrientation",
+     "args": 1
+    },
+    {
+     "name": "getGlobalOrientationQuat",
+     "args": 1
+    },
+    {
+     "name": "moveGlobalPose",
+     "args": 1
+    },
+    {
+     "name": "moveGlobalPosition",
+     "args": 1
+    },
+    {
+     "name": "moveGlobalOrientation",
+     "args": 1
+    },
+    {
+     "name": "moveGlobalOrientationQuat",
+     "args": 1
+    },
+    {
+     "name": "createShape",
+     "args": 1,
+     "returns": "NxShape"
+    },
+    {
+     "name": "releaseShape",
+     "args": 1
+    },
+    {
+     "name": "getNbShapes",
+     "args": 0
+    },
+    {
+     "name": "getShapes",
+     "args": 0
+    },
+    {
+     "name": "setGroup",
+     "args": 1
+    },
+    {
+     "name": "getGroup",
+     "args": 0
+    },
+    {
+     "name": "raiseActorFlag",
+     "args": 1
+    },
+    {
+     "name": "clearActorFlag",
+     "args": 1
+    },
+    {
+     "name": "readActorFlag",
+     "args": 1
+    },
+    {
+     "name": "isDynamic",
+     "args": 0
+    },
+    {
+     "name": "setCMassOffsetLocalPose",
+     "args": 1
+    },
+    {
+     "name": "setCMassOffsetLocalPosition",
+     "args": 1
+    },
+    {
+     "name": "setCMassOffsetLocalOrientation",
+     "args": 1
+    },
+    {
+     "name": "setCMassOffsetGlobalPose",
+     "args": 1
+    },
+    {
+     "name": "setCMassOffsetGlobalPosition",
+     "args": 1
+    },
+    {
+     "name": "setCMassOffsetGlobalOrientation",
+     "args": 1
+    },
+    {
+     "name": "setCMassGlobalPose",
+     "args": 1
+    },
+    {
+     "name": "setCMassGlobalPosition",
+     "args": 1
+    },
+    {
+     "name": "setCMassGlobalOrientation",
+     "args": 1
+    },
+    {
+     "name": "getCMassLocalPose",
+     "args": 1
+    },
+    {
+     "name": "getCMassLocalPosition",
+     "args": 1
+    },
+    {
+     "name": "getCMassLocalOrientation",
+     "args": 1
+    },
+    {
+     "name": "getCMassGlobalPose",
+     "args": 1
+    },
+    {
+     "name": "getCMassGlobalPosition",
+     "args": 1
+    },
+    {
+     "name": "getCMassGlobalOrientation",
+     "args": 1
+    },
+    {
+     "name": "setMass",
+     "args": 1
+    },
+    {
+     "name": "getMass",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setMassSpaceInertiaTensor",
+     "args": 1
+    },
+    {
+     "name": "getMassSpaceInertiaTensor",
+     "args": 1
+    },
+    {
+     "name": "getGlobalInertiaTensor",
+     "args": 1
+    },
+    {
+     "name": "getGlobalInertiaTensorInverse",
+     "args": 1
+    },
+    {
+     "name": "updateMassFromShapes",
+     "args": 2
+    },
+    {
+     "name": "setLinearDamping",
+     "args": 1
+    },
+    {
+     "name": "getLinearDamping",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setAngularDamping",
+     "args": 1
+    },
+    {
+     "name": "getAngularDamping",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setLinearVelocity",
+     "args": 1
+    },
+    {
+     "name": "setAngularVelocity",
+     "args": 1
+    },
+    {
+     "name": "getLinearVelocity",
+     "args": 1
+    },
+    {
+     "name": "getAngularVelocity",
+     "args": 1
+    },
+    {
+     "name": "setMaxAngularVelocity",
+     "args": 1
+    },
+    {
+     "name": "getMaxAngularVelocity",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setCCDMotionThreshold",
+     "args": 1
+    },
+    {
+     "name": "getCCDMotionThreshold",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setLinearMomentum",
+     "args": 1
+    },
+    {
+     "name": "setAngularMomentum",
+     "args": 1
+    },
+    {
+     "name": "getLinearMomentum",
+     "args": 1
+    },
+    {
+     "name": "getAngularMomentum",
+     "args": 1
+    },
+    {
+     "name": "addForceAtPos",
+     "args": 4
+    },
+    {
+     "name": "addForceAtLocalPos",
+     "args": 4
+    },
+    {
+     "name": "addLocalForceAtPos",
+     "args": 4
+    },
+    {
+     "name": "addLocalForceAtLocalPos",
+     "args": 4
+    },
+    {
+     "name": "addForce",
+     "args": 3
+    },
+    {
+     "name": "addLocalForce",
+     "args": 3
+    },
+    {
+     "name": "addTorque",
+     "args": 3
+    },
+    {
+     "name": "addLocalTorque",
+     "args": 3
+    },
+    {
+     "name": "computeKineticEnergy",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getPointVelocity",
+     "args": 2
+    },
+    {
+     "name": "getLocalPointVelocity",
+     "args": 2
+    },
+    {
+     "name": "isGroupSleeping",
+     "args": 0
+    },
+    {
+     "name": "isSleeping",
+     "args": 0
+    },
+    {
+     "name": "getSleepLinearVelocity",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setSleepLinearVelocity",
+     "args": 1
+    },
+    {
+     "name": "getSleepAngularVelocity",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setSleepAngularVelocity",
+     "args": 1
+    },
+    {
+     "name": "getSleepEnergyThreshold",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setSleepEnergyThreshold",
+     "args": 1
+    },
+    {
+     "name": "wakeUp",
+     "args": 1
+    },
+    {
+     "name": "putToSleep",
+     "args": 0
+    },
+    {
+     "name": "raiseBodyFlag",
+     "args": 1
+    },
+    {
+     "name": "clearBodyFlag",
+     "args": 1
+    },
+    {
+     "name": "readBodyFlag",
+     "args": 1
+    },
+    {
+     "name": "saveBodyToDesc",
+     "args": 1
+    },
+    {
+     "name": "setSolverIterationCount",
+     "args": 1
+    },
+    {
+     "name": "getSolverIterationCount",
+     "args": 0
+    },
+    {
+     "name": "linearSweep",
+     "args": 7
+    },
+    {
+     "name": "getCompartment",
+     "args": 0,
+     "returns": "NxCompartment"
+    }
+   ]
+  },
+  "NxBoxController": {
+   "base": "NxController",
+   "methods": [
+    {
+     "name": "~NxBoxController",
+     "args": 0
+    },
+    {
+     "name": "move",
+     "args": 6
+    },
+    {
+     "name": "setPosition",
+     "args": 1
+    },
+    {
+     "name": "getPosition",
+     "args": 0
+    },
+    {
+     "name": "getFilteredPosition",
+     "args": 0
+    },
+    {
+     "name": "getDebugPosition",
+     "args": 0
+    },
+    {
+     "name": "getActor",
+     "args": 0,
+     "returns": "NxActor"
+    },
+    {
+     "name": "setStepOffset",
+     "args": 1
+    },
+    {
+     "name": "setCollision",
+     "args": 1
+    },
+    {
+     "name": "setInteraction",
+     "args": 1
+    },
+    {
+     "name": "getInteraction",
+     "args": 0
+    },
+    {
+     "name": "reportSceneChanged",
+     "args": 0
+    },
+    {
+     "name": "getUserData",
+     "args": 0
+    },
+    {
+     "name": "getExtents",
+     "args": 0
+    },
+    {
+     "name": "setExtents",
+     "args": 1
+    }
+   ]
+  },
+  "NxBoxShape": {
+   "base": "NxShape",
+   "methods": [
+    {
+     "name": "~NxShape",
+     "args": 0
+    },
+    {
+     "name": "getActor",
+     "args": 0,
+     "returns": "NxActor"
+    },
+    {
+     "name": "setGroup",
+     "args": 1
+    },
+    {
+     "name": "getGroup",
+     "args": 0
+    },
+    {
+     "name": "getWorldBounds",
+     "args": 1
+    },
+    {
+     "name": "setFlag",
+     "args": 2
+    },
+    {
+     "name": "getFlag",
+     "args": 1
+    },
+    {
+     "name": "setLocalPose",
+     "args": 1
+    },
+    {
+     "name": "setLocalPosition",
+     "args": 1
+    },
+    {
+     "name": "setLocalOrientation",
+     "args": 1
+    },
+    {
+     "name": "getLocalPose",
+     "args": 1
+    },
+    {
+     "name": "getLocalPosition",
+     "args": 1
+    },
+    {
+     "name": "getLocalOrientation",
+     "args": 1
+    },
+    {
+     "name": "setGlobalPose",
+     "args": 1
+    },
+    {
+     "name": "setGlobalPosition",
+     "args": 1
+    },
+    {
+     "name": "setGlobalOrientation",
+     "args": 1
+    },
+    {
+     "name": "getGlobalPose",
+     "args": 1
+    },
+    {
+     "name": "getGlobalPosition",
+     "args": 1
+    },
+    {
+     "name": "getGlobalOrientation",
+     "args": 1
+    },
+    {
+     "name": "setMaterial",
+     "args": 1
+    },
+    {
+     "name": "getMaterial",
+     "args": 0
+    },
+    {
+     "name": "setSkinWidth",
+     "args": 1
+    },
+    {
+     "name": "getSkinWidth",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getType",
+     "args": 0
+    },
+    {
+     "name": "setCCDSkeleton",
+     "args": 1
+    },
+    {
+     "name": "getCCDSkeleton",
+     "args": 0,
+     "returns": "NxCCDSkeleton"
+    },
+    {
+     "name": "setName",
+     "args": 1
+    },
+    {
+     "name": "getName",
+     "args": 0
+    },
+    {
+     "name": "raycast",
+     "args": 5
+    },
+    {
+     "name": "checkOverlapSphere",
+     "args": 1
+    },
+    {
+     "name": "checkOverlapOBB",
+     "args": 1
+    },
+    {
+     "name": "checkOverlapAABB",
+     "args": 1
+    },
+    {
+     "name": "checkOverlapCapsule",
+     "args": 1
+    },
+    {
+     "name": "setGroupsMask",
+     "args": 1
+    },
+    {
+     "name": "getGroupsMask",
+     "args": 1
+    },
+    {
+     "name": "setDimensions",
+     "args": 1
+    },
+    {
+     "name": "getDimensions",
+     "args": 1
+    },
+    {
+     "name": "getWorldOBB",
+     "args": 1
+    },
+    {
+     "name": "saveToDesc",
+     "args": 1
+    }
+   ]
+  },
+  "NxCCDSkeleton": {
+   "base": null,
+   "methods": [
+    {
+     "name": "save",
+     "args": 2
+    },
+    {
+     "name": "getDataSize",
+     "args": 0
+    },
+    {
+     "name": "getReferenceCount",
+     "args": 0
+    },
+    {
+     "name": "saveToDesc",
+     "args": 1
+    },
+    {
+     "name": "~NxCCDSkeleton",
+     "args": 0
+    }
+   ]
+  },
+  "NxCapsuleController": {
+   "base": "NxController",
+   "methods": [
+    {
+     "name": "~NxCapsuleController",
+     "args": 0
+    },
+    {
+     "name": "move",
+     "args": 6
+    },
+    {
+     "name": "setPosition",
+     "args": 1
+    },
+    {
+     "name": "getPosition",
+     "args": 0
+    },
+    {
+     "name": "getFilteredPosition",
+     "args": 0
+    },
+    {
+     "name": "getDebugPosition",
+     "args": 0
+    },
+    {
+     "name": "getActor",
+     "args": 0,
+     "returns": "NxActor"
+    },
+    {
+     "name": "setStepOffset",
+     "args": 1
+    },
+    {
+     "name": "setCollision",
+     "args": 1
+    },
+    {
+     "name": "setInteraction",
+     "args": 1
+    },
+    {
+     "name": "getInteraction",
+     "args": 0
+    },
+    {
+     "name": "reportSceneChanged",
+     "args": 0
+    },
+    {
+     "name": "getUserData",
+     "args": 0
+    },
+    {
+     "name": "getRadius",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setRadius",
+     "args": 1
+    },
+    {
+     "name": "getHeight",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setHeight",
+     "args": 1
+    }
+   ]
+  },
+  "NxCapsuleShape": {
+   "base": "NxShape",
+   "methods": [
+    {
+     "name": "~NxShape",
+     "args": 0
+    },
+    {
+     "name": "getActor",
+     "args": 0,
+     "returns": "NxActor"
+    },
+    {
+     "name": "setGroup",
+     "args": 1
+    },
+    {
+     "name": "getGroup",
+     "args": 0
+    },
+    {
+     "name": "getWorldBounds",
+     "args": 1
+    },
+    {
+     "name": "setFlag",
+     "args": 2
+    },
+    {
+     "name": "getFlag",
+     "args": 1
+    },
+    {
+     "name": "setLocalPose",
+     "args": 1
+    },
+    {
+     "name": "setLocalPosition",
+     "args": 1
+    },
+    {
+     "name": "setLocalOrientation",
+     "args": 1
+    },
+    {
+     "name": "getLocalPose",
+     "args": 1
+    },
+    {
+     "name": "getLocalPosition",
+     "args": 1
+    },
+    {
+     "name": "getLocalOrientation",
+     "args": 1
+    },
+    {
+     "name": "setGlobalPose",
+     "args": 1
+    },
+    {
+     "name": "setGlobalPosition",
+     "args": 1
+    },
+    {
+     "name": "setGlobalOrientation",
+     "args": 1
+    },
+    {
+     "name": "getGlobalPose",
+     "args": 1
+    },
+    {
+     "name": "getGlobalPosition",
+     "args": 1
+    },
+    {
+     "name": "getGlobalOrientation",
+     "args": 1
+    },
+    {
+     "name": "setMaterial",
+     "args": 1
+    },
+    {
+     "name": "getMaterial",
+     "args": 0
+    },
+    {
+     "name": "setSkinWidth",
+     "args": 1
+    },
+    {
+     "name": "getSkinWidth",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getType",
+     "args": 0
+    },
+    {
+     "name": "setCCDSkeleton",
+     "args": 1
+    },
+    {
+     "name": "getCCDSkeleton",
+     "args": 0,
+     "returns": "NxCCDSkeleton"
+    },
+    {
+     "name": "setName",
+     "args": 1
+    },
+    {
+     "name": "getName",
+     "args": 0
+    },
+    {
+     "name": "raycast",
+     "args": 5
+    },
+    {
+     "name": "checkOverlapSphere",
+     "args": 1
+    },
+    {
+     "name": "checkOverlapOBB",
+     "args": 1
+    },
+    {
+     "name": "checkOverlapAABB",
+     "args": 1
+    },
+    {
+     "name": "checkOverlapCapsule",
+     "args": 1
+    },
+    {
+     "name": "setGroupsMask",
+     "args": 1
+    },
+    {
+     "name": "getGroupsMask",
+     "args": 1
+    },
+    {
+     "name": "setDimensions",
+     "args": 2
+    },
+    {
+     "name": "setRadius",
+     "args": 1
+    },
+    {
+     "name": "getRadius",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setHeight",
+     "args": 1
+    },
+    {
+     "name": "getHeight",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getWorldCapsule",
+     "args": 1
+    },
+    {
+     "name": "saveToDesc",
+     "args": 1
+    }
+   ]
+  },
+  "NxCloth": {
+   "base": null,
+   "methods": [
+    {
+     "name": "~NxCloth",
+     "args": 0
+    },
+    {
+     "name": "saveToDesc",
+     "args": 1
+    },
+    {
+     "name": "getClothMesh",
+     "args": 0,
+     "returns": "NxClothMesh"
+    },
+    {
+     "name": "setBendingStiffness",
+     "args": 1
+    },
+    {
+     "name": "getBendingStiffness",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setStretchingStiffness",
+     "args": 1
+    },
+    {
+     "name": "getStretchingStiffness",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setDampingCoefficient",
+     "args": 1
+    },
+    {
+     "name": "getDampingCoefficient",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setFriction",
+     "args": 1
+    },
+    {
+     "name": "getFriction",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setPressure",
+     "args": 1
+    },
+    {
+     "name": "getPressure",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setTearFactor",
+     "args": 1
+    },
+    {
+     "name": "getTearFactor",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setAttachmentTearFactor",
+     "args": 1
+    },
+    {
+     "name": "getAttachmentTearFactor",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setThickness",
+     "args": 1
+    },
+    {
+     "name": "getThickness",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getDensity",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getSolverIterations",
+     "args": 0
+    },
+    {
+     "name": "setSolverIterations",
+     "args": 1
+    },
+    {
+     "name": "getWorldBounds",
+     "args": 1
+    },
+    {
+     "name": "attachToShape",
+     "args": 2
+    },
+    {
+     "name": "attachToCollidingShapes",
+     "args": 1
+    },
+    {
+     "name": "detachFromShape",
+     "args": 1
+    },
+    {
+     "name": "attachVertexToShape",
+     "args": 4
+    },
+    {
+     "name": "attachVertexToGlobalPosition",
+     "args": 2
+    },
+    {
+     "name": "freeVertex",
+     "args": 1
+    },
+    {
+     "name": "attachToCore",
+     "args": 3
+    },
+    {
+     "name": "tearVertex",
+     "args": 2
+    },
+    {
+     "name": "raycast",
+     "args": 3
+    },
+    {
+     "name": "setGroup",
+     "args": 1
+    },
+    {
+     "name": "getGroup",
+     "args": 0
+    },
+    {
+     "name": "setGroupsMask",
+     "args": 1
+    },
+    {
+     "name": "getGroupsMask",
+     "args": 1
+    },
+    {
+     "name": "setMeshData",
+     "args": 1
+    },
+    {
+     "name": "getMeshData",
+     "args": 1
+    },
+    {
+     "name": "setValidBounds",
+     "args": 1
+    },
+    {
+     "name": "getValidBounds",
+     "args": 1
+    },
+    {
+     "name": "setPositions",
+     "args": 2
+    },
+    {
+     "name": "getPositions",
+     "args": 2
+    },
+    {
+     "name": "setVelocities",
+     "args": 2
+    },
+    {
+     "name": "getVelocities",
+     "args": 2
+    },
+    {
+     "name": "getNumberOfParticles",
+     "args": 0
+    },
+    {
+     "name": "queryShapePointers",
+     "args": 0
+    },
+    {
+     "name": "getStateByteSize",
+     "args": 0
+    },
+    {
+     "name": "getShapePointers",
+     "args": 1,
+     "out": [
+      {
+       "stack": 0,
+       "interface": "NxShape"
+      }
+     ]
+    },
+    {
+     "name": "setShapePointers",
+     "args": 2,
+     "out": [
+      {
+       "stack": 0,
+       "interface": "NxShape"
+      }
+     ]
+    },
+    {
+     "name": "saveStateToStream",
+     "args": 1
+    },
+    {
+     "name": "loadStateFromStream",
+     "args": 1
+    },
+    {
+     "name": "setCollisionResponseCoefficient",
+     "args": 1
+    },
+    {
+     "name": "getCollisionResponseCoefficient",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setAttachmentResponseCoefficient",
+     "args": 1
+    },
+    {
+     "name": "getAttachmentResponseCoefficient",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setExternalAcceleration",
+     "args": 1
+    },
+    {
+     "name": "getExternalAcceleration",
+     "args": 1
+    },
+    {
+     "name": "isSleeping",
+     "args": 0
+    },
+    {
+     "name": "getSleepLinearVelocity",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setSleepLinearVelocity",
+     "args": 1
+    },
+    {
+     "name": "wakeUp",
+     "args": 1
+    },
+    {
+     "name": "putToSleep",
+     "args": 0
+    },
+    {
+     "name": "setFlags",
+     "args": 1
+    },
+    {
+     "name": "getFlags",
+     "args": 0
+    },
+    {
+     "name": "setName",
+     "args": 1
+    },
+    {
+     "name": "addForceAtVertex",
+     "args": 3
+    },
+    {
+     "name": "addForceAtPos",
+     "args": 4
+    },
+    {
+     "name": "overlapAABBTriangles",
+     "args": 3
+    },
+    {
+     "name": "getScene",
+     "args": 0,
+     "returns": "NxScene"
+    },
+    {
+     "name": "getName",
+     "args": 0
+    },
+    {
+     "name": "getCompartment",
+     "args": 0,
+     "returns": "NxCompartment"
+    }
+   ]
+  },
+  "NxClothMesh": {
+   "base": null,
+   "methods": [
+    {
+     "name": "~NxClothMesh",
+     "args": 0
+    },
+    {
+     "name": "saveToDesc",
+     "args": 1
+    },
+    {
+     "name": "getReferenceCount",
+     "args": 0
+    }
+   ]
+  },
+  "NxCompartment": {
+   "base": null,
+   "methods": [
+    {
+     "name": "getType",
+     "args": 0
+    },
+    {
+     "name": "getDeviceCode",
+     "args": 0
+    },
+    {
+     "name": "getGridHashCellSize",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "gridHashTablePower",
+     "args": 0
+    },
+    {
+     "name": "saveToDesc",
+     "args": 1
+    }
+   ]
+  },
+  "NxController": {
+   "base": null,
+   "methods": [
+    {
+     "name": "~NxController",
+     "args": 0
+    },
+    {
+     "name": "move",
+     "args": 6
+    },
+    {
+     "name": "setPosition",
+     "args": 1
+    },
+    {
+     "name": "getPosition",
+     "args": 0
+    },
+    {
+     "name": "getFilteredPosition",
+     "args": 0
+    },
+    {
+     "name": "getDebugPosition",
+     "args": 0
+    },
+    {
+     "name": "getActor",
+     "args": 0,
+     "returns": "NxActor"
+    },
+    {
+     "name": "setStepOffset",
+     "args": 1
+    },
+    {
+     "name": "setCollision",
+     "args": 1
+    },
+    {
+     "name": "setInteraction",
+     "args": 1
+    },
+    {
+     "name": "getInteraction",
+     "args": 0
+    },
+    {
+     "name": "reportSceneChanged",
+     "args": 0
+    },
+    {
+     "name": "getUserData",
+     "args": 0
+    }
+   ]
+  },
+  "NxConvexMesh": {
+   "base": null,
+   "methods": [
+    {
+     "name": "saveToDesc",
+     "args": 1
+    },
+    {
+     "name": "getSubmeshCount",
+     "args": 0
+    },
+    {
+     "name": "getCount",
+     "args": 2
+    },
+    {
+     "name": "getFormat",
+     "args": 2
+    },
+    {
+     "name": "getBase",
+     "args": 2
+    },
+    {
+     "name": "getStride",
+     "args": 2
+    },
+    {
+     "name": "load",
+     "args": 1
+    },
+    {
+     "name": "getReferenceCount",
+     "args": 0
+    },
+    {
+     "name": "getInternal",
+     "args": 0
+    },
+    {
+     "name": "~NxConvexMesh",
+     "args": 0
+    }
+   ]
+  },
+  "NxConvexShape": {
+   "base": "NxShape",
+   "methods": [
+    {
+     "name": "~NxShape",
+     "args": 0
+    },
+    {
+     "name": "getActor",
+     "args": 0,
+     "returns": "NxActor"
+    },
+    {
+     "name": "setGroup",
+     "args": 1
+    },
+    {
+     "name": "getGroup",
+     "args": 0
+    },
+    {
+     "name": "getWorldBounds",
+     "args": 1
+    },
+    {
+     "name": "setFlag",
+     "args": 2
+    },
+    {
+     "name": "getFlag",
+     "args": 1
+    },
+    {
+     "name": "setLocalPose",
+     "args": 1
+    },
+    {
+     "name": "setLocalPosition",
+     "args": 1
+    },
+    {
+     "name": "setLocalOrientation",
+     "args": 1
+    },
+    {
+     "name": "getLocalPose",
+     "args": 1
+    },
+    {
+     "name": "getLocalPosition",
+     "args": 1
+    },
+    {
+     "name": "getLocalOrientation",
+     "args": 1
+    },
+    {
+     "name": "setGlobalPose",
+     "args": 1
+    },
+    {
+     "name": "setGlobalPosition",
+     "args": 1
+    },
+    {
+     "name": "setGlobalOrientation",
+     "args": 1
+    },
+    {
+     "name": "getGlobalPose",
+     "args": 1
+    },
+    {
+     "name": "getGlobalPosition",
+     "args": 1
+    },
+    {
+     "name": "getGlobalOrientation",
+     "args": 1
+    },
+    {
+     "name": "setMaterial",
+     "args": 1
+    },
+    {
+     "name": "getMaterial",
+     "args": 0
+    },
+    {
+     "name": "setSkinWidth",
+     "args": 1
+    },
+    {
+     "name": "getSkinWidth",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getType",
+     "args": 0
+    },
+    {
+     "name": "setCCDSkeleton",
+     "args": 1
+    },
+    {
+     "name": "getCCDSkeleton",
+     "args": 0,
+     "returns": "NxCCDSkeleton"
+    },
+    {
+     "name": "setName",
+     "args": 1
+    },
+    {
+     "name": "getName",
+     "args": 0
+    },
+    {
+     "name": "raycast",
+     "args": 5
+    },
+    {
+     "name": "checkOverlapSphere",
+     "args": 1
+    },
+    {
+     "name": "checkOverlapOBB",
+     "args": 1
+    },
+    {
+     "name": "checkOverlapAABB",
+     "args": 1
+    },
+    {
+     "name": "checkOverlapCapsule",
+     "args": 1
+    },
+    {
+     "name": "setGroupsMask",
+     "args": 1
+    },
+    {
+     "name": "getGroupsMask",
+     "args": 1
+    },
+    {
+     "name": "saveToDesc",
+     "args": 1
+    },
+    {
+     "name": "getConvexMesh",
+     "args": 0,
+     "returns": "NxConvexMesh"
+    },
+    {
+     "name": "getConvexMesh",
+     "args": 0,
+     "returns": "NxConvexMesh"
+    }
+   ]
+  },
+  "NxCookingInterface": {
+   "base": null,
+   "methods": [
+    {
+     "name": "NxSetCookingParams",
+     "args": 1
+    },
+    {
+     "name": "NxGetCookingParams",
+     "args": 0
+    },
+    {
+     "name": "NxPlatformMismatch",
+     "args": 0
+    },
+    {
+     "name": "NxInitCooking",
+     "args": 2
+    },
+    {
+     "name": "NxCloseCooking",
+     "args": 0
+    },
+    {
+     "name": "NxCookTriangleMesh",
+     "args": 2
+    },
+    {
+     "name": "NxCookConvexMesh",
+     "args": 2
+    },
+    {
+     "name": "NxCookClothMesh",
+     "args": 2
+    },
+    {
+     "name": "NxCreatePMap",
+     "args": 4
+    },
+    {
+     "name": "NxReleasePMap",
+     "args": 1
+    },
+    {
+     "name": "~NxCookingInterface",
+     "args": 0
+    }
+   ]
+  },
+  "NxCylindricalJoint": {
+   "base": "NxJoint",
+   "methods": [
+    {
+     "name": "~NxJoint",
+     "args": 0
+    },
+    {
+     "name": "getActors",
+     "args": 2,
+     "out": [
+      {
+       "stack": 0,
+       "interface": "NxActor"
+      },
+      {
+       "stack": 1,
+       "interface": "NxActor"
+      }
+     ]
+    },
+    {
+     "name": "setGlobalAnchor",
+     "args": 1
+    },
+    {
+     "name": "setGlobalAxis",
+     "args": 1
+    },
+    {
+     "name": "getGlobalAnchor",
+     "args": 1
+    },
+    {
+     "name": "getGlobalAxis",
+     "args": 1
+    },
+    {
+     "name": "getState",
+     "args": 0
+    },
+    {
+     "name": "setBreakable",
+     "args": 2
+    },
+    {
+     "name": "getBreakable",
+     "args": 2
+    },
+    {
+     "name": "setLimitPoint",
+     "args": 2
+    },
+    {
+     "name": "getLimitPoint",
+     "args": 1
+    },
+    {
+     "name": "addLimitPlane",
+     "args": 2
+    },
+    {
+     "name": "purgeLimitPlanes",
+     "args": 0
+    },
+    {
+     "name": "resetLimitPlaneIterator",
+     "args": 0
+    },
+    {
+     "name": "hasMoreLimitPlanes",
+     "args": 0
+    },
+    {
+     "name": "getNextLimitPlane",
+     "args": 2
+    },
+    {
+     "name": "getType",
+     "args": 0
+    },
+    {
+     "name": "setName",
+     "args": 1
+    },
+    {
+     "name": "getName",
+     "args": 0
+    },
+    {
+     "name": "getScene",
+     "args": 0,
+     "returns": "NxScene"
+    },
+    {
+     "name": "loadFromDesc",
+     "args": 1
+    },
+    {
+     "name": "saveToDesc",
+     "args": 1
+    }
+   ]
+  },
+  "NxD6Joint": {
+   "base": "NxJoint",
+   "methods": [
+    {
+     "name": "~NxJoint",
+     "args": 0
+    },
+    {
+     "name": "getActors",
+     "args": 2,
+     "out": [
+      {
+       "stack": 0,
+       "interface": "NxActor"
+      },
+      {
+       "stack": 1,
+       "interface": "NxActor"
+      }
+     ]
+    },
+    {
+     "name": "setGlobalAnchor",
+     "args": 1
+    },
+    {
+     "name": "setGlobalAxis",
+     "args": 1
+    },
+    {
+     "name": "getGlobalAnchor",
+     "args": 1
+    },
+    {
+     "name": "getGlobalAxis",
+     "args": 1
+    },
+    {
+     "name": "getState",
+     "args": 0
+    },
+    {
+     "name": "setBreakable",
+     "args": 2
+    },
+    {
+     "name": "getBreakable",
+     "args": 2
+    },
+    {
+     "name": "setLimitPoint",
+     "args": 2
+    },
+    {
+     "name": "getLimitPoint",
+     "args": 1
+    },
+    {
+     "name": "addLimitPlane",
+     "args": 2
+    },
+    {
+     "name": "purgeLimitPlanes",
+     "args": 0
+    },
+    {
+     "name": "resetLimitPlaneIterator",
+     "args": 0
+    },
+    {
+     "name": "hasMoreLimitPlanes",
+     "args": 0
+    },
+    {
+     "name": "getNextLimitPlane",
+     "args": 2
+    },
+    {
+     "name": "getType",
+     "args": 0
+    },
+    {
+     "name": "setName",
+     "args": 1
+    },
+    {
+     "name": "getName",
+     "args": 0
+    },
+    {
+     "name": "getScene",
+     "args": 0,
+     "returns": "NxScene"
+    },
+    {
+     "name": "loadFromDesc",
+     "args": 1
+    },
+    {
+     "name": "saveToDesc",
+     "args": 1
+    },
+    {
+     "name": "setDrivePosition",
+     "args": 1
+    },
+    {
+     "name": "setDriveOrientation",
+     "args": 1
+    },
+    {
+     "name": "setDriveLinearVelocity",
+     "args": 1
+    },
+    {
+     "name": "setDriveAngularVelocity",
+     "args": 1
+    }
+   ]
+  },
+  "NxDistanceJoint": {
+   "base": "NxJoint",
+   "methods": [
+    {
+     "name": "~NxJoint",
+     "args": 0
+    },
+    {
+     "name": "getActors",
+     "args": 2,
+     "out": [
+      {
+       "stack": 0,
+       "interface": "NxActor"
+      },
+      {
+       "stack": 1,
+       "interface": "NxActor"
+      }
+     ]
+    },
+    {
+     "name": "setGlobalAnchor",
+     "args": 1
+    },
+    {
+     "name": "setGlobalAxis",
+     "args": 1
+    },
+    {
+     "name": "getGlobalAnchor",
+     "args": 1
+    },
+    {
+     "name": "getGlobalAxis",
+     "args": 1
+    },
+    {
+     "name": "getState",
+     "args": 0
+    },
+    {
+     "name": "setBreakable",
+     "args": 2
+    },
+    {
+     "name": "getBreakable",
+     "args": 2
+    },
+    {
+     "name": "setLimitPoint",
+     "args": 2
+    },
+    {
+     "name": "getLimitPoint",
+     "args": 1
+    },
+    {
+     "name": "addLimitPlane",
+     "args": 2
+    },
+    {
+     "name": "purgeLimitPlanes",
+     "args": 0
+    },
+    {
+     "name": "resetLimitPlaneIterator",
+     "args": 0
+    },
+    {
+     "name": "hasMoreLimitPlanes",
+     "args": 0
+    },
+    {
+     "name": "getNextLimitPlane",
+     "args": 2
+    },
+    {
+     "name": "getType",
+     "args": 0
+    },
+    {
+     "name": "setName",
+     "args": 1
+    },
+    {
+     "name": "getName",
+     "args": 0
+    },
+    {
+     "name": "getScene",
+     "args": 0,
+     "returns": "NxScene"
+    },
+    {
+     "name": "loadFromDesc",
+     "args": 1
+    },
+    {
+     "name": "saveToDesc",
+     "args": 1
+    }
+   ]
+  },
+  "NxEffector": {
+   "base": null,
+   "methods": [
+    {
+     "name": "isSpringAndDamperEffector",
+     "args": 0,
+     "returns": "NxSpringAndDamperEffector"
+    },
+    {
+     "name": "getScene",
+     "args": 0,
+     "returns": "NxScene"
+    },
+    {
+     "name": "~NxEffector",
+     "args": 0
+    }
+   ]
+  },
+  "NxFixedJoint": {
+   "base": "NxJoint",
+   "methods": [
+    {
+     "name": "~NxJoint",
+     "args": 0
+    },
+    {
+     "name": "getActors",
+     "args": 2,
+     "out": [
+      {
+       "stack": 0,
+       "interface": "NxActor"
+      },
+      {
+       "stack": 1,
+       "interface": "NxActor"
+      }
+     ]
+    },
+    {
+     "name": "setGlobalAnchor",
+     "args": 1
+    },
+    {
+     "name": "setGlobalAxis",
+     "args": 1
+    },
+    {
+     "name": "getGlobalAnchor",
+     "args": 1
+    },
+    {
+     "name": "getGlobalAxis",
+     "args": 1
+    },
+    {
+     "name": "getState",
+     "args": 0
+    },
+    {
+     "name": "setBreakable",
+     "args": 2
+    },
+    {
+     "name": "getBreakable",
+     "args": 2
+    },
+    {
+     "name": "setLimitPoint",
+     "args": 2
+    },
+    {
+     "name": "getLimitPoint",
+     "args": 1
+    },
+    {
+     "name": "addLimitPlane",
+     "args": 2
+    },
+    {
+     "name": "purgeLimitPlanes",
+     "args": 0
+    },
+    {
+     "name": "resetLimitPlaneIterator",
+     "args": 0
+    },
+    {
+     "name": "hasMoreLimitPlanes",
+     "args": 0
+    },
+    {
+     "name": "getNextLimitPlane",
+     "args": 2
+    },
+    {
+     "name": "getType",
+     "args": 0
+    },
+    {
+     "name": "setName",
+     "args": 1
+    },
+    {
+     "name": "getName",
+     "args": 0
+    },
+    {
+     "name": "getScene",
+     "args": 0,
+     "returns": "NxScene"
+    },
+    {
+     "name": "loadFromDesc",
+     "args": 1
+    },
+    {
+     "name": "saveToDesc",
+     "args": 1
+    }
+   ]
+  },
+  "NxFluid": {
+   "base": null,
+   "methods": [
+    {
+     "name": "~NxFluid",
+     "args": 0
+    },
+    {
+     "name": "createEmitter",
+     "args": 1,
+     "returns": "NxFluidEmitter"
+    },
+    {
+     "name": "releaseEmitter",
+     "args": 1
+    },
+    {
+     "name": "getNbEmitters",
+     "args": 0
+    },
+    {
+     "name": "getEmitters",
+     "args": 0
+    },
+    {
+     "name": "createScreenSurfaceMesh",
+     "args": 1,
+     "returns": "NxImplicitScreenMesh"
+    },
+    {
+     "name": "releaseScreenSurfaceMesh",
+     "args": 1
+    },
+    {
+     "name": "getNbScreenSurfaceMeshes",
+     "args": 0
+    },
+    {
+     "name": "getScreenSurfaceMeshes",
+     "args": 0
+    },
+    {
+     "name": "addParticles",
+     "args": 1
+    },
+    {
+     "name": "removeAllParticles",
+     "args": 0
+    },
+    {
+     "name": "setParticlesWriteData",
+     "args": 1
+    },
+    {
+     "name": "getParticlesWriteData",
+     "args": 1
+    },
+    {
+     "name": "setParticleDeletionIdWriteData",
+     "args": 1
+    },
+    {
+     "name": "getParticleDeletionIdWriteData",
+     "args": 1
+    },
+    {
+     "name": "setParticleCreationIdWriteData",
+     "args": 1
+    },
+    {
+     "name": "getParticleCreationIdWriteData",
+     "args": 1
+    },
+    {
+     "name": "getSimulationMethod",
+     "args": 0
+    },
+    {
+     "name": "setSimulationMethod",
+     "args": 1
+    },
+    {
+     "name": "getStiffness",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setStiffness",
+     "args": 1
+    },
+    {
+     "name": "getViscosity",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setViscosity",
+     "args": 1
+    },
+    {
+     "name": "getDamping",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setDamping",
+     "args": 1
+    },
+    {
+     "name": "getExternalAcceleration",
+     "args": 1
+    },
+    {
+     "name": "setExternalAcceleration",
+     "args": 1
+    },
+    {
+     "name": "getCollisionMethod",
+     "args": 0
+    },
+    {
+     "name": "setCollisionMethod",
+     "args": 1
+    },
+    {
+     "name": "getStaticCollisionRestitution",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setStaticCollisionRestitution",
+     "args": 1
+    },
+    {
+     "name": "getStaticCollisionAdhesion",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setStaticCollisionAdhesion",
+     "args": 1
+    },
+    {
+     "name": "getDynamicCollisionRestitution",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setDynamicCollisionRestitution",
+     "args": 1
+    },
+    {
+     "name": "getDynamicCollisionAdhesion",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setDynamicCollisionAdhesion",
+     "args": 1
+    },
+    {
+     "name": "setCollisionResponseCoefficient",
+     "args": 1
+    },
+    {
+     "name": "getCollisionResponseCoefficient",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setFlag",
+     "args": 2
+    },
+    {
+     "name": "getFlag",
+     "args": 1
+    },
+    {
+     "name": "getScene",
+     "args": 0,
+     "returns": "NxScene"
+    },
+    {
+     "name": "getMaxParticles",
+     "args": 0
+    },
+    {
+     "name": "getKernelRadiusMultiplier",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getMotionLimitMultiplier",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getCollisionDistanceMultiplier",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getPacketSizeMultiplier",
+     "args": 0
+    },
+    {
+     "name": "getRestParticlesPerMeter",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getRestDensity",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getRestParticleDistance",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getParticleMass",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setGroup",
+     "args": 1
+    },
+    {
+     "name": "getGroup",
+     "args": 0
+    },
+    {
+     "name": "setGroupsMask",
+     "args": 1
+    },
+    {
+     "name": "getGroupsMask",
+     "args": 1
+    },
+    {
+     "name": "getWorldBounds",
+     "args": 1
+    },
+    {
+     "name": "loadFromDesc",
+     "args": 1
+    },
+    {
+     "name": "saveToDesc",
+     "args": 1
+    },
+    {
+     "name": "setName",
+     "args": 1
+    },
+    {
+     "name": "getName",
+     "args": 0
+    },
+    {
+     "name": "getCompartment",
+     "args": 0,
+     "returns": "NxCompartment"
+    }
+   ]
+  },
+  "NxFluidEmitter": {
+   "base": null,
+   "methods": [
+    {
+     "name": "~NxFluidEmitter",
+     "args": 0
+    },
+    {
+     "name": "getFluid",
+     "args": 0,
+     "returns": "NxFluid"
+    },
+    {
+     "name": "setGlobalPose",
+     "args": 1
+    },
+    {
+     "name": "setGlobalPosition",
+     "args": 1
+    },
+    {
+     "name": "setGlobalOrientation",
+     "args": 1
+    },
+    {
+     "name": "getGlobalPoseVal",
+     "args": 1
+    },
+    {
+     "name": "getGlobalPositionVal",
+     "args": 1
+    },
+    {
+     "name": "getGlobalOrientationVal",
+     "args": 1
+    },
+    {
+     "name": "setLocalPose",
+     "args": 1
+    },
+    {
+     "name": "setLocalPosition",
+     "args": 1
+    },
+    {
+     "name": "setLocalOrientation",
+     "args": 1
+    },
+    {
+     "name": "getLocalPoseVal",
+     "args": 1
+    },
+    {
+     "name": "getLocalPositionVal",
+     "args": 1
+    },
+    {
+     "name": "getLocalOrientationVal",
+     "args": 1
+    },
+    {
+     "name": "setFrameShape",
+     "args": 1
+    },
+    {
+     "name": "getFrameShape",
+     "args": 0,
+     "returns": "NxShape"
+    },
+    {
+     "name": "getDimensionX",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getDimensionY",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setRandomPos",
+     "args": 1
+    },
+    {
+     "name": "getRandomPos",
+     "args": 1
+    },
+    {
+     "name": "setRandomAngle",
+     "args": 1
+    },
+    {
+     "name": "getRandomAngle",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setFluidVelocityMagnitude",
+     "args": 1
+    },
+    {
+     "name": "getFluidVelocityMagnitude",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setRate",
+     "args": 1
+    },
+    {
+     "name": "getRate",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setParticleLifetime",
+     "args": 1
+    },
+    {
+     "name": "getParticleLifetime",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setFlag",
+     "args": 2
+    },
+    {
+     "name": "getFlag",
+     "args": 1
+    },
+    {
+     "name": "getShape",
+     "args": 1
+    },
+    {
+     "name": "getType",
+     "args": 1
+    },
+    {
+     "name": "loadFromDesc",
+     "args": 1
+    },
+    {
+     "name": "saveToDesc",
+     "args": 1
+    },
+    {
+     "name": "setName",
+     "args": 1
+    },
+    {
+     "name": "getName",
+     "args": 0
+    }
+   ]
+  },
+  "NxFoundationSDK": {
+   "base": null,
+   "methods": [
+    {
+     "name": "release",
+     "args": 0
+    },
+    {
+     "name": "setErrorStream",
+     "args": 1
+    },
+    {
+     "name": "getErrorStream",
+     "args": 0,
+     "returns": "NxUserOutputStream"
+    },
+    {
+     "name": "getLastError",
+     "args": 0
+    },
+    {
+     "name": "getFirstError",
+     "args": 0
+    },
+    {
+     "name": "getAllocator",
+     "args": 0,
+     "returns": "NxUserAllocator"
+    },
+    {
+     "name": "getRemoteDebugger",
+     "args": 0,
+     "returns": "NxRemoteDebugger"
+    },
+    {
+     "name": "setAllocaThreshold",
+     "args": 1
+    },
+    {
+     "name": "~NxFoundationSDK",
+     "args": 0
+    }
+   ]
+  },
+  "NxHeightField": {
+   "base": null,
+   "methods": [
+    {
+     "name": "saveToDesc",
+     "args": 1
+    },
+    {
+     "name": "loadFromDesc",
+     "args": 1
+    },
+    {
+     "name": "saveCells",
+     "args": 2
+    },
+    {
+     "name": "getNbRows",
+     "args": 0
+    },
+    {
+     "name": "getNbColumns",
+     "args": 0
+    },
+    {
+     "name": "getFormat",
+     "args": 0
+    },
+    {
+     "name": "getSampleStride",
+     "args": 0
+    },
+    {
+     "name": "getVerticalExtent",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getConvexEdgeThreshold",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getFlags",
+     "args": 0
+    },
+    {
+     "name": "getHeight",
+     "args": 2,
+     "returns_float": true
+    },
+    {
+     "name": "getCells",
+     "args": 0
+    },
+    {
+     "name": "getReferenceCount",
+     "args": 0
+    },
+    {
+     "name": "~NxHeightField",
+     "args": 0
+    }
+   ]
+  },
+  "NxHeightFieldShape": {
+   "base": "NxShape",
+   "methods": [
+    {
+     "name": "~NxShape",
+     "args": 0
+    },
+    {
+     "name": "getActor",
+     "args": 0,
+     "returns": "NxActor"
+    },
+    {
+     "name": "setGroup",
+     "args": 1
+    },
+    {
+     "name": "getGroup",
+     "args": 0
+    },
+    {
+     "name": "getWorldBounds",
+     "args": 1
+    },
+    {
+     "name": "setFlag",
+     "args": 2
+    },
+    {
+     "name": "getFlag",
+     "args": 1
+    },
+    {
+     "name": "setLocalPose",
+     "args": 1
+    },
+    {
+     "name": "setLocalPosition",
+     "args": 1
+    },
+    {
+     "name": "setLocalOrientation",
+     "args": 1
+    },
+    {
+     "name": "getLocalPose",
+     "args": 1
+    },
+    {
+     "name": "getLocalPosition",
+     "args": 1
+    },
+    {
+     "name": "getLocalOrientation",
+     "args": 1
+    },
+    {
+     "name": "setGlobalPose",
+     "args": 1
+    },
+    {
+     "name": "setGlobalPosition",
+     "args": 1
+    },
+    {
+     "name": "setGlobalOrientation",
+     "args": 1
+    },
+    {
+     "name": "getGlobalPose",
+     "args": 1
+    },
+    {
+     "name": "getGlobalPosition",
+     "args": 1
+    },
+    {
+     "name": "getGlobalOrientation",
+     "args": 1
+    },
+    {
+     "name": "setMaterial",
+     "args": 1
+    },
+    {
+     "name": "getMaterial",
+     "args": 0
+    },
+    {
+     "name": "setSkinWidth",
+     "args": 1
+    },
+    {
+     "name": "getSkinWidth",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getType",
+     "args": 0
+    },
+    {
+     "name": "setCCDSkeleton",
+     "args": 1
+    },
+    {
+     "name": "getCCDSkeleton",
+     "args": 0,
+     "returns": "NxCCDSkeleton"
+    },
+    {
+     "name": "setName",
+     "args": 1
+    },
+    {
+     "name": "getName",
+     "args": 0
+    },
+    {
+     "name": "raycast",
+     "args": 5
+    },
+    {
+     "name": "checkOverlapSphere",
+     "args": 1
+    },
+    {
+     "name": "checkOverlapOBB",
+     "args": 1
+    },
+    {
+     "name": "checkOverlapAABB",
+     "args": 1
+    },
+    {
+     "name": "checkOverlapCapsule",
+     "args": 1
+    },
+    {
+     "name": "setGroupsMask",
+     "args": 1
+    },
+    {
+     "name": "getGroupsMask",
+     "args": 1
+    },
+    {
+     "name": "saveToDesc",
+     "args": 1
+    },
+    {
+     "name": "getHeightField",
+     "args": 0,
+     "returns": "NxHeightField"
+    },
+    {
+     "name": "getHeightScale",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getRowScale",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getColumnScale",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setHeightScale",
+     "args": 1
+    },
+    {
+     "name": "setRowScale",
+     "args": 1
+    },
+    {
+     "name": "setColumnScale",
+     "args": 1
+    },
+    {
+     "name": "getTriangle",
+     "args": 6
+    },
+    {
+     "name": "overlapAABBTriangles",
+     "args": 4
+    },
+    {
+     "name": "isShapePointOnHeightField",
+     "args": 2
+    },
+    {
+     "name": "getHeightAtShapePoint",
+     "args": 2,
+     "returns_float": true
+    },
+    {
+     "name": "getMaterialAtShapePoint",
+     "args": 2
+    },
+    {
+     "name": "getNormalAtShapePoint",
+     "args": 3
+    },
+    {
+     "name": "getSmoothNormalAtShapePoint",
+     "args": 3
+    }
+   ]
+  },
+  "NxImplicitScreenMesh": {
+   "base": null,
+   "methods": [
+    {
+     "name": "~NxImplicitScreenMesh",
+     "args": 0
+    },
+    {
+     "name": "setParticles",
+     "args": 1
+    },
+    {
+     "name": "setMeshData",
+     "args": 1
+    },
+    {
+     "name": "getMeshData",
+     "args": 1
+    },
+    {
+     "name": "generateMesh",
+     "args": 0
+    },
+    {
+     "name": "getMesh",
+     "args": 0
+    },
+    {
+     "name": "generateMeshIsDone",
+     "args": 0
+    },
+    {
+     "name": "getScreenSpacing",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setScreenSpacing",
+     "args": 1
+    },
+    {
+     "name": "getThreshold",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setThreshold",
+     "args": 1
+    },
+    {
+     "name": "getHierarchyLevels",
+     "args": 0
+    },
+    {
+     "name": "setHierarchyLevels",
+     "args": 1
+    },
+    {
+     "name": "getParticleRadius",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setParticleRadius",
+     "args": 1
+    },
+    {
+     "name": "getDepthSmoothing",
+     "args": 0
+    },
+    {
+     "name": "setDepthSmoothing",
+     "args": 1
+    },
+    {
+     "name": "getSilhouetteSmoothing",
+     "args": 0
+    },
+    {
+     "name": "setSilhouetteSmoothing",
+     "args": 1
+    },
+    {
+     "name": "setProjectionMatrix",
+     "args": 1
+    },
+    {
+     "name": "getProjectionMatrix",
+     "args": 0
+    },
+    {
+     "name": "setWindowWidth",
+     "args": 1
+    },
+    {
+     "name": "getWindowWidth",
+     "args": 0
+    },
+    {
+     "name": "setWindowHeight",
+     "args": 1
+    },
+    {
+     "name": "getWindowHeight",
+     "args": 0
+    },
+    {
+     "name": "setTriangleWinding",
+     "args": 1
+    },
+    {
+     "name": "getTriangleWinding",
+     "args": 0
+    },
+    {
+     "name": "setName",
+     "args": 1
+    },
+    {
+     "name": "getName",
+     "args": 0
+    }
+   ]
+  },
+  "NxInterface": {
+   "base": null,
+   "methods": [
+    {
+     "name": "getVersionNumber",
+     "args": 0
+    },
+    {
+     "name": "getInterfaceType",
+     "args": 0
+    },
+    {
+     "name": "~NxInterface",
+     "args": 0
+    }
+   ]
+  },
+  "NxJoint": {
+   "base": null,
+   "methods": [
+    {
+     "name": "~NxJoint",
+     "args": 0
+    },
+    {
+     "name": "getActors",
+     "args": 2,
+     "out": [
+      {
+       "stack": 0,
+       "interface": "NxActor"
+      },
+      {
+       "stack": 1,
+       "interface": "NxActor"
+      }
+     ]
+    },
+    {
+     "name": "setGlobalAnchor",
+     "args": 1
+    },
+    {
+     "name": "setGlobalAxis",
+     "args": 1
+    },
+    {
+     "name": "getGlobalAnchor",
+     "args": 1
+    },
+    {
+     "name": "getGlobalAxis",
+     "args": 1
+    },
+    {
+     "name": "getState",
+     "args": 0
+    },
+    {
+     "name": "setBreakable",
+     "args": 2
+    },
+    {
+     "name": "getBreakable",
+     "args": 2
+    },
+    {
+     "name": "setLimitPoint",
+     "args": 2
+    },
+    {
+     "name": "getLimitPoint",
+     "args": 1
+    },
+    {
+     "name": "addLimitPlane",
+     "args": 2
+    },
+    {
+     "name": "purgeLimitPlanes",
+     "args": 0
+    },
+    {
+     "name": "resetLimitPlaneIterator",
+     "args": 0
+    },
+    {
+     "name": "hasMoreLimitPlanes",
+     "args": 0
+    },
+    {
+     "name": "getNextLimitPlane",
+     "args": 2
+    },
+    {
+     "name": "getType",
+     "args": 0
+    },
+    {
+     "name": "setName",
+     "args": 1
+    },
+    {
+     "name": "getName",
+     "args": 0
+    },
+    {
+     "name": "getScene",
+     "args": 0,
+     "returns": "NxScene"
+    }
+   ]
+  },
+  "NxMaterial": {
+   "base": null,
+   "methods": [
+    {
+     "name": "~NxMaterial",
+     "args": 0
+    },
+    {
+     "name": "getMaterialIndex",
+     "args": 0
+    },
+    {
+     "name": "loadFromDesc",
+     "args": 1
+    },
+    {
+     "name": "saveToDesc",
+     "args": 1
+    },
+    {
+     "name": "getScene",
+     "args": 0,
+     "returns": "NxScene"
+    },
+    {
+     "name": "setDynamicFriction",
+     "args": 1
+    },
+    {
+     "name": "getDynamicFriction",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setStaticFriction",
+     "args": 1
+    },
+    {
+     "name": "getStaticFriction",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setRestitution",
+     "args": 1
+    },
+    {
+     "name": "getRestitution",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setDynamicFrictionV",
+     "args": 1
+    },
+    {
+     "name": "getDynamicFrictionV",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setStaticFrictionV",
+     "args": 1
+    },
+    {
+     "name": "getStaticFrictionV",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setDirOfAnisotropy",
+     "args": 1
+    },
+    {
+     "name": "getDirOfAnisotropy",
+     "args": 1
+    },
+    {
+     "name": "setFlags",
+     "args": 1
+    },
+    {
+     "name": "getFlags",
+     "args": 0
+    },
+    {
+     "name": "setFrictionCombineMode",
+     "args": 1
+    },
+    {
+     "name": "getFrictionCombineMode",
+     "args": 0
+    },
+    {
+     "name": "setRestitutionCombineMode",
+     "args": 1
+    },
+    {
+     "name": "getRestitutionCombineMode",
+     "args": 0
+    }
+   ]
+  },
+  "NxPhysicsSDK": {
+   "base": null,
+   "methods": [
+    {
+     "name": "~NxPhysicsSDK",
+     "args": 0
+    },
+    {
+     "name": "release",
+     "args": 0
+    },
+    {
+     "name": "setParameter",
+     "args": 2
+    },
+    {
+     "name": "getParameter",
+     "args": 1,
+     "returns_float": true
+    },
+    {
+     "name": "createScene",
+     "args": 1,
+     "returns": "NxScene"
+    },
+    {
+     "name": "releaseScene",
+     "args": 1
+    },
+    {
+     "name": "getNbScenes",
+     "args": 0
+    },
+    {
+     "name": "getScene",
+     "args": 1,
+     "returns": "NxScene"
+    },
+    {
+     "name": "createTriangleMesh",
+     "args": 1,
+     "returns": "NxTriangleMesh"
+    },
+    {
+     "name": "releaseTriangleMesh",
+     "args": 1
+    },
+    {
+     "name": "createHeightField",
+     "args": 1,
+     "returns": "NxHeightField"
+    },
+    {
+     "name": "releaseHeightField",
+     "args": 1
+    },
+    {
+     "name": "createCCDSkeleton",
+     "args": 2,
+     "returns": "NxCCDSkeleton"
+    },
+    {
+     "name": "createCCDSkeleton",
+     "args": 1,
+     "returns": "NxCCDSkeleton"
+    },
+    {
+     "name": "releaseCCDSkeleton",
+     "args": 1
+    },
+    {
+     "name": "createConvexMesh",
+     "args": 1,
+     "returns": "NxConvexMesh"
+    },
+    {
+     "name": "releaseConvexMesh",
+     "args": 1
+    },
+    {
+     "name": "createClothMesh",
+     "args": 1,
+     "returns": "NxClothMesh"
+    },
+    {
+     "name": "releaseClothMesh",
+     "args": 1
+    },
+    {
+     "name": "getNbClothMeshes",
+     "args": 0
+    },
+    {
+     "name": "getClothMeshes",
+     "args": 0
+    },
+    {
+     "name": "getInternalVersion",
+     "args": 3
+    },
+    {
+     "name": "getInterface",
+     "args": 2,
+     "returns": "NxInterface"
+    },
+    {
+     "name": "getHWVersion",
+     "args": 0
+    },
+    {
+     "name": "getNbPPUs",
+     "args": 0
+    },
+    {
+     "name": "getFoundationSDK",
+     "args": 0,
+     "returns": "NxFoundationSDK"
+    }
+   ]
+  },
+  "NxPlaneShape": {
+   "base": "NxShape",
+   "methods": [
+    {
+     "name": "~NxShape",
+     "args": 0
+    },
+    {
+     "name": "getActor",
+     "args": 0,
+     "returns": "NxActor"
+    },
+    {
+     "name": "setGroup",
+     "args": 1
+    },
+    {
+     "name": "getGroup",
+     "args": 0
+    },
+    {
+     "name": "getWorldBounds",
+     "args": 1
+    },
+    {
+     "name": "setFlag",
+     "args": 2
+    },
+    {
+     "name": "getFlag",
+     "args": 1
+    },
+    {
+     "name": "setLocalPose",
+     "args": 1
+    },
+    {
+     "name": "setLocalPosition",
+     "args": 1
+    },
+    {
+     "name": "setLocalOrientation",
+     "args": 1
+    },
+    {
+     "name": "getLocalPose",
+     "args": 1
+    },
+    {
+     "name": "getLocalPosition",
+     "args": 1
+    },
+    {
+     "name": "getLocalOrientation",
+     "args": 1
+    },
+    {
+     "name": "setGlobalPose",
+     "args": 1
+    },
+    {
+     "name": "setGlobalPosition",
+     "args": 1
+    },
+    {
+     "name": "setGlobalOrientation",
+     "args": 1
+    },
+    {
+     "name": "getGlobalPose",
+     "args": 1
+    },
+    {
+     "name": "getGlobalPosition",
+     "args": 1
+    },
+    {
+     "name": "getGlobalOrientation",
+     "args": 1
+    },
+    {
+     "name": "setMaterial",
+     "args": 1
+    },
+    {
+     "name": "getMaterial",
+     "args": 0
+    },
+    {
+     "name": "setSkinWidth",
+     "args": 1
+    },
+    {
+     "name": "getSkinWidth",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getType",
+     "args": 0
+    },
+    {
+     "name": "setCCDSkeleton",
+     "args": 1
+    },
+    {
+     "name": "getCCDSkeleton",
+     "args": 0,
+     "returns": "NxCCDSkeleton"
+    },
+    {
+     "name": "setName",
+     "args": 1
+    },
+    {
+     "name": "getName",
+     "args": 0
+    },
+    {
+     "name": "raycast",
+     "args": 5
+    },
+    {
+     "name": "checkOverlapSphere",
+     "args": 1
+    },
+    {
+     "name": "checkOverlapOBB",
+     "args": 1
+    },
+    {
+     "name": "checkOverlapAABB",
+     "args": 1
+    },
+    {
+     "name": "checkOverlapCapsule",
+     "args": 1
+    },
+    {
+     "name": "setGroupsMask",
+     "args": 1
+    },
+    {
+     "name": "getGroupsMask",
+     "args": 1
+    },
+    {
+     "name": "setPlane",
+     "args": 2
+    },
+    {
+     "name": "saveToDesc",
+     "args": 1
+    },
+    {
+     "name": "getPlane",
+     "args": 1
+    }
+   ]
+  },
+  "NxPointInPlaneJoint": {
+   "base": "NxJoint",
+   "methods": [
+    {
+     "name": "~NxJoint",
+     "args": 0
+    },
+    {
+     "name": "getActors",
+     "args": 2,
+     "out": [
+      {
+       "stack": 0,
+       "interface": "NxActor"
+      },
+      {
+       "stack": 1,
+       "interface": "NxActor"
+      }
+     ]
+    },
+    {
+     "name": "setGlobalAnchor",
+     "args": 1
+    },
+    {
+     "name": "setGlobalAxis",
+     "args": 1
+    },
+    {
+     "name": "getGlobalAnchor",
+     "args": 1
+    },
+    {
+     "name": "getGlobalAxis",
+     "args": 1
+    },
+    {
+     "name": "getState",
+     "args": 0
+    },
+    {
+     "name": "setBreakable",
+     "args": 2
+    },
+    {
+     "name": "getBreakable",
+     "args": 2
+    },
+    {
+     "name": "setLimitPoint",
+     "args": 2
+    },
+    {
+     "name": "getLimitPoint",
+     "args": 1
+    },
+    {
+     "name": "addLimitPlane",
+     "args": 2
+    },
+    {
+     "name": "purgeLimitPlanes",
+     "args": 0
+    },
+    {
+     "name": "resetLimitPlaneIterator",
+     "args": 0
+    },
+    {
+     "name": "hasMoreLimitPlanes",
+     "args": 0
+    },
+    {
+     "name": "getNextLimitPlane",
+     "args": 2
+    },
+    {
+     "name": "getType",
+     "args": 0
+    },
+    {
+     "name": "setName",
+     "args": 1
+    },
+    {
+     "name": "getName",
+     "args": 0
+    },
+    {
+     "name": "getScene",
+     "args": 0,
+     "returns": "NxScene"
+    },
+    {
+     "name": "loadFromDesc",
+     "args": 1
+    },
+    {
+     "name": "saveToDesc",
+     "args": 1
+    }
+   ]
+  },
+  "NxPointOnLineJoint": {
+   "base": "NxJoint",
+   "methods": [
+    {
+     "name": "~NxJoint",
+     "args": 0
+    },
+    {
+     "name": "getActors",
+     "args": 2,
+     "out": [
+      {
+       "stack": 0,
+       "interface": "NxActor"
+      },
+      {
+       "stack": 1,
+       "interface": "NxActor"
+      }
+     ]
+    },
+    {
+     "name": "setGlobalAnchor",
+     "args": 1
+    },
+    {
+     "name": "setGlobalAxis",
+     "args": 1
+    },
+    {
+     "name": "getGlobalAnchor",
+     "args": 1
+    },
+    {
+     "name": "getGlobalAxis",
+     "args": 1
+    },
+    {
+     "name": "getState",
+     "args": 0
+    },
+    {
+     "name": "setBreakable",
+     "args": 2
+    },
+    {
+     "name": "getBreakable",
+     "args": 2
+    },
+    {
+     "name": "setLimitPoint",
+     "args": 2
+    },
+    {
+     "name": "getLimitPoint",
+     "args": 1
+    },
+    {
+     "name": "addLimitPlane",
+     "args": 2
+    },
+    {
+     "name": "purgeLimitPlanes",
+     "args": 0
+    },
+    {
+     "name": "resetLimitPlaneIterator",
+     "args": 0
+    },
+    {
+     "name": "hasMoreLimitPlanes",
+     "args": 0
+    },
+    {
+     "name": "getNextLimitPlane",
+     "args": 2
+    },
+    {
+     "name": "getType",
+     "args": 0
+    },
+    {
+     "name": "setName",
+     "args": 1
+    },
+    {
+     "name": "getName",
+     "args": 0
+    },
+    {
+     "name": "getScene",
+     "args": 0,
+     "returns": "NxScene"
+    },
+    {
+     "name": "loadFromDesc",
+     "args": 1
+    },
+    {
+     "name": "saveToDesc",
+     "args": 1
+    }
+   ]
+  },
+  "NxPrismaticJoint": {
+   "base": "NxJoint",
+   "methods": [
+    {
+     "name": "~NxJoint",
+     "args": 0
+    },
+    {
+     "name": "getActors",
+     "args": 2,
+     "out": [
+      {
+       "stack": 0,
+       "interface": "NxActor"
+      },
+      {
+       "stack": 1,
+       "interface": "NxActor"
+      }
+     ]
+    },
+    {
+     "name": "setGlobalAnchor",
+     "args": 1
+    },
+    {
+     "name": "setGlobalAxis",
+     "args": 1
+    },
+    {
+     "name": "getGlobalAnchor",
+     "args": 1
+    },
+    {
+     "name": "getGlobalAxis",
+     "args": 1
+    },
+    {
+     "name": "getState",
+     "args": 0
+    },
+    {
+     "name": "setBreakable",
+     "args": 2
+    },
+    {
+     "name": "getBreakable",
+     "args": 2
+    },
+    {
+     "name": "setLimitPoint",
+     "args": 2
+    },
+    {
+     "name": "getLimitPoint",
+     "args": 1
+    },
+    {
+     "name": "addLimitPlane",
+     "args": 2
+    },
+    {
+     "name": "purgeLimitPlanes",
+     "args": 0
+    },
+    {
+     "name": "resetLimitPlaneIterator",
+     "args": 0
+    },
+    {
+     "name": "hasMoreLimitPlanes",
+     "args": 0
+    },
+    {
+     "name": "getNextLimitPlane",
+     "args": 2
+    },
+    {
+     "name": "getType",
+     "args": 0
+    },
+    {
+     "name": "setName",
+     "args": 1
+    },
+    {
+     "name": "getName",
+     "args": 0
+    },
+    {
+     "name": "getScene",
+     "args": 0,
+     "returns": "NxScene"
+    },
+    {
+     "name": "loadFromDesc",
+     "args": 1
+    },
+    {
+     "name": "saveToDesc",
+     "args": 1
+    }
+   ]
+  },
+  "NxProfileData": {
+   "base": "NxProfilerData",
+   "methods": [
+    {
+     "name": "~NxProfileData",
+     "args": 0
+    },
+    {
+     "name": "getNamedZone",
+     "args": 1
+    }
+   ]
+  },
+  "NxPulleyJoint": {
+   "base": "NxJoint",
+   "methods": [
+    {
+     "name": "~NxJoint",
+     "args": 0
+    },
+    {
+     "name": "getActors",
+     "args": 2,
+     "out": [
+      {
+       "stack": 0,
+       "interface": "NxActor"
+      },
+      {
+       "stack": 1,
+       "interface": "NxActor"
+      }
+     ]
+    },
+    {
+     "name": "setGlobalAnchor",
+     "args": 1
+    },
+    {
+     "name": "setGlobalAxis",
+     "args": 1
+    },
+    {
+     "name": "getGlobalAnchor",
+     "args": 1
+    },
+    {
+     "name": "getGlobalAxis",
+     "args": 1
+    },
+    {
+     "name": "getState",
+     "args": 0
+    },
+    {
+     "name": "setBreakable",
+     "args": 2
+    },
+    {
+     "name": "getBreakable",
+     "args": 2
+    },
+    {
+     "name": "setLimitPoint",
+     "args": 2
+    },
+    {
+     "name": "getLimitPoint",
+     "args": 1
+    },
+    {
+     "name": "addLimitPlane",
+     "args": 2
+    },
+    {
+     "name": "purgeLimitPlanes",
+     "args": 0
+    },
+    {
+     "name": "resetLimitPlaneIterator",
+     "args": 0
+    },
+    {
+     "name": "hasMoreLimitPlanes",
+     "args": 0
+    },
+    {
+     "name": "getNextLimitPlane",
+     "args": 2
+    },
+    {
+     "name": "getType",
+     "args": 0
+    },
+    {
+     "name": "setName",
+     "args": 1
+    },
+    {
+     "name": "getName",
+     "args": 0
+    },
+    {
+     "name": "getScene",
+     "args": 0,
+     "returns": "NxScene"
+    },
+    {
+     "name": "loadFromDesc",
+     "args": 1
+    },
+    {
+     "name": "saveToDesc",
+     "args": 1
+    },
+    {
+     "name": "setMotor",
+     "args": 1
+    },
+    {
+     "name": "getMotor",
+     "args": 1
+    },
+    {
+     "name": "setFlags",
+     "args": 1
+    },
+    {
+     "name": "getFlags",
+     "args": 0
+    }
+   ]
+  },
+  "NxRemoteDebugger": {
+   "base": null,
+   "methods": [
+    {
+     "name": "connect",
+     "args": 3
+    },
+    {
+     "name": "flush",
+     "args": 0
+    },
+    {
+     "name": "isConnected",
+     "args": 0
+    },
+    {
+     "name": "frameBreak",
+     "args": 0
+    },
+    {
+     "name": "createObject",
+     "args": 4
+    },
+    {
+     "name": "removeObject",
+     "args": 2
+    },
+    {
+     "name": "addChild",
+     "args": 3
+    },
+    {
+     "name": "removeChild",
+     "args": 3
+    },
+    {
+     "name": "writeParameter",
+     "args": 5
+    },
+    {
+     "name": "writeParameter",
+     "args": 5
+    },
+    {
+     "name": "writeParameter",
+     "args": 5
+    },
+    {
+     "name": "writeParameter",
+     "args": 5
+    },
+    {
+     "name": "writeParameter",
+     "args": 5
+    },
+    {
+     "name": "writeParameter",
+     "args": 5
+    },
+    {
+     "name": "writeParameter",
+     "args": 5
+    },
+    {
+     "name": "writeParameter",
+     "args": 5
+    },
+    {
+     "name": "writeParameter",
+     "args": 5
+    },
+    {
+     "name": "writeParameter",
+     "args": 5
+    },
+    {
+     "name": "getMask",
+     "args": 0
+    },
+    {
+     "name": "getPickedObject",
+     "args": 0
+    },
+    {
+     "name": "getPickPoint",
+     "args": 1
+    },
+    {
+     "name": "~NxRemoteDebugger",
+     "args": 0
+    }
+   ]
+  },
+  "NxRevoluteJoint": {
+   "base": "NxJoint",
+   "methods": [
+    {
+     "name": "~NxJoint",
+     "args": 0
+    },
+    {
+     "name": "getActors",
+     "args": 2,
+     "out": [
+      {
+       "stack": 0,
+       "interface": "NxActor"
+      },
+      {
+       "stack": 1,
+       "interface": "NxActor"
+      }
+     ]
+    },
+    {
+     "name": "setGlobalAnchor",
+     "args": 1
+    },
+    {
+     "name": "setGlobalAxis",
+     "args": 1
+    },
+    {
+     "name": "getGlobalAnchor",
+     "args": 1
+    },
+    {
+     "name": "getGlobalAxis",
+     "args": 1
+    },
+    {
+     "name": "getState",
+     "args": 0
+    },
+    {
+     "name": "setBreakable",
+     "args": 2
+    },
+    {
+     "name": "getBreakable",
+     "args": 2
+    },
+    {
+     "name": "setLimitPoint",
+     "args": 2
+    },
+    {
+     "name": "getLimitPoint",
+     "args": 1
+    },
+    {
+     "name": "addLimitPlane",
+     "args": 2
+    },
+    {
+     "name": "purgeLimitPlanes",
+     "args": 0
+    },
+    {
+     "name": "resetLimitPlaneIterator",
+     "args": 0
+    },
+    {
+     "name": "hasMoreLimitPlanes",
+     "args": 0
+    },
+    {
+     "name": "getNextLimitPlane",
+     "args": 2
+    },
+    {
+     "name": "getType",
+     "args": 0
+    },
+    {
+     "name": "setName",
+     "args": 1
+    },
+    {
+     "name": "getName",
+     "args": 0
+    },
+    {
+     "name": "getScene",
+     "args": 0,
+     "returns": "NxScene"
+    },
+    {
+     "name": "loadFromDesc",
+     "args": 1
+    },
+    {
+     "name": "saveToDesc",
+     "args": 1
+    },
+    {
+     "name": "setLimits",
+     "args": 1
+    },
+    {
+     "name": "getLimits",
+     "args": 1
+    },
+    {
+     "name": "setMotor",
+     "args": 1
+    },
+    {
+     "name": "getMotor",
+     "args": 1
+    },
+    {
+     "name": "setSpring",
+     "args": 1
+    },
+    {
+     "name": "getSpring",
+     "args": 1
+    },
+    {
+     "name": "getAngle",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getVelocity",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setFlags",
+     "args": 1
+    },
+    {
+     "name": "getFlags",
+     "args": 0
+    },
+    {
+     "name": "setProjectionMode",
+     "args": 1
+    },
+    {
+     "name": "getProjectionMode",
+     "args": 0
+    }
+   ]
+  },
+  "NxScene": {
+   "base": null,
+   "methods": [
+    {
+     "name": "~NxScene",
+     "args": 0
+    },
+    {
+     "name": "saveToDesc",
+     "args": 1
+    },
+    {
+     "name": "getSimType",
+     "args": 0
+    },
+    {
+     "name": "getInternal",
+     "args": 0
+    },
+    {
+     "name": "setGravity",
+     "args": 1
+    },
+    {
+     "name": "getGravity",
+     "args": 1
+    },
+    {
+     "name": "createActor",
+     "args": 1,
+     "returns": "NxActor"
+    },
+    {
+     "name": "releaseActor",
+     "args": 1
+    },
+    {
+     "name": "createJoint",
+     "args": 1,
+     "returns": "NxJoint"
+    },
+    {
+     "name": "releaseJoint",
+     "args": 1
+    },
+    {
+     "name": "createSpringAndDamperEffector",
+     "args": 1,
+     "returns": "NxSpringAndDamperEffector"
+    },
+    {
+     "name": "releaseEffector",
+     "args": 1
+    },
+    {
+     "name": "createMaterial",
+     "args": 1,
+     "returns": "NxMaterial"
+    },
+    {
+     "name": "releaseMaterial",
+     "args": 1
+    },
+    {
+     "name": "createCompartment",
+     "args": 1,
+     "returns": "NxCompartment"
+    },
+    {
+     "name": "getNbCompartments",
+     "args": 0
+    },
+    {
+     "name": "getCompartmentArray",
+     "args": 3,
+     "out": [
+      {
+       "stack": 0,
+       "interface": "NxCompartment"
+      }
+     ]
+    },
+    {
+     "name": "setActorPairFlags",
+     "args": 3
+    },
+    {
+     "name": "getActorPairFlags",
+     "args": 2
+    },
+    {
+     "name": "setShapePairFlags",
+     "args": 3
+    },
+    {
+     "name": "getShapePairFlags",
+     "args": 2
+    },
+    {
+     "name": "getNbPairs",
+     "args": 0
+    },
+    {
+     "name": "getPairFlagArray",
+     "args": 2
+    },
+    {
+     "name": "setGroupCollisionFlag",
+     "args": 3
+    },
+    {
+     "name": "getGroupCollisionFlag",
+     "args": 2
+    },
+    {
+     "name": "setActorGroupPairFlags",
+     "args": 3
+    },
+    {
+     "name": "getActorGroupPairFlags",
+     "args": 2
+    },
+    {
+     "name": "getNbActorGroupPairs",
+     "args": 0
+    },
+    {
+     "name": "getActorGroupPairArray",
+     "args": 3
+    },
+    {
+     "name": "setFilterOps",
+     "args": 3
+    },
+    {
+     "name": "setFilterBool",
+     "args": 1
+    },
+    {
+     "name": "setFilterConstant0",
+     "args": 1
+    },
+    {
+     "name": "setFilterConstant1",
+     "args": 1
+    },
+    {
+     "name": "getFilterOps",
+     "args": 3
+    },
+    {
+     "name": "getFilterBool",
+     "args": 0
+    },
+    {
+     "name": "getFilterConstant0",
+     "args": 1
+    },
+    {
+     "name": "getFilterConstant1",
+     "args": 1
+    },
+    {
+     "name": "getNbActors",
+     "args": 0
+    },
+    {
+     "name": "getActors",
+     "args": 0
+    },
+    {
+     "name": "getActiveTransforms",
+     "args": 1
+    },
+    {
+     "name": "getNbStaticShapes",
+     "args": 0
+    },
+    {
+     "name": "getNbDynamicShapes",
+     "args": 0
+    },
+    {
+     "name": "getTotalNbShapes",
+     "args": 0
+    },
+    {
+     "name": "getNbJoints",
+     "args": 0
+    },
+    {
+     "name": "resetJointIterator",
+     "args": 0
+    },
+    {
+     "name": "getNextJoint",
+     "args": 0,
+     "returns": "NxJoint"
+    },
+    {
+     "name": "getNbEffectors",
+     "args": 0
+    },
+    {
+     "name": "resetEffectorIterator",
+     "args": 0
+    },
+    {
+     "name": "getNextEffector",
+     "args": 0,
+     "returns": "NxEffector"
+    },
+    {
+     "name": "getBoundForIslandSize",
+     "args": 1
+    },
+    {
+     "name": "getIslandArrayFromActor",
+     "args": 4,
+     "out": [
+      {
+       "stack": 1,
+       "interface": "NxActor"
+      }
+     ]
+    },
+    {
+     "name": "getNbMaterials",
+     "args": 0
+    },
+    {
+     "name": "getMaterialArray",
+     "args": 3,
+     "out": [
+      {
+       "stack": 0,
+       "interface": "NxMaterial"
+      }
+     ]
+    },
+    {
+     "name": "getHighestMaterialIndex",
+     "args": 0
+    },
+    {
+     "name": "getMaterialFromIndex",
+     "args": 1,
+     "returns": "NxMaterial"
+    },
+    {
+     "name": "flushStream",
+     "args": 0
+    },
+    {
+     "name": "setTiming",
+     "args": 3
+    },
+    {
+     "name": "getTiming",
+     "args": 4
+    },
+    {
+     "name": "getDebugRenderable",
+     "args": 0
+    },
+    {
+     "name": "getPhysicsSDK",
+     "args": 0,
+     "returns": "NxPhysicsSDK"
+    },
+    {
+     "name": "getStats",
+     "args": 1
+    },
+    {
+     "name": "getStats2",
+     "args": 0
+    },
+    {
+     "name": "getLimits",
+     "args": 1
+    },
+    {
+     "name": "setUserNotify",
+     "args": 1
+    },
+    {
+     "name": "setUserContactModify",
+     "args": 1
+    },
+    {
+     "name": "getUserNotify",
+     "args": 0,
+     "returns": "NxUserNotify"
+    },
+    {
+     "name": "getUserContactModify",
+     "args": 0,
+     "returns": "NxUserContactModify"
+    },
+    {
+     "name": "setUserTriggerReport",
+     "args": 1
+    },
+    {
+     "name": "getUserTriggerReport",
+     "args": 0,
+     "returns": "NxUserTriggerReport"
+    },
+    {
+     "name": "setUserContactReport",
+     "args": 1
+    },
+    {
+     "name": "getUserContactReport",
+     "args": 0,
+     "returns": "NxUserContactReport"
+    },
+    {
+     "name": "raycastAnyBounds",
+     "args": 5
+    },
+    {
+     "name": "raycastAnyShape",
+     "args": 6,
+     "out": [
+      {
+       "stack": 5,
+       "interface": "NxShape"
+      }
+     ]
+    },
+    {
+     "name": "raycastAllBounds",
+     "args": 7
+    },
+    {
+     "name": "raycastAllShapes",
+     "args": 7
+    },
+    {
+     "name": "raycastClosestBounds",
+     "args": 7,
+     "returns": "NxShape"
+    },
+    {
+     "name": "raycastClosestShape",
+     "args": 8,
+     "returns": "NxShape",
+     "out": [
+      {
+       "stack": 7,
+       "interface": "NxShape"
+      }
+     ]
+    },
+    {
+     "name": "overlapSphereShapes",
+     "args": 8,
+     "out": [
+      {
+       "stack": 3,
+       "interface": "NxShape"
+      },
+      {
+       "stack": 4,
+       "interface": "NxShape"
+      }
+     ]
+    },
+    {
+     "name": "overlapAABBShapes",
+     "args": 8,
+     "out": [
+      {
+       "stack": 3,
+       "interface": "NxShape"
+      },
+      {
+       "stack": 4,
+       "interface": "NxShape"
+      }
+     ]
+    },
+    {
+     "name": "overlapOBBShapes",
+     "args": 8,
+     "out": [
+      {
+       "stack": 3,
+       "interface": "NxShape"
+      },
+      {
+       "stack": 4,
+       "interface": "NxShape"
+      }
+     ]
+    },
+    {
+     "name": "overlapCapsuleShapes",
+     "args": 8,
+     "out": [
+      {
+       "stack": 3,
+       "interface": "NxShape"
+      },
+      {
+       "stack": 4,
+       "interface": "NxShape"
+      }
+     ]
+    },
+    {
+     "name": "createSweepCache",
+     "args": 0,
+     "returns": "NxSweepCache"
+    },
+    {
+     "name": "releaseSweepCache",
+     "args": 1
+    },
+    {
+     "name": "linearOBBSweep",
+     "args": 9
+    },
+    {
+     "name": "linearCapsuleSweep",
+     "args": 9
+    },
+    {
+     "name": "cullShapes",
+     "args": 8,
+     "out": [
+      {
+       "stack": 4,
+       "interface": "NxShape"
+      },
+      {
+       "stack": 5,
+       "interface": "NxShape"
+      }
+     ]
+    },
+    {
+     "name": "checkOverlapSphere",
+     "args": 4
+    },
+    {
+     "name": "checkOverlapAABB",
+     "args": 4
+    },
+    {
+     "name": "checkOverlapOBB",
+     "args": 4
+    },
+    {
+     "name": "checkOverlapCapsule",
+     "args": 4
+    },
+    {
+     "name": "createFluid",
+     "args": 1,
+     "returns": "NxFluid"
+    },
+    {
+     "name": "releaseFluid",
+     "args": 1
+    },
+    {
+     "name": "getNbFluids",
+     "args": 0
+    },
+    {
+     "name": "getFluids",
+     "args": 0
+    },
+    {
+     "name": "cookFluidMeshHotspot",
+     "args": 6
+    },
+    {
+     "name": "createImplicitScreenMesh",
+     "args": 1,
+     "returns": "NxImplicitScreenMesh"
+    },
+    {
+     "name": "releaseImplicitScreenMesh",
+     "args": 1
+    },
+    {
+     "name": "getNbImplicitScreenMeshes",
+     "args": 0
+    },
+    {
+     "name": "getImplicitScreenMeshes",
+     "args": 0
+    },
+    {
+     "name": "createCloth",
+     "args": 1,
+     "returns": "NxCloth"
+    },
+    {
+     "name": "releaseCloth",
+     "args": 1
+    },
+    {
+     "name": "getNbCloths",
+     "args": 0
+    },
+    {
+     "name": "getCloths",
+     "args": 0
+    },
+    {
+     "name": "isWritable",
+     "args": 0
+    },
+    {
+     "name": "simulate",
+     "args": 1
+    },
+    {
+     "name": "checkResults",
+     "args": 2
+    },
+    {
+     "name": "fetchResults",
+     "args": 3
+    },
+    {
+     "name": "flushCaches",
+     "args": 0
+    },
+    {
+     "name": "readProfileData",
+     "args": 1,
+     "returns": "NxProfileData"
+    },
+    {
+     "name": "pollForWork",
+     "args": 1
+    },
+    {
+     "name": "resetPollForWork",
+     "args": 0
+    },
+    {
+     "name": "pollForBackgroundWork",
+     "args": 1
+    },
+    {
+     "name": "shutdownWorkerThreads",
+     "args": 0
+    },
+    {
+     "name": "lockQueries",
+     "args": 0
+    },
+    {
+     "name": "unlockQueries",
+     "args": 0
+    }
+   ]
+  },
+  "NxShape": {
+   "base": null,
+   "methods": [
+    {
+     "name": "~NxShape",
+     "args": 0
+    },
+    {
+     "name": "getActor",
+     "args": 0,
+     "returns": "NxActor"
+    },
+    {
+     "name": "setGroup",
+     "args": 1
+    },
+    {
+     "name": "getGroup",
+     "args": 0
+    },
+    {
+     "name": "getWorldBounds",
+     "args": 1
+    },
+    {
+     "name": "setFlag",
+     "args": 2
+    },
+    {
+     "name": "getFlag",
+     "args": 1
+    },
+    {
+     "name": "setLocalPose",
+     "args": 1
+    },
+    {
+     "name": "setLocalPosition",
+     "args": 1
+    },
+    {
+     "name": "setLocalOrientation",
+     "args": 1
+    },
+    {
+     "name": "getLocalPose",
+     "args": 1
+    },
+    {
+     "name": "getLocalPosition",
+     "args": 1
+    },
+    {
+     "name": "getLocalOrientation",
+     "args": 1
+    },
+    {
+     "name": "setGlobalPose",
+     "args": 1
+    },
+    {
+     "name": "setGlobalPosition",
+     "args": 1
+    },
+    {
+     "name": "setGlobalOrientation",
+     "args": 1
+    },
+    {
+     "name": "getGlobalPose",
+     "args": 1
+    },
+    {
+     "name": "getGlobalPosition",
+     "args": 1
+    },
+    {
+     "name": "getGlobalOrientation",
+     "args": 1
+    },
+    {
+     "name": "setMaterial",
+     "args": 1
+    },
+    {
+     "name": "getMaterial",
+     "args": 0
+    },
+    {
+     "name": "setSkinWidth",
+     "args": 1
+    },
+    {
+     "name": "getSkinWidth",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getType",
+     "args": 0
+    },
+    {
+     "name": "setCCDSkeleton",
+     "args": 1
+    },
+    {
+     "name": "getCCDSkeleton",
+     "args": 0,
+     "returns": "NxCCDSkeleton"
+    },
+    {
+     "name": "setName",
+     "args": 1
+    },
+    {
+     "name": "getName",
+     "args": 0
+    },
+    {
+     "name": "raycast",
+     "args": 5
+    },
+    {
+     "name": "checkOverlapSphere",
+     "args": 1
+    },
+    {
+     "name": "checkOverlapOBB",
+     "args": 1
+    },
+    {
+     "name": "checkOverlapAABB",
+     "args": 1
+    },
+    {
+     "name": "checkOverlapCapsule",
+     "args": 1
+    },
+    {
+     "name": "setGroupsMask",
+     "args": 1
+    },
+    {
+     "name": "getGroupsMask",
+     "args": 1
+    }
+   ]
+  },
+  "NxSphereShape": {
+   "base": "NxShape",
+   "methods": [
+    {
+     "name": "~NxShape",
+     "args": 0
+    },
+    {
+     "name": "getActor",
+     "args": 0,
+     "returns": "NxActor"
+    },
+    {
+     "name": "setGroup",
+     "args": 1
+    },
+    {
+     "name": "getGroup",
+     "args": 0
+    },
+    {
+     "name": "getWorldBounds",
+     "args": 1
+    },
+    {
+     "name": "setFlag",
+     "args": 2
+    },
+    {
+     "name": "getFlag",
+     "args": 1
+    },
+    {
+     "name": "setLocalPose",
+     "args": 1
+    },
+    {
+     "name": "setLocalPosition",
+     "args": 1
+    },
+    {
+     "name": "setLocalOrientation",
+     "args": 1
+    },
+    {
+     "name": "getLocalPose",
+     "args": 1
+    },
+    {
+     "name": "getLocalPosition",
+     "args": 1
+    },
+    {
+     "name": "getLocalOrientation",
+     "args": 1
+    },
+    {
+     "name": "setGlobalPose",
+     "args": 1
+    },
+    {
+     "name": "setGlobalPosition",
+     "args": 1
+    },
+    {
+     "name": "setGlobalOrientation",
+     "args": 1
+    },
+    {
+     "name": "getGlobalPose",
+     "args": 1
+    },
+    {
+     "name": "getGlobalPosition",
+     "args": 1
+    },
+    {
+     "name": "getGlobalOrientation",
+     "args": 1
+    },
+    {
+     "name": "setMaterial",
+     "args": 1
+    },
+    {
+     "name": "getMaterial",
+     "args": 0
+    },
+    {
+     "name": "setSkinWidth",
+     "args": 1
+    },
+    {
+     "name": "getSkinWidth",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getType",
+     "args": 0
+    },
+    {
+     "name": "setCCDSkeleton",
+     "args": 1
+    },
+    {
+     "name": "getCCDSkeleton",
+     "args": 0,
+     "returns": "NxCCDSkeleton"
+    },
+    {
+     "name": "setName",
+     "args": 1
+    },
+    {
+     "name": "getName",
+     "args": 0
+    },
+    {
+     "name": "raycast",
+     "args": 5
+    },
+    {
+     "name": "checkOverlapSphere",
+     "args": 1
+    },
+    {
+     "name": "checkOverlapOBB",
+     "args": 1
+    },
+    {
+     "name": "checkOverlapAABB",
+     "args": 1
+    },
+    {
+     "name": "checkOverlapCapsule",
+     "args": 1
+    },
+    {
+     "name": "setGroupsMask",
+     "args": 1
+    },
+    {
+     "name": "getGroupsMask",
+     "args": 1
+    },
+    {
+     "name": "setRadius",
+     "args": 1
+    },
+    {
+     "name": "getRadius",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getWorldSphere",
+     "args": 1
+    },
+    {
+     "name": "saveToDesc",
+     "args": 1
+    }
+   ]
+  },
+  "NxSphericalJoint": {
+   "base": "NxJoint",
+   "methods": [
+    {
+     "name": "~NxJoint",
+     "args": 0
+    },
+    {
+     "name": "getActors",
+     "args": 2,
+     "out": [
+      {
+       "stack": 0,
+       "interface": "NxActor"
+      },
+      {
+       "stack": 1,
+       "interface": "NxActor"
+      }
+     ]
+    },
+    {
+     "name": "setGlobalAnchor",
+     "args": 1
+    },
+    {
+     "name": "setGlobalAxis",
+     "args": 1
+    },
+    {
+     "name": "getGlobalAnchor",
+     "args": 1
+    },
+    {
+     "name": "getGlobalAxis",
+     "args": 1
+    },
+    {
+     "name": "getState",
+     "args": 0
+    },
+    {
+     "name": "setBreakable",
+     "args": 2
+    },
+    {
+     "name": "getBreakable",
+     "args": 2
+    },
+    {
+     "name": "setLimitPoint",
+     "args": 2
+    },
+    {
+     "name": "getLimitPoint",
+     "args": 1
+    },
+    {
+     "name": "addLimitPlane",
+     "args": 2
+    },
+    {
+     "name": "purgeLimitPlanes",
+     "args": 0
+    },
+    {
+     "name": "resetLimitPlaneIterator",
+     "args": 0
+    },
+    {
+     "name": "hasMoreLimitPlanes",
+     "args": 0
+    },
+    {
+     "name": "getNextLimitPlane",
+     "args": 2
+    },
+    {
+     "name": "getType",
+     "args": 0
+    },
+    {
+     "name": "setName",
+     "args": 1
+    },
+    {
+     "name": "getName",
+     "args": 0
+    },
+    {
+     "name": "getScene",
+     "args": 0,
+     "returns": "NxScene"
+    },
+    {
+     "name": "loadFromDesc",
+     "args": 1
+    },
+    {
+     "name": "saveToDesc",
+     "args": 1
+    },
+    {
+     "name": "setFlags",
+     "args": 1
+    },
+    {
+     "name": "getFlags",
+     "args": 0
+    },
+    {
+     "name": "setProjectionMode",
+     "args": 1
+    },
+    {
+     "name": "getProjectionMode",
+     "args": 0
+    }
+   ]
+  },
+  "NxSpringAndDamperEffector": {
+   "base": "NxEffector",
+   "methods": [
+    {
+     "name": "isSpringAndDamperEffector",
+     "args": 0,
+     "returns": "NxSpringAndDamperEffector"
+    },
+    {
+     "name": "getScene",
+     "args": 0,
+     "returns": "NxScene"
+    },
+    {
+     "name": "~NxSpringAndDamperEffector",
+     "args": 0
+    },
+    {
+     "name": "saveToDesc",
+     "args": 1
+    },
+    {
+     "name": "setBodies",
+     "args": 4
+    },
+    {
+     "name": "setLinearSpring",
+     "args": 5
+    },
+    {
+     "name": "getLinearSpring",
+     "args": 5
+    },
+    {
+     "name": "setLinearDamper",
+     "args": 4
+    },
+    {
+     "name": "getLinearDamper",
+     "args": 4
+    }
+   ]
+  },
+  "NxSweepCache": {
+   "base": null,
+   "methods": [
+    {
+     "name": "~NxSweepCache",
+     "args": 0
+    },
+    {
+     "name": "setVolume",
+     "args": 1
+    }
+   ]
+  },
+  "NxTask": {
+   "base": null,
+   "methods": [
+    {
+     "name": "~NxTask",
+     "args": 0
+    },
+    {
+     "name": "execute",
+     "args": 0
+    }
+   ]
+  },
+  "NxTireFunctionDesc": {
+   "base": null,
+   "methods": [
+    {
+     "name": "~NxTireFunctionDesc",
+     "args": 0
+    }
+   ]
+  },
+  "NxTriangleMesh": {
+   "base": null,
+   "methods": [
+    {
+     "name": "saveToDesc",
+     "args": 1
+    },
+    {
+     "name": "getSubmeshCount",
+     "args": 0
+    },
+    {
+     "name": "getCount",
+     "args": 2
+    },
+    {
+     "name": "getFormat",
+     "args": 2
+    },
+    {
+     "name": "getBase",
+     "args": 2
+    },
+    {
+     "name": "getStride",
+     "args": 2
+    },
+    {
+     "name": "getPageCount",
+     "args": 0
+    },
+    {
+     "name": "getPageBBox",
+     "args": 2
+    },
+    {
+     "name": "loadPMap",
+     "args": 1
+    },
+    {
+     "name": "hasPMap",
+     "args": 0
+    },
+    {
+     "name": "getPMapSize",
+     "args": 0
+    },
+    {
+     "name": "getPMapData",
+     "args": 1
+    },
+    {
+     "name": "getPMapDensity",
+     "args": 0
+    },
+    {
+     "name": "load",
+     "args": 1
+    },
+    {
+     "name": "getTriangleMaterial",
+     "args": 1
+    },
+    {
+     "name": "getReferenceCount",
+     "args": 0
+    },
+    {
+     "name": "~NxTriangleMesh",
+     "args": 0
+    }
+   ]
+  },
+  "NxTriangleMeshShape": {
+   "base": "NxShape",
+   "methods": [
+    {
+     "name": "~NxShape",
+     "args": 0
+    },
+    {
+     "name": "getActor",
+     "args": 0,
+     "returns": "NxActor"
+    },
+    {
+     "name": "setGroup",
+     "args": 1
+    },
+    {
+     "name": "getGroup",
+     "args": 0
+    },
+    {
+     "name": "getWorldBounds",
+     "args": 1
+    },
+    {
+     "name": "setFlag",
+     "args": 2
+    },
+    {
+     "name": "getFlag",
+     "args": 1
+    },
+    {
+     "name": "setLocalPose",
+     "args": 1
+    },
+    {
+     "name": "setLocalPosition",
+     "args": 1
+    },
+    {
+     "name": "setLocalOrientation",
+     "args": 1
+    },
+    {
+     "name": "getLocalPose",
+     "args": 1
+    },
+    {
+     "name": "getLocalPosition",
+     "args": 1
+    },
+    {
+     "name": "getLocalOrientation",
+     "args": 1
+    },
+    {
+     "name": "setGlobalPose",
+     "args": 1
+    },
+    {
+     "name": "setGlobalPosition",
+     "args": 1
+    },
+    {
+     "name": "setGlobalOrientation",
+     "args": 1
+    },
+    {
+     "name": "getGlobalPose",
+     "args": 1
+    },
+    {
+     "name": "getGlobalPosition",
+     "args": 1
+    },
+    {
+     "name": "getGlobalOrientation",
+     "args": 1
+    },
+    {
+     "name": "setMaterial",
+     "args": 1
+    },
+    {
+     "name": "getMaterial",
+     "args": 0
+    },
+    {
+     "name": "setSkinWidth",
+     "args": 1
+    },
+    {
+     "name": "getSkinWidth",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getType",
+     "args": 0
+    },
+    {
+     "name": "setCCDSkeleton",
+     "args": 1
+    },
+    {
+     "name": "getCCDSkeleton",
+     "args": 0,
+     "returns": "NxCCDSkeleton"
+    },
+    {
+     "name": "setName",
+     "args": 1
+    },
+    {
+     "name": "getName",
+     "args": 0
+    },
+    {
+     "name": "raycast",
+     "args": 5
+    },
+    {
+     "name": "checkOverlapSphere",
+     "args": 1
+    },
+    {
+     "name": "checkOverlapOBB",
+     "args": 1
+    },
+    {
+     "name": "checkOverlapAABB",
+     "args": 1
+    },
+    {
+     "name": "checkOverlapCapsule",
+     "args": 1
+    },
+    {
+     "name": "setGroupsMask",
+     "args": 1
+    },
+    {
+     "name": "getGroupsMask",
+     "args": 1
+    },
+    {
+     "name": "saveToDesc",
+     "args": 1
+    },
+    {
+     "name": "getTriangleMesh",
+     "args": 0,
+     "returns": "NxTriangleMesh"
+    },
+    {
+     "name": "getTriangleMesh",
+     "args": 0,
+     "returns": "NxTriangleMesh"
+    },
+    {
+     "name": "getTriangle",
+     "args": 6
+    },
+    {
+     "name": "overlapAABBTriangles",
+     "args": 4
+    },
+    {
+     "name": "mapPageInstance",
+     "args": 1
+    },
+    {
+     "name": "unmapPageInstance",
+     "args": 1
+    },
+    {
+     "name": "isPageInstanceMapped",
+     "args": 1
+    }
+   ]
+  },
+  "NxUserAllocator": {
+   "base": null,
+   "methods": [
+    {
+     "name": "mallocDEBUG",
+     "args": 5
+    },
+    {
+     "name": "mallocDEBUG",
+     "args": 3
+    },
+    {
+     "name": "malloc",
+     "args": 2
+    },
+    {
+     "name": "malloc",
+     "args": 1
+    },
+    {
+     "name": "realloc",
+     "args": 2
+    },
+    {
+     "name": "free",
+     "args": 1
+    },
+    {
+     "name": "checkDEBUG",
+     "args": 0
+    },
+    {
+     "name": "~NxUserAllocator",
+     "args": 0
+    }
+   ]
+  },
+  "NxUserContactModify": {
+   "base": null,
+   "methods": [
+    {
+     "name": "onContactConstraint",
+     "args": 6
+    },
+    {
+     "name": "~NxUserContactModify",
+     "args": 0
+    }
+   ]
+  },
+  "NxUserContactReport": {
+   "base": null,
+   "methods": [
+    {
+     "name": "onContactNotify",
+     "args": 2
+    },
+    {
+     "name": "~NxUserContactReport",
+     "args": 0
+    }
+   ]
+  },
+  "NxUserControllerHitReport": {
+   "base": null,
+   "methods": [
+    {
+     "name": "onShapeHit",
+     "args": 1
+    },
+    {
+     "name": "onControllerHit",
+     "args": 1
+    },
+    {
+     "name": "~NxUserControllerHitReport",
+     "args": 0
+    }
+   ]
+  },
+  "NxUserNotify": {
+   "base": null,
+   "methods": [
+    {
+     "name": "onJointBreak",
+     "args": 2
+    },
+    {
+     "name": "onWake",
+     "args": 2,
+     "out": [
+      {
+       "stack": 0,
+       "interface": "NxActor"
+      }
+     ]
+    },
+    {
+     "name": "onSleep",
+     "args": 2,
+     "out": [
+      {
+       "stack": 0,
+       "interface": "NxActor"
+      }
+     ]
+    },
+    {
+     "name": "~NxUserNotify",
+     "args": 0
+    }
+   ]
+  },
+  "NxUserOutputStream": {
+   "base": null,
+   "methods": [
+    {
+     "name": "reportError",
+     "args": 4
+    },
+    {
+     "name": "reportAssertViolation",
+     "args": 3
+    },
+    {
+     "name": "print",
+     "args": 1
+    },
+    {
+     "name": "~NxUserOutputStream",
+     "args": 0
+    }
+   ]
+  },
+  "NxUserRaycastReport": {
+   "base": null,
+   "methods": [
+    {
+     "name": "onHit",
+     "args": 1
+    },
+    {
+     "name": "~NxUserRaycastReport",
+     "args": 0
+    }
+   ]
+  },
+  "NxUserScheduler": {
+   "base": null,
+   "methods": [
+    {
+     "name": "addTask",
+     "args": 1
+    },
+    {
+     "name": "addBackgroundTask",
+     "args": 1
+    },
+    {
+     "name": "waitTasksComplete",
+     "args": 0
+    },
+    {
+     "name": "~NxUserScheduler",
+     "args": 0
+    }
+   ]
+  },
+  "NxUserTriggerReport": {
+   "base": null,
+   "methods": [
+    {
+     "name": "onTrigger",
+     "args": 3
+    },
+    {
+     "name": "~NxUserTriggerReport",
+     "args": 0
+    }
+   ]
+  },
+  "NxUserWheelContactModify": {
+   "base": null,
+   "methods": [
+    {
+     "name": "onWheelContact",
+     "args": 8
+    },
+    {
+     "name": "~NxUserWheelContactModify",
+     "args": 0
+    }
+   ]
+  },
+  "NxUtilLib": {
+   "base": null,
+   "methods": [
+    {
+     "name": "NxBoxContainsPoint",
+     "args": 2
+    },
+    {
+     "name": "NxCreateBox",
+     "args": 3
+    },
+    {
+     "name": "NxComputeBoxPlanes",
+     "args": 2
+    },
+    {
+     "name": "NxComputeBoxPoints",
+     "args": 2
+    },
+    {
+     "name": "NxComputeBoxVertexNormals",
+     "args": 2
+    },
+    {
+     "name": "NxGetBoxEdges",
+     "args": 0
+    },
+    {
+     "name": "NxGetBoxEdgesAxes",
+     "args": 0
+    },
+    {
+     "name": "NxGetBoxTriangles",
+     "args": 0
+    },
+    {
+     "name": "NxGetBoxLocalEdgeNormals",
+     "args": 0
+    },
+    {
+     "name": "NxComputeBoxWorldEdgeNormal",
+     "args": 3
+    },
+    {
+     "name": "NxComputeCapsuleAroundBox",
+     "args": 2
+    },
+    {
+     "name": "NxIsBoxAInsideBoxB",
+     "args": 2
+    },
+    {
+     "name": "NxGetBoxQuads",
+     "args": 0
+    },
+    {
+     "name": "NxBoxVertexToQuad",
+     "args": 1
+    },
+    {
+     "name": "NxComputeBoxAroundCapsule",
+     "args": 2
+    },
+    {
+     "name": "NxSetFPUPrecision24",
+     "args": 0
+    },
+    {
+     "name": "NxSetFPUPrecision53",
+     "args": 0
+    },
+    {
+     "name": "NxSetFPUPrecision64",
+     "args": 0
+    },
+    {
+     "name": "NxSetFPURoundingChop",
+     "args": 0
+    },
+    {
+     "name": "NxSetFPURoundingUp",
+     "args": 0
+    },
+    {
+     "name": "NxSetFPURoundingDown",
+     "args": 0
+    },
+    {
+     "name": "NxSetFPURoundingNear",
+     "args": 0
+    },
+    {
+     "name": "NxSetFPUExceptions",
+     "args": 1
+    },
+    {
+     "name": "NxIntChop",
+     "args": 1
+    },
+    {
+     "name": "NxIntFloor",
+     "args": 1
+    },
+    {
+     "name": "NxIntCeil",
+     "args": 1
+    },
+    {
+     "name": "NxComputeDistanceSquared",
+     "args": 3,
+     "returns_float": true
+    },
+    {
+     "name": "NxComputeSquareDistance",
+     "args": 3,
+     "returns_float": true
+    },
+    {
+     "name": "NxComputeSphere",
+     "args": 3
+    },
+    {
+     "name": "NxFastComputeSphere",
+     "args": 3
+    },
+    {
+     "name": "NxMergeSpheres",
+     "args": 3
+    },
+    {
+     "name": "NxNormalToTangents",
+     "args": 3
+    },
+    {
+     "name": "NxDiagonalizeInertiaTensor",
+     "args": 3
+    },
+    {
+     "name": "NxFindRotationMatrix",
+     "args": 3
+    },
+    {
+     "name": "NxComputeBounds",
+     "args": 4
+    },
+    {
+     "name": "NxCrc32",
+     "args": 2
+    },
+    {
+     "name": "NxComputeSphereMass",
+     "args": 2,
+     "returns_float": true
+    },
+    {
+     "name": "NxComputeSphereDensity",
+     "args": 2,
+     "returns_float": true
+    },
+    {
+     "name": "NxComputeBoxMass",
+     "args": 2,
+     "returns_float": true
+    },
+    {
+     "name": "NxComputeBoxDensity",
+     "args": 2,
+     "returns_float": true
+    },
+    {
+     "name": "NxComputeEllipsoidMass",
+     "args": 2,
+     "returns_float": true
+    },
+    {
+     "name": "NxComputeEllipsoidDensity",
+     "args": 2,
+     "returns_float": true
+    },
+    {
+     "name": "NxComputeCylinderMass",
+     "args": 3,
+     "returns_float": true
+    },
+    {
+     "name": "NxComputeCylinderDensity",
+     "args": 3,
+     "returns_float": true
+    },
+    {
+     "name": "NxComputeConeMass",
+     "args": 3,
+     "returns_float": true
+    },
+    {
+     "name": "NxComputeConeDensity",
+     "args": 3,
+     "returns_float": true
+    },
+    {
+     "name": "NxComputeBoxInertiaTensor",
+     "args": 5
+    },
+    {
+     "name": "NxComputeSphereInertiaTensor",
+     "args": 4
+    },
+    {
+     "name": "NxJointDesc_SetGlobalAnchor",
+     "args": 2
+    },
+    {
+     "name": "NxJointDesc_SetGlobalAxis",
+     "args": 2
+    },
+    {
+     "name": "NxBoxBoxIntersect",
+     "args": 7
+    },
+    {
+     "name": "NxTriBoxIntersect",
+     "args": 5
+    },
+    {
+     "name": "NxSeparatingAxis",
+     "args": 7
+    },
+    {
+     "name": "NxSegmentPlaneIntersect",
+     "args": 5
+    },
+    {
+     "name": "NxRayPlaneIntersect",
+     "args": 4
+    },
+    {
+     "name": "NxRaySphereIntersect",
+     "args": 7
+    },
+    {
+     "name": "NxSegmentBoxIntersect",
+     "args": 5
+    },
+    {
+     "name": "NxRayAABBIntersect",
+     "args": 5
+    },
+    {
+     "name": "NxRayAABBIntersect2",
+     "args": 6
+    },
+    {
+     "name": "NxSegmentOBBIntersect",
+     "args": 5
+    },
+    {
+     "name": "NxSegmentAABBIntersect",
+     "args": 4
+    },
+    {
+     "name": "NxRayOBBIntersect",
+     "args": 4
+    },
+    {
+     "name": "NxRayCapsuleIntersect",
+     "args": 4
+    },
+    {
+     "name": "NxSweptSpheresIntersect",
+     "args": 4
+    },
+    {
+     "name": "NxRayTriIntersect",
+     "args": 9
+    },
+    {
+     "name": "NxBuildSmoothNormals",
+     "args": 7
+    },
+    {
+     "name": "~NxUtilLib",
+     "args": 0
+    }
+   ]
+  },
+  "NxWheelShape": {
+   "base": "NxShape",
+   "methods": [
+    {
+     "name": "~NxShape",
+     "args": 0
+    },
+    {
+     "name": "getActor",
+     "args": 0,
+     "returns": "NxActor"
+    },
+    {
+     "name": "setGroup",
+     "args": 1
+    },
+    {
+     "name": "getGroup",
+     "args": 0
+    },
+    {
+     "name": "getWorldBounds",
+     "args": 1
+    },
+    {
+     "name": "setFlag",
+     "args": 2
+    },
+    {
+     "name": "getFlag",
+     "args": 1
+    },
+    {
+     "name": "setLocalPose",
+     "args": 1
+    },
+    {
+     "name": "setLocalPosition",
+     "args": 1
+    },
+    {
+     "name": "setLocalOrientation",
+     "args": 1
+    },
+    {
+     "name": "getLocalPose",
+     "args": 1
+    },
+    {
+     "name": "getLocalPosition",
+     "args": 1
+    },
+    {
+     "name": "getLocalOrientation",
+     "args": 1
+    },
+    {
+     "name": "setGlobalPose",
+     "args": 1
+    },
+    {
+     "name": "setGlobalPosition",
+     "args": 1
+    },
+    {
+     "name": "setGlobalOrientation",
+     "args": 1
+    },
+    {
+     "name": "getGlobalPose",
+     "args": 1
+    },
+    {
+     "name": "getGlobalPosition",
+     "args": 1
+    },
+    {
+     "name": "getGlobalOrientation",
+     "args": 1
+    },
+    {
+     "name": "setMaterial",
+     "args": 1
+    },
+    {
+     "name": "getMaterial",
+     "args": 0
+    },
+    {
+     "name": "setSkinWidth",
+     "args": 1
+    },
+    {
+     "name": "getSkinWidth",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getType",
+     "args": 0
+    },
+    {
+     "name": "setCCDSkeleton",
+     "args": 1
+    },
+    {
+     "name": "getCCDSkeleton",
+     "args": 0,
+     "returns": "NxCCDSkeleton"
+    },
+    {
+     "name": "setName",
+     "args": 1
+    },
+    {
+     "name": "getName",
+     "args": 0
+    },
+    {
+     "name": "raycast",
+     "args": 5
+    },
+    {
+     "name": "checkOverlapSphere",
+     "args": 1
+    },
+    {
+     "name": "checkOverlapOBB",
+     "args": 1
+    },
+    {
+     "name": "checkOverlapAABB",
+     "args": 1
+    },
+    {
+     "name": "checkOverlapCapsule",
+     "args": 1
+    },
+    {
+     "name": "setGroupsMask",
+     "args": 1
+    },
+    {
+     "name": "getGroupsMask",
+     "args": 1
+    },
+    {
+     "name": "saveToDesc",
+     "args": 1
+    },
+    {
+     "name": "setRadius",
+     "args": 1
+    },
+    {
+     "name": "setSuspensionTravel",
+     "args": 1
+    },
+    {
+     "name": "getRadius",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getSuspensionTravel",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setSuspension",
+     "args": 1
+    },
+    {
+     "name": "setLongitudalTireForceFunction",
+     "args": 1
+    },
+    {
+     "name": "setLateralTireForceFunction",
+     "args": 1
+    },
+    {
+     "name": "setInverseWheelMass",
+     "args": 1
+    },
+    {
+     "name": "setWheelFlags",
+     "args": 1
+    },
+    {
+     "name": "getSuspension",
+     "args": 1
+    },
+    {
+     "name": "getLongitudalTireForceFunction",
+     "args": 0
+    },
+    {
+     "name": "getLateralTireForceFunction",
+     "args": 0
+    },
+    {
+     "name": "getInverseWheelMass",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getWheelFlags",
+     "args": 0
+    },
+    {
+     "name": "setMotorTorque",
+     "args": 1
+    },
+    {
+     "name": "setBrakeTorque",
+     "args": 1
+    },
+    {
+     "name": "setSteerAngle",
+     "args": 1
+    },
+    {
+     "name": "getMotorTorque",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getBrakeTorque",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getSteerAngle",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "setAxleSpeed",
+     "args": 1
+    },
+    {
+     "name": "getAxleSpeed",
+     "args": 0,
+     "returns_float": true
+    },
+    {
+     "name": "getContact",
+     "args": 1,
+     "returns": "NxShape"
+    },
+    {
+     "name": "setUserWheelContactModify",
+     "args": 1
+    },
+    {
+     "name": "getUserWheelContactModify",
+     "args": 0,
+     "returns": "NxUserWheelContactModify"
+    }
+   ]
+  },
+  "NxWheelShapeDesc": {
+   "base": "NxShapeDesc",
+   "methods": [
+    {
+     "name": "~NxWheelShapeDesc",
+     "args": 0
+    }
+   ]
+  }
+ },
+ "functions": {
+  "NxCreatePhysicsSDK": {
+   "args": 5,
+   "returns": "NxPhysicsSDK",
+   "module": "physxloader.dll",
+   "out": []
+  },
+  "NxCreatePhysicsSDKWithID": {
+   "args": 9,
+   "returns": "NxPhysicsSDK",
+   "module": "physxloader.dll",
+   "out": []
+  },
+  "NxGetPhysicsSDKAllocator": {
+   "args": 0,
+   "returns": "NxUserAllocator",
+   "module": "physxloader.dll",
+   "out": []
+  },
+  "NxGetFoundationSDK": {
+   "args": 0,
+   "returns": "NxFoundationSDK",
+   "module": "physxloader.dll",
+   "out": []
+  },
+  "NxGetPhysicsSDK": {
+   "args": 0,
+   "returns": "NxPhysicsSDK",
+   "module": "physxloader.dll",
+   "out": []
+  },
+  "NxGetUtilLib": {
+   "args": 0,
+   "returns": "NxUtilLib",
+   "module": "physxloader.dll",
+   "out": []
+  },
+  "NxGetCookingLib": {
+   "args": 1,
+   "returns": "NxCookingInterface",
+   "module": "physxloader.dll",
+   "out": []
+  },
+  "NxGetCookingLibWithID": {
+   "args": 5,
+   "returns": "NxCookingInterface",
+   "module": "physxloader.dll",
+   "out": []
+  }
+ },
+ "iids": {}
+}

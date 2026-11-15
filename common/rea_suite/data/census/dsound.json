@@ -1,0 +1,1138 @@
+{
+ "schema": "rea-census-slots/1",
+ "sdk": "dsound",
+ "source": {
+  "headers": "mingw-w64",
+  "files": {
+   "dsound.h": "dd4b92cbeacbd172668e9a6dbfec5f8340cb421af40c31a5cab6b323509732d9"
+  }
+ },
+ "conv": "stdcall",
+ "interfaces": {
+  "IDirectSound": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "CreateSoundBuffer",
+     "args": 3,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirectSoundBuffer"
+      }
+     ]
+    },
+    {
+     "name": "GetCaps",
+     "args": 1
+    },
+    {
+     "name": "DuplicateSoundBuffer",
+     "args": 2,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirectSoundBuffer"
+      }
+     ]
+    },
+    {
+     "name": "SetCooperativeLevel",
+     "args": 2
+    },
+    {
+     "name": "Compact",
+     "args": 0
+    },
+    {
+     "name": "GetSpeakerConfig",
+     "args": 1
+    },
+    {
+     "name": "SetSpeakerConfig",
+     "args": 1
+    },
+    {
+     "name": "Initialize",
+     "args": 1
+    }
+   ]
+  },
+  "IDirectSound8": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "CreateSoundBuffer",
+     "args": 3,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirectSoundBuffer"
+      }
+     ]
+    },
+    {
+     "name": "GetCaps",
+     "args": 1
+    },
+    {
+     "name": "DuplicateSoundBuffer",
+     "args": 2,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirectSoundBuffer"
+      }
+     ]
+    },
+    {
+     "name": "SetCooperativeLevel",
+     "args": 2
+    },
+    {
+     "name": "Compact",
+     "args": 0
+    },
+    {
+     "name": "GetSpeakerConfig",
+     "args": 1
+    },
+    {
+     "name": "SetSpeakerConfig",
+     "args": 1
+    },
+    {
+     "name": "Initialize",
+     "args": 1
+    },
+    {
+     "name": "VerifyCertification",
+     "args": 1
+    }
+   ]
+  },
+  "IDirectSoundBuffer": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "GetCaps",
+     "args": 1
+    },
+    {
+     "name": "GetCurrentPosition",
+     "args": 2
+    },
+    {
+     "name": "GetFormat",
+     "args": 3
+    },
+    {
+     "name": "GetVolume",
+     "args": 1
+    },
+    {
+     "name": "GetPan",
+     "args": 1
+    },
+    {
+     "name": "GetFrequency",
+     "args": 1
+    },
+    {
+     "name": "GetStatus",
+     "args": 1
+    },
+    {
+     "name": "Initialize",
+     "args": 2
+    },
+    {
+     "name": "Lock",
+     "args": 7
+    },
+    {
+     "name": "Play",
+     "args": 3
+    },
+    {
+     "name": "SetCurrentPosition",
+     "args": 1
+    },
+    {
+     "name": "SetFormat",
+     "args": 1
+    },
+    {
+     "name": "SetVolume",
+     "args": 1
+    },
+    {
+     "name": "SetPan",
+     "args": 1
+    },
+    {
+     "name": "SetFrequency",
+     "args": 1
+    },
+    {
+     "name": "Stop",
+     "args": 0
+    },
+    {
+     "name": "Unlock",
+     "args": 4
+    },
+    {
+     "name": "Restore",
+     "args": 0
+    }
+   ]
+  },
+  "IDirectSoundBuffer8": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "GetCaps",
+     "args": 1
+    },
+    {
+     "name": "GetCurrentPosition",
+     "args": 2
+    },
+    {
+     "name": "GetFormat",
+     "args": 3
+    },
+    {
+     "name": "GetVolume",
+     "args": 1
+    },
+    {
+     "name": "GetPan",
+     "args": 1
+    },
+    {
+     "name": "GetFrequency",
+     "args": 1
+    },
+    {
+     "name": "GetStatus",
+     "args": 1
+    },
+    {
+     "name": "Initialize",
+     "args": 2
+    },
+    {
+     "name": "Lock",
+     "args": 7
+    },
+    {
+     "name": "Play",
+     "args": 3
+    },
+    {
+     "name": "SetCurrentPosition",
+     "args": 1
+    },
+    {
+     "name": "SetFormat",
+     "args": 1
+    },
+    {
+     "name": "SetVolume",
+     "args": 1
+    },
+    {
+     "name": "SetPan",
+     "args": 1
+    },
+    {
+     "name": "SetFrequency",
+     "args": 1
+    },
+    {
+     "name": "Stop",
+     "args": 0
+    },
+    {
+     "name": "Unlock",
+     "args": 4
+    },
+    {
+     "name": "Restore",
+     "args": 0
+    },
+    {
+     "name": "SetFX",
+     "args": 3
+    },
+    {
+     "name": "AcquireResources",
+     "args": 3
+    },
+    {
+     "name": "GetObjectInPath",
+     "args": 4
+    }
+   ]
+  },
+  "IDirectSoundCapture": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "CreateCaptureBuffer",
+     "args": 3,
+     "out": [
+      {
+       "stack": 2,
+       "interface": "IDirectSoundCaptureBuffer"
+      }
+     ]
+    },
+    {
+     "name": "GetCaps",
+     "args": 1
+    },
+    {
+     "name": "Initialize",
+     "args": 1
+    }
+   ]
+  },
+  "IDirectSoundCaptureBuffer": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "GetCaps",
+     "args": 1
+    },
+    {
+     "name": "GetCurrentPosition",
+     "args": 2
+    },
+    {
+     "name": "GetFormat",
+     "args": 3
+    },
+    {
+     "name": "GetStatus",
+     "args": 1
+    },
+    {
+     "name": "Initialize",
+     "args": 2
+    },
+    {
+     "name": "Lock",
+     "args": 7
+    },
+    {
+     "name": "Start",
+     "args": 1
+    },
+    {
+     "name": "Stop",
+     "args": 0
+    },
+    {
+     "name": "Unlock",
+     "args": 4
+    }
+   ]
+  },
+  "IDirectSoundCaptureBuffer8": {
+   "base": "IDirectSoundCaptureBuffer",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "GetCaps",
+     "args": 1
+    },
+    {
+     "name": "GetCurrentPosition",
+     "args": 2
+    },
+    {
+     "name": "GetFormat",
+     "args": 3
+    },
+    {
+     "name": "GetStatus",
+     "args": 1
+    },
+    {
+     "name": "Initialize",
+     "args": 2
+    },
+    {
+     "name": "Lock",
+     "args": 7
+    },
+    {
+     "name": "Start",
+     "args": 1
+    },
+    {
+     "name": "Stop",
+     "args": 0
+    },
+    {
+     "name": "Unlock",
+     "args": 4
+    },
+    {
+     "name": "GetObjectInPath",
+     "args": 4
+    },
+    {
+     "name": "GetFXStatus",
+     "args": 2
+    }
+   ]
+  },
+  "IDirectSoundNotify": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "SetNotificationPositions",
+     "args": 2
+    }
+   ]
+  },
+  "IDirectSound3DListener": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "GetAllParameters",
+     "args": 1
+    },
+    {
+     "name": "GetDistanceFactor",
+     "args": 1
+    },
+    {
+     "name": "GetDopplerFactor",
+     "args": 1
+    },
+    {
+     "name": "GetOrientation",
+     "args": 2
+    },
+    {
+     "name": "GetPosition",
+     "args": 1
+    },
+    {
+     "name": "GetRolloffFactor",
+     "args": 1
+    },
+    {
+     "name": "GetVelocity",
+     "args": 1
+    },
+    {
+     "name": "SetAllParameters",
+     "args": 2
+    },
+    {
+     "name": "SetDistanceFactor",
+     "args": 2
+    },
+    {
+     "name": "SetDopplerFactor",
+     "args": 2
+    },
+    {
+     "name": "SetOrientation",
+     "args": 7
+    },
+    {
+     "name": "SetPosition",
+     "args": 4
+    },
+    {
+     "name": "SetRolloffFactor",
+     "args": 2
+    },
+    {
+     "name": "SetVelocity",
+     "args": 4
+    },
+    {
+     "name": "CommitDeferredSettings",
+     "args": 0
+    }
+   ]
+  },
+  "IDirectSound3DBuffer": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "GetAllParameters",
+     "args": 1
+    },
+    {
+     "name": "GetConeAngles",
+     "args": 2
+    },
+    {
+     "name": "GetConeOrientation",
+     "args": 1
+    },
+    {
+     "name": "GetConeOutsideVolume",
+     "args": 1
+    },
+    {
+     "name": "GetMaxDistance",
+     "args": 1
+    },
+    {
+     "name": "GetMinDistance",
+     "args": 1
+    },
+    {
+     "name": "GetMode",
+     "args": 1
+    },
+    {
+     "name": "GetPosition",
+     "args": 1
+    },
+    {
+     "name": "GetVelocity",
+     "args": 1
+    },
+    {
+     "name": "SetAllParameters",
+     "args": 2
+    },
+    {
+     "name": "SetConeAngles",
+     "args": 3
+    },
+    {
+     "name": "SetConeOrientation",
+     "args": 4
+    },
+    {
+     "name": "SetConeOutsideVolume",
+     "args": 2
+    },
+    {
+     "name": "SetMaxDistance",
+     "args": 2
+    },
+    {
+     "name": "SetMinDistance",
+     "args": 2
+    },
+    {
+     "name": "SetMode",
+     "args": 2
+    },
+    {
+     "name": "SetPosition",
+     "args": 4
+    },
+    {
+     "name": "SetVelocity",
+     "args": 4
+    }
+   ]
+  },
+  "IKsPropertySet": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "Get",
+     "args": 7
+    },
+    {
+     "name": "Set",
+     "args": 6
+    },
+    {
+     "name": "QuerySupport",
+     "args": 3
+    }
+   ]
+  },
+  "IDirectSoundFullDuplex": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "Initialize",
+     "args": 8,
+     "out": [
+      {
+       "stack": 7,
+       "interface": "IDirectSoundCaptureBuffer8"
+      },
+      {
+       "stack": 8,
+       "interface": "IDirectSoundBuffer8"
+      }
+     ]
+    }
+   ]
+  },
+  "IDirectSoundFXI3DL2Reverb": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "SetAllParameters",
+     "args": 1
+    },
+    {
+     "name": "GetAllParameters",
+     "args": 1
+    },
+    {
+     "name": "SetPreset",
+     "args": 1
+    },
+    {
+     "name": "GetPreset",
+     "args": 1
+    },
+    {
+     "name": "SetQuality",
+     "args": 1
+    },
+    {
+     "name": "GetQuality",
+     "args": 1
+    }
+   ]
+  },
+  "IDirectSoundFXGargle": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "SetAllParameters",
+     "args": 1
+    },
+    {
+     "name": "GetAllParameters",
+     "args": 1
+    }
+   ]
+  },
+  "IDirectSoundFXChorus": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "SetAllParameters",
+     "args": 1
+    },
+    {
+     "name": "GetAllParameters",
+     "args": 1
+    }
+   ]
+  },
+  "IDirectSoundFXFlanger": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "SetAllParameters",
+     "args": 1
+    },
+    {
+     "name": "GetAllParameters",
+     "args": 1
+    }
+   ]
+  },
+  "IDirectSoundFXEcho": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "SetAllParameters",
+     "args": 1
+    },
+    {
+     "name": "GetAllParameters",
+     "args": 1
+    }
+   ]
+  },
+  "IDirectSoundFXDistortion": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "SetAllParameters",
+     "args": 1
+    },
+    {
+     "name": "GetAllParameters",
+     "args": 1
+    }
+   ]
+  },
+  "IDirectSoundFXCompressor": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "SetAllParameters",
+     "args": 1
+    },
+    {
+     "name": "GetAllParameters",
+     "args": 1
+    }
+   ]
+  },
+  "IDirectSoundFXParamEq": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "SetAllParameters",
+     "args": 1
+    },
+    {
+     "name": "GetAllParameters",
+     "args": 1
+    }
+   ]
+  },
+  "IDirectSoundFXWavesReverb": {
+   "base": "IUnknown",
+   "methods": [
+    {
+     "name": "QueryInterface",
+     "args": 2,
+     "riid": {
+      "iid": 1,
+      "out": 2
+     }
+    },
+    {
+     "name": "AddRef",
+     "args": 0
+    },
+    {
+     "name": "Release",
+     "args": 0
+    },
+    {
+     "name": "SetAllParameters",
+     "args": 1
+    },
+    {
+     "name": "GetAllParameters",
+     "args": 1
+    }
+   ]
+  }
+ },
+ "functions": {
+  "DirectSoundCreate": {
+   "args": 3,
+   "out": [
+    {
+     "stack": 1,
+     "interface": "IDirectSound"
+    }
+   ],
+   "module": "dsound.dll",
+   "returns": null
+  },
+  "DirectSoundCaptureCreate": {
+   "args": 3,
+   "out": [
+    {
+     "stack": 1,
+     "interface": "IDirectSoundCapture"
+    }
+   ],
+   "module": "dsound.dll",
+   "returns": null
+  },
+  "DirectSoundCreate8": {
+   "args": 3,
+   "out": [
+    {
+     "stack": 1,
+     "interface": "IDirectSound8"
+    }
+   ],
+   "module": "dsound.dll",
+   "returns": null
+  },
+  "DirectSoundCaptureCreate8": {
+   "args": 3,
+   "out": [
+    {
+     "stack": 1,
+     "interface": "IDirectSoundCapture"
+    }
+   ],
+   "module": "dsound.dll",
+   "returns": null
+  },
+  "DirectSoundFullDuplexCreate": {
+   "args": 10,
+   "out": [
+    {
+     "stack": 6,
+     "interface": "IDirectSoundFullDuplex"
+    },
+    {
+     "stack": 7,
+     "interface": "IDirectSoundCaptureBuffer8"
+    },
+    {
+     "stack": 8,
+     "interface": "IDirectSoundBuffer8"
+    }
+   ],
+   "module": "dsound.dll",
+   "returns": null
+  }
+ },
+ "iids": {
+  "IDirectSound": "83fa9a278149ce11a5210020af0be560",
+  "IDirectSound8": "937e0ac595f334489ef67fa99de50966",
+  "IDirectSoundBuffer": "85fa9a278149ce11a5210020af0be560",
+  "IDirectSoundBuffer8": "49a425682475824d920f50e36ab3ab1e",
+  "IDirectSoundNotify": "830721b0cd89d011af0800a0c925cd16",
+  "IDirectSound3DListener": "84fa9a278149ce11a5210020af0be560",
+  "IDirectSound3DBuffer": "86fa9a278149ce11a5210020af0be560",
+  "IDirectSoundCapture": "810721b0cd89d011af0800a0c925cd16",
+  "IDirectSoundCaptureBuffer": "820721b0cd89d011af0800a0c925cd16",
+  "IDirectSoundCaptureBuffer8": "f40d9900bb0d7248833e6d303e80aeb6",
+  "IDirectSoundFullDuplex": "7a4ccbedabda1642a42e6c50596ddc1d",
+  "IDirectSoundFXI3DL2Reverb": "6a6a164b660df34380e3ee6280dee1a4",
+  "IDirectSoundFXGargle": "52f316d622d6ce11aac50020af0b99a3",
+  "IDirectSoundFXChorus": "e34208885f14e643a934a71806e50547",
+  "IDirectSoundFXFlanger": "78983e90922c72409b2cea68f5396783",
+  "IDirectSoundFXEcho": "df8ed28bdb50924ea2bd445488d1ed42",
+  "IDirectSoundFXDistortion": "2643cf8e5f458b4dbda98d5d3e9e3e0b",
+  "IDirectSoundFXCompressor": "5411bd4bf6622c4ea15cd3b6c417f7a0",
+  "IDirectSoundFXParamEq": "fea93cc090fe0442807882334cd177da",
+  "IDirectSoundFXWavesReverb": "3a8c8546c60de345b760d4eef16cb325",
+  "IKsPropertySet": "30acef315c51d011a9aa00aa0061be93"
+ }
+}
