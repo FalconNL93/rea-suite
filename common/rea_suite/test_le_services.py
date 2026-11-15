@@ -109,6 +109,8 @@ def program() -> tuple[bytes, list[bytes]]:
     put(0xB0, "b409 eb00 cd21 c3")  # mov ah,9; jmp 0xB4; int 21h; ret
     # 0xC0: a table of `int n; ret` for n = 0..9, reached by the gap pass
     put(0xC0, "".join(f"cd{n:02x}c3" for n in range(10)))
+    # 0xE0: text after the table's last ret; its letters decode as ins/outs (l = insb, o = outsd)
+    code[0xE0:0xF0] = b"loading levels\0\0"
     fixups = (
         fixup_selector(0x2F, 2)
         + fixup_internal(0x40, 1, 0xA0)
@@ -162,6 +164,19 @@ class LeServicesTest(unittest.TestCase):
         self.assertEqual(ints[0x62]["found_by"], "gap")  # dead code
         self.assertEqual(ints[0x84]["function"], CODE + 0x80)
         self.assertTrue(ints[0x84]["function_known"])
+
+    def test_a_gap_site_says_how_far_to_trust_it(self):
+        ports, ints = self.sites("ports"), self.sites("interrupts")
+        self.assertEqual(ports[0x12]["confidence"], "high")  # reached by flow
+        self.assertEqual(
+            (ints[0x62]["confidence"], ints[0x62]["doubts"]), ("medium", [])
+        )  # dead code
+        text = [p for at, p in ports.items() if at >= 0xE0]  # letters of a string after a ret
+        self.assertTrue(text)
+        for site in text:
+            self.assertEqual(
+                (site["confidence"], site["doubts"]), ("low", ["in_text", "after_jump"])
+            )
 
     def test_a_pointer_in_code_is_not_decoded(self):
         code = le_services.decode(le.read_module(self.exe))

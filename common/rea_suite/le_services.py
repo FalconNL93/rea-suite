@@ -31,7 +31,7 @@ a heuristic, since LE has no function table.
 from __future__ import annotations
 
 import bisect
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from capstone import CS_ARCH_X86, CS_MODE_16, CS_MODE_32, Cs, CsError
 from capstone.x86 import X86_OP_IMM, X86_OP_MEM, X86_OP_REG
@@ -358,6 +358,10 @@ class Code:
     fixups: dict  # site address -> le.Fixup, in code objects
     objects: dict  # object number -> (base, end, bits)
     origin: dict  # address -> "flow" or "gap", how decoding reached it
+    data: bytes = b""  # the image's bytes, from `base`
+    base: int = 0
+    stretch: dict = field(default_factory=dict)  # a gap-decoded address -> where its stretch began
+    after_jump: set = field(default_factory=set)  # stretches that begin right after a jmp or ret
 
     def function(self, address: int) -> int | None:
         i = bisect.bisect_right(self.functions, address)
@@ -444,11 +448,12 @@ def decode(module) -> Code:
         engines[bits] = cs
     fixups = fixup_sites(module, image.bases)
     start = seeds(module, image.bases, objects)
-    code = Code({}, {}, set(start), [], fixups, spans, {})
+    code = Code({}, {}, set(start), [], fixups, spans, {}, bytes(image.data), image.base)
     calls: set[int] = set()
     covered = bytearray(len(image.data))  # 1 where a decoded instruction lies
+    ends: dict[int, object] = {}  # an instruction's end address -> it
 
-    def walk(work: list[int], origin: str) -> None:
+    def walk(work: list[int], origin: str, stretch: int | None = None) -> None:
         while work:
             address = work.pop()
             while address not in code.insns:
@@ -464,7 +469,10 @@ def decode(module) -> Code:
                 if insn is None or not fixups_fit(insn, fixups):
                     break
                 code.insns[address] = insn
+                ends[address + insn.size] = insn
                 code.origin[address] = origin
+                if stretch is not None:
+                    code.stretch[address] = stretch
                 covered[at : at + insn.size] = b"\1" * insn.size
                 jumps = GRP_JUMP in insn.groups or GRP_CALL in insn.groups
                 target = direct_target(insn) if jumps else None
@@ -496,7 +504,13 @@ def decode(module) -> Code:
                 continue
             address = image.base + p
             code.labels.add(address)
-            walk([address], "gap")
+            back = p - 1
+            while back >= base - image.base and image.data[back] in PADDING:
+                back -= 1
+            ending = ends.get(image.base + back + 1)
+            if ending is not None and ends_flow(ending):
+                code.after_jump.add(address)
+            walk([address], "gap", address)
             if address in code.insns:
                 gap_starts.add(address)
             elif (end := pointer_end(fixups, address)) is not None:  # a pointer: step over it
@@ -694,7 +708,33 @@ def site(code: Code, insn) -> dict:
         "function_known": function is not None,
         "instruction": f"{insn.mnemonic} {insn.op_str}".strip(),
         "found_by": code.origin[insn.address],
+        **confidence(code, insn),
     }
+
+
+TEXT = frozenset(range(0x20, 0x7F)) | {0x09, 0x0A, 0x0D}
+
+
+def confidence(code: Code, insn) -> dict:
+    """How far to trust a site: `high` when decoding reached it by flow; for a gap-decoded one
+    `low` inside a printable run of 8 bytes or more (Theme Park's seven ins/outs sites were in
+    strings), else `medium`; with the reasons (`doubts`): `in_text`, and `after_jump` when
+    its stretch begins right after an unconditional jump or return (what follows one is often data)."""
+    if code.origin.get(insn.address) != "gap":
+        return {"confidence": "high"}
+    doubts = []
+    at = insn.address - code.base
+    start, end = at, at + insn.size
+    if all(b in TEXT for b in code.data[start:end]):
+        while start > 0 and code.data[start - 1] in TEXT:
+            start -= 1
+        while end < len(code.data) and code.data[end] in TEXT:
+            end += 1
+        if end - start >= 8:  # a printable run of 8 bytes or more holds the whole instruction
+            doubts.append("in_text")
+    if code.stretch.get(insn.address) in code.after_jump:
+        doubts.append("after_jump")
+    return {"confidence": "low" if "in_text" in doubts else "medium", "doubts": doubts}
 
 
 def hexbyte(value: int | None) -> str:
@@ -945,17 +985,25 @@ def summarize(interrupts, ports, loads, far) -> dict:
         "ports": [by_port[k] for k in sorted(by_port)],
         "segment_loads": dict(sorted(registers.items())),
         "far_transfers": far_kinds,
+        # a site in text (confidence low) is counted apart: it is most likely no instruction
         "unresolved": {
-            "interrupts": sum(not d["resolved"] for d in interrupts),
-            "ports": sum(not d["resolved"] for d in ports),
-            "segment_loads": sum(not d["resolved"] for d in loads),
+            "interrupts": sum(
+                not d["resolved"] and d.get("confidence") != "low" for d in interrupts
+            ),
+            "ports": sum(not d["resolved"] and d.get("confidence") != "low" for d in ports),
+            "segment_loads": sum(not d["resolved"] and d.get("confidence") != "low" for d in loads),
+        },
+        "low_confidence": {
+            "interrupts": sum(d.get("confidence") == "low" for d in interrupts),
+            "ports": sum(d.get("confidence") == "low" for d in ports),
+            "segment_loads": sum(d.get("confidence") == "low" for d in loads),
         },
     }
 
 
 def where(d: dict) -> str:
     function = f"in 0x{d['function']:08x}" if d["function_known"] else "in ?"
-    gap = "gap " if d["found_by"] == "gap" else "    "
+    gap = {"high": "    ", "medium": "gap ", "low": "text"}[d.get("confidence", "high")]
     return f"0x{d['address']:08x} {gap} {function:13} {d['instruction']:34}"
 
 
@@ -1026,3 +1074,9 @@ def print_summary(s: dict) -> None:
         f"unresolved  {u['interrupts']} interrupts, {u['ports']} ports, "
         f"{u['segment_loads']} segment loads"
     )
+    low = s.get("low_confidence", {})
+    if any(low.values()):
+        print(
+            f"in text     {low['interrupts']} interrupts, {low['ports']} ports, "
+            f"{low['segment_loads']} segment loads (gap-decoded inside a printable run: marked text)"
+        )

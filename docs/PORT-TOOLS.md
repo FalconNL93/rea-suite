@@ -567,7 +567,13 @@ rea-suite le services game/MAIN.EXE [--json]   # INT n, DPMI, I/O ports, segment
     instruction's displacement or immediate (a jump or function table is pointers, not code). Then
     each stretch nothing reached is decoded the same way from its first byte past nop padding:
     functions called only through a computed pointer, dead code and data that happens to decode.
-    Every site says how it was reached (`found_by` `flow` or `gap`, `gap` in the text). A linear
+    Every site says how it was reached (`found_by` `flow` or `gap`) and how far to trust it
+    (`confidence`): `high` by flow; for a gap-decoded site `low` when a printable run of 8 bytes or
+    more holds it (text decoded as code: `text` in the text output) and `medium` otherwise, with the
+    reasons in `doubts` (`in_text`, and `after_jump` when its stretch begins right after an
+    unconditional jump or return). Low sites are left out of the unresolved counts and counted
+    apart (`low_confidence`). On Theme Park, six of its seven `ins`/`outs` sites are `low`; the
+    seventh is a table of words that a branch target reaches by flow, which no mark covers. A linear
     sweep or a byte search for `CD ??` finds `int` in data and inside other instructions.
   - **Interrupts.** Every `int n` with AH, AL, BH, BL set before it in its basic block, the function
     (AH, or AX for DPMI 31h, mouse 33h, multiplex 2Fh, VDS 4Bh) and the subfunction where one picks
