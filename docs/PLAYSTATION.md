@@ -16,6 +16,7 @@ components selected. Selection runs setup.
 | Tool | Purpose | Component | Linux x86_64 / macOS ARM / Windows x64 |
 |---|---|---|---|
 | dumpsxiso / mkpsxiso | Extract 2352-byte CD BIN/CUE; keep an XML layout to rebuild the CD | playstation | release binaries |
+| vgmstream (`vgmstream-cli`) | PS1/PS2 audio (VAG, VAB, XA, and middleware streams) to WAV | playstation | release binaries |
 | dumps2iso / mkps2iso | Extract a PS2 DVD (DVD-5/9, UDF) into files and an XML of its layout; rebuild it with every file at its original LBA | playstation | release binaries |
 | chdman | CHD images to CUE/BIN (CD) or ISO (DVD) | playstation | apt `mame-tools`, brew `rom-tools`; Windows: `chdman.exe` alone from MAME's release (`mame*b_x64.exe`, a 7-Zip self-extractor; tools.yml `mame-chdman`, checked against GitHub's digest), since MAME's winget installer needs an install location |
 | ghidra_psx_ldr | PS-X EXE loader, PSX processor with GTE, PsyQ library signatures | playstation | exact-version Ghidra extension |

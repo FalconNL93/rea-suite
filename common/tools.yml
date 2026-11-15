@@ -276,6 +276,22 @@ tools:
 
   # Per-function match of a decompilation's objects against the original (MIPS, PPC, x86,
   # ARM); the CLI for scripts and CI, the GUI to work in (component decomp).
+  # Game audio to WAV: DSP ADPCM (.dsp, .brstm, .bcstm), PS VAG/VAB, and thousands more formats;
+  # optional gamecube and playstation components. ISC-style license.
+  vgmstream:
+    github: vgmstream/vgmstream
+    version: latest
+    assets:
+      linux: '^vgmstream-linux\.zip$'
+      macos: '^vgmstream-mac\.zip$'
+      windows: '^vgmstream-win64\.zip$'
+    bin:
+      linux: &vgmstream-unix
+        vgmstream-cli: vgmstream-cli
+      macos: *vgmstream-unix
+      windows:
+        vgmstream-cli: vgmstream-cli.exe
+
   objdiff:
     github: encounter/objdiff
     version: latest

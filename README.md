@@ -517,6 +517,7 @@ been run on macOS arm64 and Linux x86_64 (WSL2, 2026-11-03); Windows execution r
 | PCSX-Redux (`pcsx-redux`) | PS1 emulator with a debugger, GDB server, Lua and a web API; starts without a Sony BIOS (component `playstation`) | tools.yml, distrib.app builds |
 | PCSX2 (`pcsx2`) | PS2 emulator with its EE/IOP debugger and PINE (component `playstation`) | tools.yml, release binaries |
 | splat (`splat`) | Split a PS1/PS2 (and N64, PSP) executable into assembly, data and a linker script for a decompilation (component `decomp`) | PyPI `splat64[mips]`, own uv environment |
+| vgmstream (`vgmstream-cli`) | Game audio to WAV: DSP ADPCM (`.dsp`, `.brstm`), PS VAG/VAB and thousands of other formats (components `gamecube`, `playstation`) | tools.yml, release binaries |
 | objdiff (`objdiff`, `objdiff-cli`) | Match a decompilation's compiled objects against the original, function by function (component `decomp`) | tools.yml, release binaries |
 | Dolphin (`dolphin`; Linux `dolphin-emu`, `dolphin-emu-nogui`, `dolphin-tool`) | GameCube and Wii emulator with a debugger, a GDB stub (`-C Dolphin.General.GDBPort=2345`) and DolphinTool; headless on Linux (component `gamecube`; [route](docs/GAMECUBE-WII.md)) | apt `dolphin-emu` on Linux; tools.yml, release 2609b on macOS and Windows |
 | dtk (decomp-toolkit) | Split a GameCube or Wii DOL and its RELs into objects for a decompilation, with Metrowerks and SDK signatures; disc images in every format; RARC, U8, Yaz0 (component `gamecube`) | tools.yml, release binaries |

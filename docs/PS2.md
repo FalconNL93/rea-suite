@@ -119,7 +119,8 @@ images for code that is not in the ELF.
 - Game archives and formats need a parser of the port's own: ImHex patterns, QuickBMS scripts where
   one exists ([GAME-ARCHIVES.md](GAME-ARCHIVES.md)), and the code that reads them (step 3).
 - Video is usually PSS (MPEG-2 with ADPCM audio) or a middleware format; audio is VAG/VAB (SPU2 ADPCM).
-  Neither has a converter in the suite; ffmpeg reads many PSS files.
+  `vgmstream-cli -o out.wav file.vag` converts the audio and most middleware streams (not yet
+  checked on a PS2 file); ffmpeg reads many PSS files.
 
 ## 6. Decompilation: splat and objdiff
 

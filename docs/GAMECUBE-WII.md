@@ -175,8 +175,10 @@ gdb-multiarch -ex 'set architecture powerpc:750' -ex 'target remote 127.0.0.1:23
 
 - Archives: RARC and U8 (`dtk rarc`, `dtk u8`), Yaz0 and Yay0 compression (`dtk yaz0`, `dtk yay0`), Wii
   WADs (`dtk wad`). Game formats need a parser of the port's own ([GAME-ARCHIVES.md](GAME-ARCHIVES.md)).
-- Audio is DSP ADPCM (`.dsp`, `.brstm` on the Wii) or streamed ADP; textures are GX formats (TPL, BTI).
-  The suite has no converter for either yet.
+- Audio is DSP ADPCM (`.dsp`, `.brstm` on the Wii) or streamed ADP: `vgmstream-cli -o out.wav
+  file.brstm` converts it (`-m` prints the stream's format, rate and loop points without converting;
+  checked on a synthetic `.dsp`, whose decoded samples match the ADPCM formula, 2026-11-15).
+  Textures are GX formats (TPL, BTI).
 
 ## 6. Decompilation: dtk and objdiff
 
@@ -251,7 +253,7 @@ What a recompilation of a GameCube or Wii game needs, whichever recompiler is us
 ## Still missing
 
 - A run of `rea-suite oracle` against Dolphin with a real game.
-- DSP ADPCM and GX texture converters.
+- A GX texture converter (TPL, BTI).
 
 ## Sources (read 2026-11-13)
 

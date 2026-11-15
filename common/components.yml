@@ -79,13 +79,13 @@ components:
     tools: [dosbox-x]
 
   playstation:
-    description: PS1/PS2 - disc preparation (dumpsxiso/mkpsxiso, dumps2iso/mkps2iso, chdman), PS1 media (jPSXdec), the PCSX-Redux and PCSX2 emulators with their debuggers, and the exact-version PSX and Emotion Engine Ghidra loaders
+    description: PS1/PS2 - disc preparation (dumpsxiso/mkpsxiso, dumps2iso/mkps2iso, chdman), PS1 media (jPSXdec), game audio (vgmstream), the PCSX-Redux and PCSX2 emulators with their debuggers, and the exact-version PSX and Emotion Engine Ghidra loaders
     # chdman: CHD images (Redump sets are often CHD). Windows has no package with chdman
     # on PATH (MAME's winget installer needs a location): mame-chdman takes it from MAME's
     # release (tools.yml); see docs/PLAYSTATION.md.
     apt: [mame-tools]
     brew: [rom-tools]
-    tools: [mkpsxiso, mkps2iso, jpsxdec, pcsx-redux, pcsx2, mame-chdman]
+    tools: [mkpsxiso, mkps2iso, jpsxdec, pcsx-redux, pcsx2, mame-chdman, vgmstream]
 
   decomp:
     description: Decompilation projects - splat (split a MIPS executable into assembly and data; PS1, PS2, N64, PSP) and objdiff (match compiled objects against the original, function by function)
@@ -109,11 +109,11 @@ components:
     tools: [xemu, extract-xiso]
 
   gamecube:
-    description: GameCube and Wii - Dolphin with its GDB stub and DolphinTool (Linux from the distribution), dtk (decomp-toolkit; it also reads and extracts disc images in every format), nod-rs for rea-suite gamecube's RVZ/WBFS/WIA images, and the GameCube loader for Ghidra (built from source)
+    description: GameCube and Wii - Dolphin with its GDB stub and DolphinTool (Linux from the distribution), dtk (decomp-toolkit; it also reads and extracts disc images in every format), nod-rs for rea-suite gamecube's RVZ/WBFS/WIA images, vgmstream for DSP ADPCM audio, and the GameCube loader for Ghidra (built from source)
     # The Debian and Ubuntu name (Ubuntu 26.04 carries 2512); Fedora and Arch names not checked.
     apt: [dolphin-emu]
     uv-groups: [gamecube]
-    tools: [dolphin, dtk]
+    tools: [dolphin, dtk, vgmstream]
 
   psp:
     description: PSP - PPSSPP with its WebSocket debugger, its source's HLE tables to name NIDs (rea-suite psp), and ghidra-allegrex for Ghidra, which REA's PSP profile uses
