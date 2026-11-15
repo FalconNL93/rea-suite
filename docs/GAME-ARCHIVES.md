@@ -55,7 +55,10 @@ rea-suite fastfile extract zone/english/common_mp.ff --out work/cod4/common_mp
 The asset list names every asset's type; the reader finds the simple ones by their shape in the
 stream (raw files with their bytes, string tables as CSV, localized strings into `localize.json`) and
 says when it found fewer than the list holds. Images, models, materials, menus and the other types are
-counted, not read: walking to their data means reading every asset before them, of every type.
+counted, not read: walking to their data means reading every asset before them, of every type. When
+fewer are found than listed, `list --debug` shows where each found one lies and the gaps between
+them, with their first bytes in hex: the list keeps a type in runs, so a gap inside a run is where
+the unfound one lies, and its bytes show what shape it has.
 Names come from the file: an extracted path keeps to the output folder (`..` and empty parts dropped,
 unsafe characters as `%XX`). IW3 on the Xbox 360 (version 1, big-endian), signed fastfiles
 (`IWff0100`), IW4 and later are recognized and refused by name, the places a second reader goes.

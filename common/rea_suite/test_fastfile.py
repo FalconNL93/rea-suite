@@ -120,6 +120,22 @@ class Reading(unittest.TestCase):
             )
             self.assertFalse((Path(tmp) / "escape.cfg").exists())
 
+    def test_debug_shows_the_gap_where_an_asset_was_not_found(self) -> None:
+        hidden = list(SAMPLE)
+        hidden.insert(
+            2, ("rawfile", u32(0) + rawfile("hidden.gsc", b"x")[4:])
+        )  # a name pointer of 0
+        lines = fastfile.debug_lines(fastfile.read(fastfile_bytes(zone(hidden))))
+        self.assertIn("rawfile: 3 found of 4 listed, in 2 run(s) of the list", lines)
+        gap = next(
+            i
+            for i, line in enumerate(lines)
+            if "between maps/mp/_load.gsc and ../../escape.cfg" in line
+        )
+        self.assertTrue(
+            lines[gap + 1].strip().startswith("00 00 00 00 01 00 00 00 ff ff ff ff 68 69")
+        )
+
     def test_other_fastfiles_are_named_and_refused(self) -> None:
         z = zone(SAMPLE)
         with self.assertRaisesRegex(fastfile.FastfileError, "xbox360"):

@@ -36,6 +36,7 @@ files (the opt-in test reads them, REA_FASTFILE_SAMPLE).
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import re
 import struct
@@ -74,6 +75,7 @@ class Found:
     type: str
     name: str
     offset: int  # in the inflated zone
+    end: int = 0  # just past it
     data: bytes = b""  # a raw file's bytes
     rows: list[list[str]] = field(default_factory=list)  # a string table's
     value: str = ""  # a localized string's
@@ -94,6 +96,7 @@ class Zone:
     data_offset: int  # where the assets' data starts in the zone
     found: list[Found]
     zone_bytes: int
+    zone: bytes = field(default=b"", repr=False)  # the inflated zone, for --debug
 
     def counts(self) -> Counter:
         return Counter(self.assets)
@@ -195,7 +198,7 @@ def read_iw3_pc(data: bytes, fmt: Format) -> Zone:
     wanted = Counter(assets)
     found = scan(zone, at, wanted)
     return Zone(fmt.game, fmt.platform, fmt.magic.decode(), fmt.version, len(data) - 12, size, external,
-                blocks, strings, assets, at, found, len(zone))  # fmt: skip
+                blocks, strings, assets, at, found, len(zone), zone)  # fmt: skip
 
 
 FORMATS: tuple[Format, ...] = (
@@ -253,6 +256,7 @@ def scan(zone: bytes, start: int, wanted: Counter) -> list[Found]:
             hit = localize(zone, at)
         if hit is not None:
             item, end = hit
+            item.end = end
             found.append(item)
             at = zone.find(FF4, end)
         else:
@@ -348,6 +352,35 @@ def extract(zone: Zone, root: Path, types: set[str]) -> dict[str, int]:
     return dict(written)
 
 
+def runs(kinds: list[str], kind: str) -> int:
+    """How many runs of consecutive entries of kind the asset list has."""
+    return sum(1 for i, k in enumerate(kinds) if k == kind and (i == 0 or kinds[i - 1] != kind))
+
+
+def debug_lines(zone: Zone, dump: int = 64) -> list[str]:
+    """Where each found asset of the read types lies, and the gaps between consecutive ones: the
+    list holds a type in `runs` runs, so a type has runs - 1 gaps where other assets lie between,
+    and any more mark one it did not find; the gap's first bytes show its shape."""
+    lines = []
+    for kind in EXTRACTED:
+        items = sorted((f for f in zone.found if f.type == kind), key=lambda f: f.offset)
+        listed = zone.counts()[kind]
+        if not listed:
+            continue
+        lines.append(
+            f"{kind}: {len(items)} found of {listed} listed, in {runs(zone.assets, kind)} run(s) of the list"
+        )
+        for f in items:
+            lines.append(f"  {f.offset:#010x}-{f.end:#010x}  {printable(f.name)}")
+        gaps = [(b.offset - a.end, a, b) for a, b in itertools.pairwise(items) if b.offset > a.end]
+        for size, a, b in sorted(gaps, key=lambda g: g[0]):
+            lines.append(
+                f"  gap of {size:#x} bytes at {a.end:#010x}, between {printable(a.name)} and {printable(b.name)}:"
+            )
+            lines.append("    " + zone.zone[a.end : a.end + min(size, dump)].hex(" "))
+    return lines
+
+
 def csv_cell(value: str) -> str:
     return '"' + value.replace('"', '""') + '"' if any(c in value for c in ',"\n') else value
 
@@ -381,6 +414,12 @@ def main(argv: list[str] | None = None) -> int:
         c = sub.add_parser(name, help=help)
         c.add_argument("file", type=Path)
         c.add_argument("--json", action="store_true")
+        if name == "list":
+            c.add_argument(
+                "--debug",
+                action="store_true",
+                help="offsets, and the gaps where an unfound asset may lie, in hex",
+            )
         if name == "extract":
             c.add_argument("--out", type=Path, required=True)
             c.add_argument(
@@ -395,8 +434,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "info":
         print(json.dumps(zone.as_json(), indent=1) if args.json else "\n".join(info_lines(zone)))
     elif args.command == "list":
-        rows = [{"type": f.type, "name": f.name, "offset": f"{f.offset:#x}"} for f in zone.found]
-        if args.json:
+        rows = [
+            {"type": f.type, "name": f.name, "offset": f"{f.offset:#x}", "end": f"{f.end:#x}"}
+            for f in zone.found
+        ]
+        if args.debug:
+            print("\n".join(debug_lines(zone)))
+        elif args.json:
             print(json.dumps(rows, indent=1))
         else:
             for row in rows:
