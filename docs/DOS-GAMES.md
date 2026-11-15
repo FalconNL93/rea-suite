@@ -222,6 +222,16 @@ rea-suite dosbox compare work/dosbox/<run>/regions.jsonl <port's sequence> --reg
   against the port's own log of its chip's writes, from each side's first key-on
   ([PORT-TOOLS.md](PORT-TOOLS.md#music-opl-register-writes---opl-log-compare-opl)).
 
+- **Port I/O has no run-time log; take it in two halves.** DOSBox-X's debugger has no I/O
+  breakpoints, and its port log is a compile-time option that leaves out the VGA DAC (3C8h/3C9h) by
+  design, so the runner logs no `in`/`out` (checked in DOSBox-X v2026.10.01's source, 2026-11-15).
+  `rea-suite le services` lists every `in`/`out` site of the program with its port (section 4,
+  with a confidence per site), which is what the port's layer must answer; what the writes do is
+  read in memory at sync points (`--regions`): the palette a game uploads to the DAC is a table in
+  its own data first, the PIT's divisor a variable the timer code keeps, so a region over them
+  compares with the port's. Code breakpoints on the `in`/`out` sites would log the values too
+  (a stop each, about 15 ms); that is for a value no region shows, and not built yet.
+
 *Feeds:* the object bases the loader uses, the first-frame call list (which bounds the core's
 first work and the layer's first services), and the oracle: region sequences the port's game tests
 are compared against.
