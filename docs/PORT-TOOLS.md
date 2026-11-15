@@ -1412,6 +1412,19 @@ keyboard, the mouse and the front window. On the shared development machine run 
 `heavy run --display` where `heavy` exists (ci-images): the report says whether the display lock
 was held (`display_lock`, from `FALCON_HEAVY_DISPLAY_PID`), and nothing depends on it.
 
+### Two checks a script should make
+
+- **A state value at a later tick catches a stall.** Script a few clicks, then check a value the
+  game only reaches when it went on (Theme Park checks the park's cash). A hang at start-up makes
+  the clicks land on the wrong screen, and the check fails where a capture would only look odd.
+  Theme Park found a 33 s audio open this way: with no audio device, SDL tried PipeWire with no
+  timeout (Theme Park, 2026-11-13). Keep sound on in scripted runs, so they cover the audio path.
+- **Aim a click at the code's hit area, not at the picture.** Theme Park's save confirmation
+  answers to a box right of where its tick is drawn, so clicks aimed at the drawing missed and
+  the save looked broken. Read the box from the routine that tests the click (REA, or `pe disasm`
+  on the hit test), and keep the coordinate in the script with a note of where it came from
+  (Theme Park, 2026-11-14).
+
 ### What it replaces in the Alan Wake ports
 
 | Port script | Now |
