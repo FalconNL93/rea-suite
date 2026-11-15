@@ -850,6 +850,40 @@ in about 3 minutes, no errors. Steps 3 and 4 were not run here.
 Keep the `.fidb` and the project in `work/` (ignored): they are derived from Microsoft's
 libraries and do not go into git.
 
+### FunctionID for Watcom C
+
+A DOS game built with Watcom C (most DOS/4GW games) links Watcom's runtime statically:
+`cstrt386`, the heap, `int386x`, stdio. Ghidra ships no Watcom set. A set has to come from the
+**same Watcom version** the game was built with: FunctionID hashes whole function bodies, and
+the runtime changed between releases. Measured 2026-11-15: a set built from Open Watcom 2.0's
+`clib3r`, `math3r`, `math387r` and `plib3r` (1,794 functions) named 1 of Theme Park's 1,002
+functions (`__STOSD`; the game names its runtime "WATCOM C/C++32 Run-Time system ... 1988-1993",
+Watcom 9.5 or 10.0). So build it from your own copy of that version's `lib386` (commercial, like
+VC6's libraries; keep it out of git), in `work/fid/`, under `heavy run` on the shared machine:
+
+```sh
+wat=~/Dev/libs/watcom10/lib386 fid=work/fid h="$GHIDRA_INSTALL_DIR/support/analyzeHeadless"
+s=common/ghidra_scripts folder=Watcom/10.0/3r
+for lib in "$wat"/dos/clib3r.lib "$wat"/math3r.lib "$wat"/math387r.lib "$wat"/plib3r.lib; do
+  "$h" "$fid/proj" "watcom/$folder" -import "$lib" -recursive -noanalysis > "$fid/import-$(basename "$lib").log" 2>&1
+done
+"$h" "$fid/proj" "watcom/$folder" -process -recursive > "$fid/analyze.log" 2>&1
+# BuildFid needs one program to run beside: any member of clib3r.lib (its name is in the import log)
+"$h" "$fid/proj" "watcom/$folder/clib3r.lib" -process <a member, say wctype.c> -noanalysis -readOnly \
+  -scriptPath "$s" -postScript BuildFid.java "$PWD/$fid/watcom10-3r.fidb" "/$folder" Watcom 10.0 3r \
+  x86:LE:32:default > "$fid/build.log" 2>&1
+```
+
+Ghidra imports Watcom's OMF libraries member by member (`-recursive`: 2,332 imports from Open
+Watcom 2.0's `clib3r.lib`). `common/ghidra_scripts/BuildFid.java` is
+`CreateMultipleLibraries.java` with arguments instead of dialogs (headless), and it does not leave
+the set attached to every later analysis. Use the set for one analysis with
+`common/ghidra_scripts/AttachFid.java`:
+`-preScript AttachFid.java attach <set> ... -postScript AttachFid.java detach <set>`. `3r` is
+Watcom's register calling convention, the default for 32-bit code; a game built with `-3s` wants
+the `...3s` libraries. The suite installs no Watcom: Open Watcom 2.0 was tried as the source and
+gave the result above. Keep the `.fidb` in `work/` too: it is derived from Watcom's libraries.
+
 ## Linting and testing the suite's own code
 
 `.githooks/lint.sh` runs ruff (format and lint) on the Python, shellcheck on every shell
