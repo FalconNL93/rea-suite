@@ -10,7 +10,7 @@
   "dependencies": {
     "@electron/asar": "^4.3.1",
     "apk-mitm": "^1.3.0",
-    "rea-agents": "^6.8.0",
+    "rea-agents": "^6.9.0",
     "webcrack": "^2.16.0"
   },
   "allowScripts": {
