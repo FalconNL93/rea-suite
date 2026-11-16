@@ -12,7 +12,9 @@ A table is a run of entries, each a little-endian 32-bit LBA and size at the sta
 rounded up to a sector. Every entry of a run names a disc file with the same constant offset
 between its stored LBA and the file's (a game may store LBA - 23, or count from the pregap): the
 offset is reported, within --max-bias of zero. Up to --max-gap entries in a row may name no file
-(an empty slot, a file the listing lacks). MSF (BCD) positions and 16-bit fields are not matched.
+(an empty slot, a file the listing lacks). A run where one file is named by more than half of the
+entries that name a file is dropped: a table names distinct files. MSF (BCD) positions and 16-bit
+fields are not matched.
 
 Checked on 2026-11-16 against a synthetic disc and executable (test_psx_lba.py); the case it was
 written for, Duke Nukem: Time to Kill, keeps 453 (LBA - 23, size) pairs at 0x800BCC00.
@@ -37,6 +39,7 @@ STRIDES = (8, 12, 16)
 UNITS = ("bytes", "sectors", "padded")
 ORDERS = ("lba,size", "size,lba")
 DENSITY = 6  # tenths of a table's entries that must name a file
+SAME_FILE = 5  # tenths of the naming entries one file may be named by, at most
 
 
 def program(path: Path, base: int | None) -> tuple[int, bytes]:
@@ -65,6 +68,15 @@ class Table:
     @property
     def matched(self) -> int:
         return sum(1 for e in self.entries if e["files"])
+
+    @property
+    def most_named(self) -> int:
+        """How many entries name the file named most often."""
+        counts: dict[str, int] = defaultdict(int)
+        for e in self.entries:
+            for path in set(e["files"]):
+                counts[path] += 1
+        return max(counts.values(), default=0)
 
     def layout(self) -> str:
         first, second = self.order.split(",")
@@ -170,12 +182,16 @@ def runs(phases, step: int, max_gap: int):
 def distinct(tables: list[Table]) -> list[Table]:
     """The strongest reading of each stretch of memory: a table that overlaps one naming more
     files is dropped (the same entries read with a wider stride, another size unit, or a bias that
-    lands on a neighbor of the same size), and so is one where most entries name nothing."""
+    lands on a neighbor of the same size), and so is one where most entries name nothing or one
+    file is named by more than half of the entries that name any (a run of one small value that
+    happens to match a file, not a table of files)."""
     tables.sort(key=lambda t: (-t.matched, len(t.entries), UNITS.index(t.unit), t.address))
     kept: list[Table] = []
     for t in tables:
         end = t.address + len(t.entries) * t.stride
         if t.matched * 10 < len(t.entries) * DENSITY:
+            continue
+        if t.most_named * 10 > t.matched * SAME_FILE:
             continue
         if any(t.address < k.address + len(k.entries) * k.stride and k.address < end for k in kept):
             continue

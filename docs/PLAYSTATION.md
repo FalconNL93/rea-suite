@@ -118,6 +118,9 @@ rea-suite playstation lba-table --disc work/game-src/game.cue --list > work/game
   LBA may differ from the file's by a constant (`--max-bias`, default 512), which is reported: Duke
   Nukem: Time to Kill keeps 453 (LBA - 23, size) pairs at 0x800BCC00. Up to `--max-gap` (2) entries
   in a row may name no file; a table needs `--min-entries` (8) that do, and most of its entries.
+  A run where one file is named by more than half of the entries that name a file is dropped: a
+  table names distinct files, and such a run is one small value repeated (on TTK's executable four
+  runs of 12 to 24 entries, each naming one file over and over, such as SYSTEM.CNF 15 times).
 - Not matched: MSF (BCD) positions, 16-bit fields, tables of LBAs without sizes.
 - Each table is reported with its address, entry count, layout and each entry's files (`--summary`
   for the tables alone). Checked 2026-11-16 on a synthetic disc and executable

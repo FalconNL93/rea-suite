@@ -130,6 +130,21 @@ class LbaTable(unittest.TestCase):
         table = b"".join(struct.pack("<2I", f.lba, f.size) for f in self.files[:5])
         self.assertEqual(psx_lba.find(LOAD, executable(table)[0x800:], self.files), [])
 
+    def test_a_run_naming_one_file_over_and_over_is_not_a_table(self) -> None:
+        # TTK's false positive: 16 entries, 15 of them SYSTEM.CNF's (lba, 1 sector), one another file
+        cnf = self.files[0]
+        pairs = [(cnf.lba, 1)] * 8 + [(self.files[2].lba, -(-self.files[2].size // 2048))]
+        pairs += [(cnf.lba, 1)] * 7
+        table = b"".join(struct.pack("<2I", a, s) for a, s in pairs)
+        self.assertEqual(psx_lba.find(LOAD, executable(table)[0x800:], self.files), [])
+
+    def test_a_table_where_one_file_is_named_by_half_its_entries_is_kept(self) -> None:
+        cnf = self.files[0]
+        pairs = [p for f in self.files[2:10] for p in ((f.lba, f.size), (cnf.lba, cnf.size))]
+        table = b"".join(struct.pack("<2I", a, s) for a, s in pairs)
+        tables = psx_lba.find(LOAD, executable(table)[0x800:], self.files)
+        self.assertEqual([(t.address, t.matched) for t in tables], [(LOAD + TABLE_OFFSET, 16)])
+
     def test_the_command_with_a_listing_and_a_ram_dump(self) -> None:
         with tempfile.TemporaryDirectory() as d:
             iso, listing, ram = Path(d) / "g.iso", Path(d) / "files.txt", Path(d) / "ram.bin"
