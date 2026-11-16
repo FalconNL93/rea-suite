@@ -185,7 +185,8 @@ first session (Time to Kill, 2026-11-14):
 A paced run, past the title and into a level, is a script for `rea-suite playstation drive` (from
 duke-nukem-ttk's `tools/drive.py`, same format): one `<seconds> <step>` a line, the steps first-pad
 presses (`start 30`, `cross+square`), `host-button a` and `host-key Return` (SDL events, as a
-player's), `host-text <text>` (the rest of the line, spaces and `#` kept, typed as one SDL text
+player's; `host-button back down` and `host-button back up` send one edge, so steps at one time
+hold a chord of host buttons, such as an SDK's View+LB+RB, that the guest pad line never reaches), `host-text <text>` (the rest of the line, spaces and `#` kept, typed as one SDL text
 input event: 1 to 255 UTF-8 bytes, checked when the script is read; Return is a `host-key` step of
 its own, and the server's `"ok": false` stops the run with exit 1), `read <addr> <bytes>`, `write <addr> <hex byte>`, `raw <json>` and `wait <addr> <hex
 byte> [timeout]`, which polls until the game's state is reached and shifts every later step by the

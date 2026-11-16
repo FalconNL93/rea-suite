@@ -152,6 +152,45 @@ class Drive(unittest.TestCase):
         self.assertIn("timed out", out.getvalue())
         self.assertEqual(self.fake.requests[-1][1], {"cmd": "host_key", "name": "K"})
 
+    def test_host_button_takes_an_edge(self) -> None:
+        steps = psx_drive.parse("1 host-button back down\n2 host-button back up\n3 host-button a")
+        self.assertEqual(steps[0][1], {"cmd": "host_button", "name": "back", "down": 1})
+        self.assertEqual(steps[1][1], {"cmd": "host_button", "name": "back", "down": 0})
+        self.assertEqual(steps[2][1], {"cmd": "host_button", "name": "a"})  # press and release
+        for bad in ("1 host-button a held", "1 host-button a Down", "1 host-button a down 4", "1 host-key K down"):  # fmt: skip
+            with self.assertRaises(ValueError, msg=bad):
+                psx_drive.parse(bad)
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "run.txt").write_text("0 host-button a sideways\n")
+            err = io.StringIO()
+            with redirect_stderr(err), self.assertRaises(SystemExit) as exit_:
+                psx_drive.main(["run.txt", "--plan", "--caller-cwd", d])
+            self.assertEqual(exit_.exception.code, 2)
+            self.assertIn("run.txt:1: host-button takes down or up", err.getvalue())
+            (Path(d) / "run.txt").write_text("0 host-button back down\n")
+            out = io.StringIO()
+            with redirect_stdout(out):
+                psx_drive.main(["run.txt", "--plan", "--caller-cwd", d])
+        self.assertEqual(
+            json.loads(out.getvalue()),
+            [{"at": 0.0, "cmd": "host_button", "name": "back", "down": 1}],
+        )
+        self.assertEqual(self.fake.requests, [])
+
+    def test_a_chord_holds_three_host_buttons_then_lets_go(self) -> None:
+        chord = ("back", "leftshoulder", "rightshoulder")
+        script = "".join(f"0 host-button {b} down\n" for b in chord)
+        script += "".join(f"0.1 host-button {b} up\n" for b in chord)
+        out = io.StringIO()
+        psx_drive.Driver("127.0.0.1", self.fake.port, 5, out).run(psx_drive.parse(script))
+        sent = [r for _, r in self.fake.requests]
+        self.assertEqual(
+            sent,
+            [{"cmd": "host_button", "name": b, "down": 1} for b in chord]
+            + [{"cmd": "host_button", "name": b, "down": 0} for b in chord],
+        )
+        self.assertEqual(out.getvalue().count('"ok": true'), 6)
+
     def test_plan_and_a_missing_port(self) -> None:
         with tempfile.TemporaryDirectory() as d:
             (Path(d) / "run.txt").write_text(SCRIPT)

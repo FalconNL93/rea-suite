@@ -9,8 +9,11 @@ REA_PSXRECOMP_PORT and REA_PSXRECOMP_HOST (default 127.0.0.1). A script line is
   <s> <button>[+<button>...] [frames]   hold first-pad buttons for that many guest frames (default
                                          4): start select cross circle square triangle up down left
                                          right l1 r1 l2 r2 l3 r3 (`press`, then `pad_status` logged)
-  <s> host-button <name>                 press and release a host gamepad button, SDL's name (a,
-                                         rightstick), as an SDL event a player's would be
+  <s> host-button <name> [down|up]       press and release a host gamepad button, SDL's name (a,
+                                         rightstick), as an SDL event a player's would be; `down`
+                                         or `up` sends only that edge, so several steps at one time
+                                         hold a chord (back, leftshoulder, rightshoulder) the guest
+                                         pad never reaches
   <s> host-key <name>                    the same for a key, SDL's scancode name (K, Return)
   <s> host-text <text>                   type text as SDL text input: the rest of the line, spaces
                                          and `#` kept, 1 to 255 UTF-8 bytes; no Return (a host-key
@@ -63,6 +66,7 @@ DEFAULT_FRAMES = 4
 DEFAULT_WAIT = 60.0
 POLL = 0.1  # seconds between a wait's reads
 SETTLE = 0.05  # seconds after a press before its pad_status is read
+EDGES = {"down": 1, "up": 0}  # host_button's down field; left out, the server sends both edges
 MAX_TEXT = 255  # UTF-8 bytes the debug server's host_text takes
 HOST_TEXT = re.compile(r"\s*(\S+)\s+host-text(?: (.*))?$")
 
@@ -98,6 +102,10 @@ def parse_line(words: list[str]) -> dict:
         return {"cmd": "write_ram", "addr": words[1], "val": f"{value:02x}"}
     if kind in ("host-button", "host-key") and len(words) == 2:
         return {"cmd": kind.replace("-", "_"), "name": words[1]}
+    if kind == "host-button" and len(words) == 3:
+        if words[2] not in EDGES:
+            raise ValueError(f"host-button takes down or up after the name, not {words[2]}")
+        return {"cmd": "host_button", "name": words[1], "down": EDGES[words[2]]}
     if len(words) not in (1, 2):
         raise ValueError("expected '<seconds> <buttons> [frames]' or a named step")
     mask = 0
