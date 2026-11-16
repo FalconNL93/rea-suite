@@ -10,7 +10,7 @@ import tempfile
 import threading
 import time
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
@@ -52,6 +52,11 @@ class FakeServer:
             return {"ok": True, "buttons": "fff7"}
         if cmd in ("press", "host_key", "host_button", "ping"):
             return {"ok": True}
+        if cmd == "host_text":  # as the server: UTF-8, 1 to 255 bytes; "refuse" stands in for SDL2
+            size = len(request.get("text", "").encode())
+            if 0 < size <= 255 and request["text"] != "refuse":
+                return {"id": 1, "ok": True}
+            return {"id": 1, "ok": False, "error": "host_text needs 1 to 255 bytes of text"}
         return {"ok": False, "error": f"unknown command {cmd}"}
 
     def close(self) -> None:
@@ -110,6 +115,33 @@ class Drive(unittest.TestCase):
         reached = [t for t, r in self.fake.requests if r["cmd"] == "read_ram"][2]
         read_step = [t for t, r in self.fake.requests if r["cmd"] == "read_ram"][3]
         self.assertGreaterEqual(read_step - reached, 0.08)
+
+    def test_host_text_takes_the_rest_of_the_line(self) -> None:
+        steps = psx_drive.parse(
+            "1 host-text  two  spaces # kept\n2 host-text Ünïcødé ✓\n3 host-text " + "a" * 255
+        )
+        self.assertEqual(steps[0][1], {"cmd": "host_text", "text": " two  spaces # kept"})
+        self.assertEqual(steps[1][1], {"cmd": "host_text", "text": "Ünïcødé ✓"})
+        self.assertEqual(len(steps[2][1]["text"]), 255)
+        for bad in ("1 host-text", "1 host-text ", "1 host-text " + "a" * 256, "1 host-text " + "é" * 128):  # fmt: skip
+            with self.assertRaises(ValueError, msg=bad):
+                psx_drive.parse(bad)
+
+    def test_host_text_on_the_wire_and_a_refusal_fails_the_run(self) -> None:
+        out = io.StringIO()
+        psx_drive.Driver("127.0.0.1", self.fake.port, 5, out).run(
+            psx_drive.parse('0 host-text say "hi"\\ ✓\n')
+        )
+        self.assertEqual(self.fake.requests[-1][1], {"cmd": "host_text", "text": 'say "hi"\\ ✓'})
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "run.txt").write_text("0 host-text refuse\n0.1 host-key Return\n")
+            err = io.StringIO()
+            with redirect_stderr(err), patch.dict("os.environ", {"REA_PSXRECOMP_PORT": str(self.fake.port)}):  # fmt: skip
+                code = psx_drive.main(["run.txt", "--caller-cwd", d])
+        self.assertEqual(code, 1)
+        self.assertIn("host-text refused", err.getvalue())
+        self.assertIn('"ok": false', err.getvalue())
+        self.assertEqual(self.fake.requests[-1][1]["cmd"], "host_text")  # Return never sent
 
     def test_a_wait_that_never_comes_times_out_and_the_run_goes_on(self) -> None:
         out = io.StringIO()

@@ -12,6 +12,9 @@ REA_PSXRECOMP_PORT and REA_PSXRECOMP_HOST (default 127.0.0.1). A script line is
   <s> host-button <name>                 press and release a host gamepad button, SDL's name (a,
                                          rightstick), as an SDL event a player's would be
   <s> host-key <name>                    the same for a key, SDL's scancode name (K, Return)
+  <s> host-text <text>                   type text as SDL text input: the rest of the line, spaces
+                                         and `#` kept, 1 to 255 UTF-8 bytes; no Return (a host-key
+                                         step); the server's "ok": false fails the run
   <s> read <address> <bytes>             log guest RAM there in hex (`read_ram`)
   <s> write <address> <hex byte>         write one byte of guest RAM (`write_ram`)
   <s> raw <json>                         send any debug server command as it is
@@ -29,6 +32,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -59,6 +63,19 @@ DEFAULT_FRAMES = 4
 DEFAULT_WAIT = 60.0
 POLL = 0.1  # seconds between a wait's reads
 SETTLE = 0.05  # seconds after a press before its pad_status is read
+MAX_TEXT = 255  # UTF-8 bytes the debug server's host_text takes
+HOST_TEXT = re.compile(r"\s*(\S+)\s+host-text(?: (.*))?$")
+
+
+class StepFailed(RuntimeError):
+    """A step the debug server refused, where the rest of the run would make no sense."""
+
+
+def host_text(text: str) -> dict:
+    size = len(text.encode("utf-8"))
+    if not 0 < size <= MAX_TEXT:
+        raise ValueError(f"host-text takes 1 to {MAX_TEXT} UTF-8 bytes, not {size}")
+    return {"cmd": "host_text", "text": text}
 
 
 def parse_line(words: list[str]) -> dict:
@@ -95,10 +112,14 @@ def parse_line(words: list[str]) -> dict:
 def parse(text: str, origin: str = "script") -> list[tuple[float, dict]]:
     steps = []
     for number, raw in enumerate(text.splitlines(), 1):
+        typed = HOST_TEXT.match(raw)
         words = raw.split("#", 1)[0].split()
         if not words:
             continue
         try:
+            if typed:  # the text is the rest of the line as written, a `#` too
+                steps.append((float(typed[1]), host_text(typed[2] or "")))
+                continue
             if len(words) < 2:
                 raise ValueError("expected '<seconds> <step>'")
             steps.append((float(words[0]), parse_line(words[1:])))
@@ -118,6 +139,14 @@ class Driver:
 
     def log(self, text: str) -> None:
         print(f"drive: {text}", file=self.out or sys.stdout, flush=True)
+
+    @staticmethod
+    def accepted(reply: str) -> bool:
+        try:
+            answer = json.loads(reply)
+        except ValueError:
+            return False
+        return isinstance(answer, dict) and answer.get("ok") is True
 
     def wait(self, step: dict) -> str:
         """Poll a guest byte until it has the value or the step times out."""
@@ -150,6 +179,8 @@ class Driver:
                 reply = self.send(command)
             except OSError as error:
                 reply = f"no answer ({error})"
+            if command["cmd"] == "host_text" and not self.accepted(reply):
+                raise StepFailed(f"{at:.1f}s host-text refused: {printable(reply)}")
             status = ""
             if command["cmd"] == "press":
                 time.sleep(SETTLE)
@@ -196,7 +227,11 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.port is None or not 0 < int(args.port) < 65536:
         p.error("give the debug server's port: --port N or REA_PSXRECOMP_PORT")
-    Driver(args.host, int(args.port), args.timeout).run(steps)
+    try:
+        Driver(args.host, int(args.port), args.timeout).run(steps)
+    except StepFailed as exc:
+        print(f"drive: {exc}", file=sys.stderr)
+        return 1
     return 0
 
 
