@@ -68,9 +68,21 @@ def run(*args: str, check: bool = True) -> subprocess.CompletedProcess:
 
 
 def plan() -> dict:
-    """rea setup's plan for every detected agent; changes nothing."""
-    out = run(*REA, "setup", "--all-detected", "--dry-run", "--format", "json").stdout
-    return json.loads(out)
+    """rea setup's plan for every detected agent; changes nothing.
+
+    rea-agents 6.9 exits 1 with status needs_human when a registration is not its own,
+    which the suite launcher never is; the plan is still complete, so a parsable plan
+    counts, whatever the exit code.
+    """
+    args = (*REA, "setup", "--all-detected", "--dry-run", "--format", "json")
+    result = run(*args, check=False)
+    try:
+        out = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        out = None
+    if not isinstance(out, dict) or "clientStates" not in out:
+        raise subprocess.CalledProcessError(result.returncode, args, result.stdout, result.stderr)
+    return out
 
 
 def agents() -> list[dict]:
@@ -151,6 +163,12 @@ def register(agent: dict, named: bool) -> str | None:
         return f"{agent['display']}: quit it fully, then run rea-suite agents {agent['name']}"
     if agent["definition"]["format"] == "unsupported":
         return f"{agent['display']}: manual registration required"
+    if state(agent) == "foreign":
+        # rea-agents 6.9 changes only registrations of the launcher it runs as
+        return (
+            f"{agent['display']}: rea in {agent['config']} starts "
+            f"{' '.join(agent['command'])}; remove that entry, then run rea-suite agents"
+        )
     registration("configure", [agent])
     print(f"  {agent['name']}: rea now starts {' '.join(LAUNCHER)}")
     if agent["quit_first"]:

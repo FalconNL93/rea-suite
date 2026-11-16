@@ -1,17 +1,40 @@
 // Reuse REA's format-aware checks, policy preservation, backups and readback,
 // supplying the suite launcher instead of REA's package entrypoint.
 import { fileURLToPath } from "node:url";
-import { resolve } from "node:path";
-import {
-  clientConfigurationAligned,
-  configureClientConfiguration,
-} from "../node_modules/rea-agents/dist/application/SetupClientConfiguration.js";
-import {
-  explicitSetupRegistrationEnvironment,
-} from "../node_modules/rea-agents/dist/application/SetupRegistrationEnvironment.js";
-import { failedConfigurationMessage } from "../node_modules/rea-agents/dist/application/SetupClients.js";
+import { isAbsolute, resolve } from "node:path";
+
+// rea-agents (6.9 and later) changes a registration only when it owns it: its launcher must be
+// the running entrypoint, process.argv[1], which it reads once when its modules load. The suite
+// launcher owns the suite's registrations, so it becomes the entrypoint before rea-agents loads;
+// any other registration, REA's own included, stays foreign and is left to the user.
+let rea;
+async function reaModules(command) {
+  if (rea) return rea;
+  if (command.length === 2 && command[1] === "mcp" && isAbsolute(command[0])) {
+    process.argv[1] = command[0];
+  }
+  const dist = "../node_modules/rea-agents/dist/application/";
+  const [configuration, environment, clients] = await Promise.all([
+    import(`${dist}SetupClientConfiguration.js`),
+    import(`${dist}SetupRegistrationEnvironment.js`),
+    import(`${dist}SetupClients.js`),
+  ]);
+  rea = {
+    clientConfigurationAligned: configuration.clientConfigurationAligned,
+    configureClientConfiguration: configuration.configureClientConfiguration,
+    explicitSetupRegistrationEnvironment: environment.explicitSetupRegistrationEnvironment,
+    failedConfigurationMessage: clients.failedConfigurationMessage,
+  };
+  return rea;
+}
 
 export async function registration({ operation, clients, command, environment = {} }) {
+  const {
+    clientConfigurationAligned,
+    configureClientConfiguration,
+    explicitSetupRegistrationEnvironment,
+    failedConfigurationMessage,
+  } = await reaModules(command);
   const desiredEnvironment = {
     ...environment,
     ...explicitSetupRegistrationEnvironment(process.env),
