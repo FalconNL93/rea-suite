@@ -420,7 +420,7 @@ def prepare(args: argparse.Namespace) -> dict:
 
 
 # Tools of their own under `rea-suite playstation <name>`: their modules, loaded when asked for.
-TOOLS = {"drive": "psx_drive"}
+TOOLS = {"drive": "psx_drive", "lba-table": "psx_lba"}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -430,8 +430,8 @@ def main(argv: list[str] | None = None) -> int:
         tool = argv.pop(at)
         return importlib.import_module(f"rea_suite.{TOOLS[tool]}").main(argv)
     p = argparse.ArgumentParser(
-        description=__doc__
-        + " Also: playstation drive (a PSXRecomp game driven from a script), with --help."
+        description=__doc__ + " Also: playstation drive (a PSXRecomp game driven from a script), "
+        "playstation lba-table (a PS1 game's tables of disc file extents); each with --help."
     )
     p.add_argument(
         "input", type=Path, help="ISO, BIN/CUE, extracted directory, PS-X EXE or MIPS ELF"

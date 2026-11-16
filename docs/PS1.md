@@ -211,8 +211,9 @@ mkpsxiso work/game/disc.xml -o work/patched.bin -c work/patched.cue
 ```
 
 - `disc.xml` keeps the file order and LBAs of the original; changing a file's size moves those after it.
-  Check the LBAs the game reads directly (some read sectors, not files), XA and CD audio, and compare
-  the rebuilt image's unchanged files with the original hashes.
+  Check the LBAs the game reads directly (some read sectors, not files; `rea-suite playstation
+  lba-table` finds a table of them, [PLAYSTATION.md](PLAYSTATION.md#rea-suite-playstation-lba-table-a-games-tables-of-disc-files)),
+  XA and CD audio, and compare the rebuilt image's unchanged files with the original hashes.
 - Patch code by assembling into the executable at its file offset (load address minus the header's
   address, plus 0x800). armips is not in the suite ([PLAYSTATION.md](PLAYSTATION.md#what-the-communities-use-and-what-the-suite-has)).
 

@@ -95,6 +95,34 @@ Check assembly and logs; a saved project does not establish complete or correct 
 The project's Ghidra folder takes `rea-ghidra`'s queries: `rea-ghidra functions --project
 work/game/ghidra <program>`, and `decomp` and `xrefs` the same way.
 
+## `rea-suite playstation lba-table`: a game's tables of disc files
+
+A PS1 game often reads its files by sector, not by name: the executable keeps a table of (LBA, size)
+pairs, one per disc file, and a mod that changes a file's size has to move that table's entries.
+`lba-table` finds such tables and says which disc file each entry names.
+
+```sh
+rea-suite playstation lba-table work/game/disc/SLUS_000.00 --disc work/game-src/game.cue
+rea-suite playstation lba-table work/ram.bin --base 80000000 --files work/game/files.txt --json
+rea-suite playstation lba-table --disc work/game-src/game.cue --list > work/game/files.txt
+```
+
+- The program is a PS-X EXE (mapped at its header's load address) or a RAM dump (`--base`, hex,
+  default 80000000): a table the game builds or loads at run time is only in a dump, such as the
+  PSXRecomp debug server's `read_ram` of all of RAM (PS1.md, step 7).
+- The disc is an image (`.cue`, raw `.bin` in Mode 1 or Mode 2, cooked `.iso`; only the primary
+  volume's ISO 9660 tree) or a listing of `<lba> <size> <path>` lines, as `--list` prints it, so the
+  image need not be at hand.
+- An entry is a little-endian 32-bit LBA and size at the start of an 8-, 12- or 16-byte entry,
+  LBA or size first; the size in bytes, in sectors or in bytes rounded up to a sector. Its stored
+  LBA may differ from the file's by a constant (`--max-bias`, default 512), which is reported: Duke
+  Nukem: Time to Kill keeps 453 (LBA - 23, size) pairs at 0x800BCC00. Up to `--max-gap` (2) entries
+  in a row may name no file; a table needs `--min-entries` (8) that do, and most of its entries.
+- Not matched: MSF (BCD) positions, 16-bit fields, tables of LBAs without sizes.
+- Each table is reported with its address, entry count, layout and each entry's files (`--summary`
+  for the tables alone). Checked 2026-11-16 on a synthetic disc and executable
+  (`test_psx_lba.py`); a game's own files never go into the suite.
+
 ## What the communities use, and what the suite has
 
 Checked 2026-11-12 against the upstream repositories and release pages linked. The Ghidra pin is

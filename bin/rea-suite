@@ -23,6 +23,8 @@
 #   rea-suite playstation drive <script>    drive a PSXRecomp game from a script through its debug
 #                                            server: pad, host keys, RAM reads, writes, waits
 #                                            (--port or REA_PSXRECOMP_PORT; --help)
+#   rea-suite playstation lba-table <exe|ram> --disc <image>|--files <listing>  a PS1 game's
+#                                            tables of (LBA, size) pairs naming the disc's files
 #   rea-suite xbox360 <command> [options]   Xbox 360 XEX or PE image in a Ghidra project of yours:
 #                                            analyze, decomp, xrefs, functions, check, and
 #                                            Ghidra-free info, extract, imports, refs, spa
