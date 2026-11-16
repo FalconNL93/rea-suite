@@ -236,14 +236,24 @@ node_env() { # [--upgrade]
   browsers
 }
 
+# rea-agents' own playwright-core, wherever npm put it (nested under rea-agents, which bundles
+# its dependencies, or hoisted to node_modules/).
+playwright_core() {
+  fnm exec --using="$NODE_VERSION" -- node -e '
+    const path = require("path");
+    const req = require("module").createRequire(path.resolve("node_modules/rea-agents/package.json"));
+    console.log(path.dirname(req.resolve("playwright-core/package.json")));'
+}
+
 # Browsers of the selected components (component `browser`), from rea-agents' own
 # playwright-core: it downloads only a build it does not have yet and drops old ones.
 browsers() {
-  local browser
+  local browser pw
   local system=""
+  pw="$(playwright_core)"
   for browser in $(components values playwright); do
     step "$browser for REA (Playwright, .runtime/ms-playwright)"
-    fnm exec --using="$NODE_VERSION" -- node node_modules/playwright-core/cli.js install "$browser" && continue
+    fnm exec --using="$NODE_VERSION" -- node "$pw/cli.js" install "$browser" && continue
     # Playwright publishes builds for the distributions it supports (not Ubuntu 26.04 yet): a system Chrome or
     # Chromium serves REA instead, rather than setup failing on it.
     [ "$browser" = chromium ] || { warn "$browser: Playwright has no build for this system"; continue; }
@@ -264,10 +274,8 @@ browsers() {
   fi
   # REA_BROWSER_EXECUTABLE (common/env.sh) reads this
   fnm exec --using="$NODE_VERSION" -- node -e '
-    import("playwright-core").then(({ chromium }) => {
-      const fs = require("fs"), path = chromium.executablePath();
-      if (fs.existsSync(path)) fs.writeFileSync(process.argv[1], path + "\n");
-    })' "$REA_RUNTIME/chromium-path"
+    const fs = require("fs"), path = require(process.argv[1]).chromium.executablePath();
+    if (fs.existsSync(path)) fs.writeFileSync(process.argv[2], path + "\n");' "$pw" "$REA_RUNTIME/chromium-path"
 }
 
 suite_tools() { # install | update

@@ -128,13 +128,17 @@ function Node-Env([switch]$Upgrade) {
 }
 # Browsers of the selected components, from rea-agents' own playwright-core (counterpart
 # of browsers() in bin/rea-suite); env.ps1 reads chromium-path into REA_BROWSER_EXECUTABLE.
+# playwright-core is resolved from rea-agents, nested (bundled) or hoisted.
 function Browsers {
+    $find = 'const path = require("path"); const req = require("module").createRequire(path.resolve("node_modules/rea-agents/package.json")); console.log(path.dirname(req.resolve("playwright-core/package.json")))'
+    $pw = (fnm exec --using=$Node -- node -e $find | Select-Object -Last 1)
+    if ($LASTEXITCODE -or -not $pw) { throw 'playwright-core not found under rea-agents; run rea-suite.ps1 setup' }
     foreach ($browser in Components values playwright) {
         Step "$browser for REA (Playwright, .runtime\ms-playwright)"
-        Invoke-Checked fnm exec --using=$Node -- node node_modules\playwright-core\cli.js install $browser
+        Invoke-Checked fnm exec --using=$Node -- node "$pw\cli.js" install $browser
     }
-    $js = 'import("playwright-core").then(({ chromium }) => { const fs = require("fs"), p = chromium.executablePath(); if (fs.existsSync(p)) fs.writeFileSync(process.argv[1], p + "\n"); })'
-    Invoke-Checked fnm exec --using=$Node -- node -e $js "$env:REA_RUNTIME\chromium-path"
+    $js = 'const fs = require("fs"), p = require(process.argv[1]).chromium.executablePath(); if (fs.existsSync(p)) fs.writeFileSync(process.argv[2], p + "\n")'
+    Invoke-Checked fnm exec --using=$Node -- node -e $js $pw "$env:REA_RUNTIME\chromium-path"
 }
 function Suite-Tools([string]$Action) {
     Step 'tools from common/tools.yml'
