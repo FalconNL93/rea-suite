@@ -633,7 +633,7 @@ tools:
   # Pinned to the version rea verifies; newer releases may work.
   kuna:
     github: Noelo-Lab/kuna
-    version: v1.833
+    version: v1.990
     assets:
       linux: '^kuna-v[\d.]+-linux-x86_64\.tar\.gz$'
       macos: '^kuna-v[\d.]+-macos-arm64\.tar\.gz$'

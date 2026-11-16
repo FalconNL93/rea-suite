@@ -721,10 +721,11 @@ def cmd_prune(args: argparse.Namespace) -> None:
 REA_GHIDRA_POLICY = (
     ROOT / "node_modules" / "rea-agents" / "dist" / "ghidra" / "GhidraReleasePolicy.js"
 )
+REA_KUNA_RELEASE = ROOT / "node_modules" / "rea-agents" / "dist" / "kuna" / "KunaRelease.js"
 
 
 def cmd_rea_pins(args: argparse.Namespace) -> None:
-    """Compare the Ghidra pin and the JDK with the versions the installed REA verifies."""
+    """Compare the Ghidra and Kuna pins and the JDK with the versions the installed REA verifies."""
     if not REA_GHIDRA_POLICY.exists():
         raise SystemExit(f"  FAIL  rea pins           {REA_GHIDRA_POLICY} missing; run setup")
     policy = REA_GHIDRA_POLICY.read_text()
@@ -747,6 +748,24 @@ def cmd_rea_pins(args: argparse.Namespace) -> None:
         print(
             "                           for ghidra in common/tools.yml, then rea-tools update ghidra"
         )
+        problems += 1
+
+    kuna = (
+        re.search(r'KUNA_VERIFIED_VERSION = "([^"]+)"', REA_KUNA_RELEASE.read_text())
+        if REA_KUNA_RELEASE.is_file()
+        else None
+    )
+    pinned = load_tools()["kuna"].version
+    if kuna and pinned == f"v{kuna[1]}":
+        print(f"  ok    kuna pin           {pinned} (REA verifies {kuna[1]})")
+    elif kuna:
+        print(
+            f"  FAIL  kuna pin           {pinned}; REA verifies {kuna[1]}: set `version: v{kuna[1]}`"
+        )
+        print("                           for kuna in common/tools.yml, then rea-tools update kuna")
+        problems += 1
+    else:
+        print(f"  FAIL  kuna pin           verified version not found in {REA_KUNA_RELEASE.name}")
         problems += 1
 
     release = Path(os.environ.get("JAVA_HOME", "")) / "release"
@@ -899,7 +918,9 @@ def main() -> None:
     p = sub.add_parser("components", help="optional components (see components --help)")
     p.add_argument("rest", nargs=argparse.REMAINDER)
     p.set_defaults(func=lambda a: components.main(a.rest))
-    p = sub.add_parser("rea-pins", help="check Ghidra pin and JDK against what REA verifies")
+    p = sub.add_parser(
+        "rea-pins", help="check the Ghidra and Kuna pins and the JDK against what REA verifies"
+    )
     p.set_defaults(func=cmd_rea_pins)
     p = sub.add_parser(
         "wsl-bridge", help="WSL: launchers for the Windows checkout's Windows-only tools"
