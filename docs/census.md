@@ -123,7 +123,8 @@ uv run python -m rea_suite.census_slots physx <PhysX_2.6.4_SDK_Core/SDKs> --sdk 
 Per interface, in vtable order: each method's name, its argument count without `this` (a PhysX
 method returning a class by value counts MSVC's hidden pointer, as winrt's tables do), whether it
 returns a float, the interface it returns, the ones it hands out through out-parameters,
-QueryInterface's IID and out arguments, and an enumeration's callback and context arguments. The
+QueryInterface's IID and out arguments, an enumeration's callback and context arguments, and its
+`return_kind` ([below](#return-kinds)). The
 PhysX headers are preprocessed as a Win32 build (`g++ -E`), and their vtables follow MSVC's layout
 (one slot for a virtual destructor, overloads grouped in reverse order). They agree with winrt's
 PhysX tables on every slot of its 13 classes and on all 244 argument counts winrt had on 2026-11-15.
@@ -133,7 +134,8 @@ The PhysX SDK itself is not in git; the tables carry its headers' SHA-256.
 
 `common/rea_suite/data/census/win32-imports.json` (`"kind": "imports"`) gives winrt's census mode
 what it needs to return from an import it has no answer for: per `module!Name` the argument count
-and calling convention, and `returns_float` where a header declares FLOAT or double. Every named
+and calling convention, `returns_float` where a header declares float or double, and `return_kind`
+([below](#return-kinds)). Every named
 export is listed again as `module!#ordinal`, for games that import by ordinal (wsock32 `#101`,
 dsound `#6`). winrt reads it at run time (`<GAME>_CENSUS_IMPORTS`); the static census does not use it.
 
@@ -146,6 +148,46 @@ Counts come from MinGW-w64's i686 import libraries: `_CreateFileA@28` is stdcall
 an undecorated name is cdecl, its `args` null (the caller cleans). Ordinals come from Windows' own
 32-bit DLLs (Windows 11's, read through WSL), Miles's `mss32.dll` from its decorated exports (Call
 of Duty's copy; another Miles version may differ). 31,917 entries on 2026-11-15.
+
+### Return kinds
+
+Every row of every slot table, methods and functions, carries `return_kind`: what it returns, so a
+runtime with no answer for it can return a failure the caller understands instead of 0, which is
+S_OK for an HRESULT and makes a game go on with a null object. Each table's `return_kinds` lists
+the vocabulary, fixed in `common/rea_suite/census_returns.py`, with the value to return:
+
+| Kind | Failure | Means |
+|---|---|---|
+| `hresult` | `0x80004005` (E_FAIL) | HRESULT: the COM methods (`STDMETHOD`), DirectDrawCreateEx, DirectSoundCreate8, CoCreateInstance |
+| `ntstatus` | `0xC0000001` (STATUS_UNSUCCESSFUL) | NTSTATUS |
+| `lstatus` | `2` (ERROR_FILE_NOT_FOUND) | an error code, 0 success: LSTATUS, the registry's LONG, `errno_t` (2 is ENOENT), WSAStartup, getaddrinfo |
+| `mmresult` | `1` (MMSYSERR_ERROR) | MMRESULT, MCIERROR |
+| `bool` | `0` | BOOL, BOOLEAN, C++ bool |
+| `handle` | `0` (NULL) | a handle that fails with NULL |
+| `handle_invalid` | `0xFFFFFFFF` (INVALID_HANDLE_VALUE) | CreateFile, FindFirstFile, CreateToolhelp32Snapshot, GetStdHandle...; SOCKET (INVALID_SOCKET), HFILE |
+| `socket_error` | `0xFFFFFFFF` (SOCKET_ERROR) | Winsock's int functions |
+| `pointer` | `0` (NULL) | a pointer, string, function pointer, C++ reference |
+| `int`, `dword` | `0` | a signed or unsigned 32-bit integer: the type alone does not say which value fails |
+| `qword` | `0` in EDX:EAX | a 64-bit integer |
+| `float` | `0.0` in ST(0) | float or double; the same rows as `returns_float` |
+| `void` | none | |
+| `unknown` | none | the headers do not say: no declaration, a structure by value, declarations that disagree |
+
+The kind is read from the declaration's return type in MinGW-w64's headers (all of `include/`,
+through their typedefs, `DECLARE_HANDLE` and enums; `STDAPI`, `WINOLEAPI` and the like expanded from
+their `#define`s), or for PhysX from the preprocessed SDK. Three rules over names add what a type
+cannot say (`census_slots.py`): the handles that fail with INVALID_HANDLE_VALUE, the registry's
+`Reg*` LONGs as `lstatus`, and Winsock's ints as `socket_error` (WSAStartup and getaddrinfo's family
+as `lstatus`). Nothing else is guessed: an export no header declares (Miles's `mss32.dll`, the
+DLLs' undocumented exports) stays `unknown`, as does a name whose declarations disagree (14 in the
+headers, OLE 1's `OleDraw` against ole32's). `int` and `dword` are the type only; a runtime that knows
+a function's failure value (GetModuleFileNameA's 0, ChangeDisplaySettingsA's -1) answers it itself.
+
+Win32 imports on 2026-11-16, of 16,455 named exports (the 31,917 rows with ordinals and Miles's
+decorated names): 5,051 hresult, 2,242 pointer, 1,847 bool, 1,111 int, 895 dword, 643 void, 396
+handle, 224 lstatus, 186 float, 125 mmresult, 110 socket_error, 50 qword, 43 handle_invalid, 33
+ntstatus and 3,499 unknown (680 of them Miles's). The field is optional: a reader that does not know
+it keeps working, so the schema stays `rea-census-slots/1`.
 
 ## The pilot: Lost: Via Domus (2026-11-15)
 

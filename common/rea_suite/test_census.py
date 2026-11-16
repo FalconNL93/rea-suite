@@ -10,7 +10,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from rea_suite import census, census_slots, pe, pecensus, pefunctions, samples
+from rea_suite import census, census_returns, census_slots, pe, pecensus, pefunctions, samples
 from rea_suite.pemodel import Image
 
 
@@ -116,6 +116,107 @@ class Votes(unittest.TestCase):
         self.assertFalse(self.facts.changed)
 
 
+HEADER = """
+#define STDAPI EXTERN_C HRESULT STDAPICALLTYPE
+#define STDAPI_(type) EXTERN_C type STDAPICALLTYPE
+#define WINOLEAPI STDAPI
+typedef long LONG;
+typedef LONG LSTATUS;
+typedef unsigned long DWORD;
+typedef void *HANDLE, *LPVOID;
+typedef int (WINAPI *FARPROC)();
+DECLARE_HANDLE(HWND);
+typedef enum _KIND { KIND_A, KIND_B } KIND, *PKIND;
+typedef struct _THING { int x; } THING;
+WINBASEAPI HANDLE WINAPI CreateThing (LPCSTR name);  /* HANDLE: NULL */
+WINOLEAPI CoMakeThing (REFCLSID rclsid, LPVOID *ppv);
+STDAPI_(LPVOID) CoThingAlloc (SIZE_T cb);
+WINADVAPI LSTATUS WINAPI RegThing (DWORD a);
+WINUSERAPI HWND WINAPI FindThing (void);
+WINBASEAPI VOID WINAPI Rest (DWORD ms);
+DECL_WINELIB_TYPE_AW(LPTHING) KIND WINAPI KindOf (void);
+THING WINAPI ThingByValue (void);
+WINBASEAPI FARPROC WINAPI ThingProc (HANDLE h, LPCSTR name);
+_CRTIMP double __cdecl thing_sqrt (double x);
+int WINAPI Twice (void);
+LPVOID WINAPI Twice (void);
+struct IThing { virtual HRESULT STDMETHODCALLTYPE Rest (void) = 0; };
+"""
+
+
+class ReturnKinds(unittest.TestCase):
+    def test_kinds_from_declarations(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "things.h").write_text(HEADER, encoding="utf-8")
+            kinds, found, disagree = census_returns.header_kinds(Path(tmp))
+        self.assertEqual(
+            found,
+            {
+                "CreateThing": "handle", "CoMakeThing": "hresult", "CoThingAlloc": "pointer",
+                "RegThing": "lstatus", "FindThing": "handle", "Rest": "void", "KindOf": "int",
+                "ThingByValue": "unknown", "ThingProc": "pointer", "thing_sqrt": "float",
+                "Twice": "unknown",  # declarations that disagree; the C++ method is no export
+            },
+        )  # fmt: skip
+        self.assertEqual(disagree, 1)
+        self.assertEqual(kinds.of("PKIND"), "pointer")
+
+    def test_kinds_of_cpp_return_types(self) -> None:
+        kinds = census_returns.ReturnKinds(
+            "typedef unsigned int NxU32; typedef float NxReal; typedef NxU32 NxActorGroup;"
+        )
+        for text, kind in [
+            ("NxU32", "dword"), ("NxActorGroup", "dword"), ("NxReal", "float"),
+            ("NxActor*", "pointer"), ("const NxVec3&", "pointer"), ("bool", "bool"),
+            ("void", "void"), ("NxVec3", "unknown"), ("unsigned __int64", "qword"),
+        ]:  # fmt: skip
+            self.assertEqual(kinds.of(text), kind, text)
+
+    def test_rules_over_names(self) -> None:
+        declared = {"CreateFileA": "handle", "CreateEventA": "handle", "RegOpenKeyA": "int",
+                    "connect": "int", "WSAStartup": "int", "WSAGetLastError": "int"}  # fmt: skip
+        kind = census_slots.import_kind
+        self.assertEqual(kind("kernel32.dll", "CreateFileA", declared), "handle_invalid")
+        self.assertEqual(kind("kernel32.dll", "CreateEventA", declared), "handle")
+        self.assertEqual(kind("advapi32.dll", "RegOpenKeyA", declared), "lstatus")
+        self.assertEqual(kind("ws2_32.dll", "connect", declared), "socket_error")
+        self.assertEqual(kind("wsock32.dll", "WSAStartup", declared), "lstatus")
+        self.assertEqual(kind("ws2_32.dll", "WSAGetLastError", declared), "int")
+        self.assertEqual(kind("mss32.dll", "AIL_startup", declared), "unknown")
+
+    def test_the_generated_tables_kinds(self) -> None:
+        imports = json.loads((census.TABLES / "win32-imports.json").read_text())
+        functions = imports["functions"]
+        for key, kind in [
+            ("ddraw.dll!DirectDrawCreateEx", "hresult"),
+            ("dsound.dll!DirectSoundCreate8", "hresult"),
+            ("ole32.dll!CoCreateInstance", "hresult"),
+            ("kernel32.dll!CreateFileA", "handle_invalid"),
+            ("kernel32.dll!CreateEventA", "handle"),
+            ("advapi32.dll!RegOpenKeyA", "lstatus"),
+            ("kernel32.dll!GetProcAddress", "pointer"),
+            ("kernel32.dll!Sleep", "void"),
+            ("user32.dll!GetMessageA", "bool"),
+            ("winmm.dll!waveOutOpen", "mmresult"),
+            ("wsock32.dll!#101", "socket_error"),  # an ordinal has its name's kind
+            ("msvcrt.dll!sqrt", "float"),
+        ]:
+            self.assertEqual(functions[key]["return_kind"], kind, key)
+        self.assertEqual(
+            imports["return_kinds"]["hresult"]["failure"], 0x80004005
+        )  # E_FAIL, not S_OK
+        self.assertEqual(imports["return_kinds"]["handle_invalid"]["failure"], 0xFFFFFFFF)
+        for path in sorted(census.TABLES.glob("*.json")):
+            table = json.loads(path.read_text())
+            self.assertEqual(set(table["return_kinds"]), set(census_returns.KINDS), path.name)
+            rows = [m for i in table["interfaces"].values() for m in i["methods"]]
+            for row in [*rows, *table["functions"].values()]:
+                self.assertIn(row["return_kind"], census_returns.KINDS, (path.name, row))
+                self.assertEqual(
+                    bool(row.get("returns_float")), row["return_kind"] == "float", (path.name, row)
+                )
+
+
 class Win32Imports(unittest.TestCase):
     def test_decorated_names_give_stdcall_counts(self) -> None:
         found = census_slots.parse_nm(
@@ -129,7 +230,12 @@ class Win32Imports(unittest.TestCase):
         self.assertEqual(table["kind"], "imports")
         self.assertEqual(
             functions["kernel32.dll!CreateFileA"],
-            {"module": "kernel32.dll", "args": 7, "conv": "stdcall"},
+            {
+                "module": "kernel32.dll",
+                "args": 7,
+                "conv": "stdcall",
+                "return_kind": "handle_invalid",
+            },
         )
         self.assertEqual(functions["wsock32.dll!#101"]["args"], 4)  # WSAAsyncSelect by ordinal
         self.assertEqual(functions["mss32.dll!AIL_open_digital_driver"]["args"], 4)

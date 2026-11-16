@@ -6,13 +6,14 @@
       PhysX 2.x classes from the SDK's headers, preprocessed by g++ -E as a Win32 build
   uv run python -m rea_suite.census_slots imports <mingw-lib-dir> --dlls <SysWOW64> [--extra mss32.dll]
       [--include <mingw-include-dir>] [--out DIR]
-      the Win32 imports' argument counts and calling conventions (win32-imports.json, below)
+      the Win32 imports' argument counts, calling conventions and return kinds (win32-imports.json)
 
 A table (`common/rea_suite/data/census/<sdk>.json`, schema "rea-census-slots/1") lists per
 interface its vtable in slot order: each method's name, its argument count without `this`, the
 interface it returns in EAX, the ones it hands out through out-parameters (by the index of the
 argument dword on the stack at the call, `this` counted for a COM method) and, for
-QueryInterface-shaped methods, which argument is the IID and which the out-pointer. It lists the
+QueryInterface-shaped methods, which argument is the IID and which the out-pointer, and its
+return kind (census_returns.py: the failure a runtime returns for it). It lists the
 factory functions the same way, and the IIDs by their bytes. The tables are generated files:
 change the generator, never the JSON.
 
@@ -33,6 +34,9 @@ import sys
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from rea_suite import census_returns
+from rea_suite.census_returns import strip_comments
 
 OUT = Path(__file__).resolve().parent / "data" / "census"
 SCHEMA = "rea-census-slots/1"
@@ -74,11 +78,6 @@ class Interface:
     thiscall: bool = False
 
 
-def strip_comments(text: str) -> str:
-    text = re.sub(r"/\*.*?\*/", " ", text, flags=re.DOTALL)
-    return re.sub(r"//[^\n]*", "", text)
-
-
 def split_params(text: str) -> list[str]:
     """Top-level comma split; `void`, `THIS` and empty lists are no parameters."""
     out, depth, cur = [], 0, []
@@ -109,6 +108,7 @@ class Types:
         self.interfaces = interfaces
         self.typedefs = typedefs
         self.records = records
+        self.kinds: census_returns.ReturnKinds | None = None  # return kinds, when set
         self.callbacks: dict[
             str, int
         ] = {}  # callback typedef -> its context parameter's index  # classes and structs: one returned by value takes a hidden pointer
@@ -178,6 +178,7 @@ def com_tables(include: Path) -> dict[str, dict]:
     blocks = {name: (base, body) for name, base, body in COM_BLOCK.findall(every)}
     types = Types(set(blocks) | {"IUnknown"}, typedefs_of(every))
     types.callbacks = callbacks_of(every)
+    types.kinds = census_returns.header_kinds(include)[0]  # the typedefs of every header
     iids = {}
     for name, numbers in GUID.findall(every):
         if name in types.interfaces:
@@ -206,6 +207,7 @@ def com_tables(include: Path) -> dict[str, dict]:
             "sdk": sdk,
             "source": {"headers": "mingw-w64", "files": {p.name: sha256(p) for p, _t in files}},
             "conv": "stdcall",
+            "return_kinds": census_returns.vocabulary(),
             "interfaces": interfaces,
             "functions": {
                 k: v for k, v in functions.items() if v["returns"] or v["out"] or v.get("riid")
@@ -231,6 +233,8 @@ def method_json(m: Method, types: Types, this_slot: int) -> dict:
         row["returns"] = ret[0]
     if returns_float(m.returns):
         row["returns_float"] = True  # in ST(0)
+    if types.kinds:
+        row["return_kind"] = types.kinds.of(m.returns)
     outs, riid = [], None
     for i, p in enumerate(m.params):
         t = types.resolve(p)
@@ -450,6 +454,7 @@ def physx_table(sdks: Path, sdk: str) -> dict:
         n for n in classes if msvc_vtable(n, classes)
     }  # a class without virtuals is no interface
     types = Types(names, typedefs_of(text), set(classes))
+    types.kinds = census_returns.ReturnKinds(text)
     interfaces = {}
     for name in sorted(classes):
         table = msvc_vtable(name, classes)
@@ -488,6 +493,7 @@ def physx_table(sdks: Path, sdk: str) -> dict:
         "sdk": sdk,
         "source": {"headers": f"PhysX SDK ({sdk}), preprocessed as a Win32 build", "files": files},
         "conv": "thiscall",
+        "return_kinds": census_returns.vocabulary(),
         "interfaces": interfaces,
         "functions": functions,
         "iids": {},
@@ -535,32 +541,57 @@ def dll_exports(path: Path) -> list[tuple[int, str | None]]:
     return [(e.ordinal, e.name) for e in Image.open(path).exports]
 
 
-def float_returns(include: Path | None) -> set[str]:
-    """Functions the headers declare as returning FLOAT or double (WINAPI ones)."""
-    if include is None:
-        return set()
-    names = set()
-    pattern = re.compile(
-        r"\b(?:FLOAT|float|DOUBLE|double)\s+(?:WINAPI|APIENTRY|__stdcall|WINGDIAPI\s+\w+\s+APIENTRY)\s+(\w+)\s*\("
-    )
-    for header in include.glob("*.h"):
-        names.update(pattern.findall(header.read_text(encoding="utf-8", errors="replace")))
-    return names
+# Kinds the return type cannot tell, by rule (docs/census.md, "Return kinds"). A handle type
+# fails with NULL except for these, which fail with INVALID_HANDLE_VALUE (their documentation):
+INVALID_HANDLE_RETURNS = {
+    "CreateFileA", "CreateFileW", "CreateFile2", "CreateFileTransactedA", "CreateFileTransactedW",
+    "ReOpenFile", "FindFirstFileA", "FindFirstFileW", "FindFirstFileExA", "FindFirstFileExW",
+    "FindFirstFileTransactedA", "FindFirstFileTransactedW", "FindFirstFileNameW",
+    "FindFirstFileNameTransactedW", "FindFirstStreamW", "FindFirstStreamTransactedW",
+    "FindFirstChangeNotificationA", "FindFirstChangeNotificationW", "FindFirstVolumeA",
+    "FindFirstVolumeW", "FindFirstVolumeMountPointA", "FindFirstVolumeMountPointW",
+    "CreateToolhelp32Snapshot", "CreateNamedPipeA", "CreateNamedPipeW", "CreateMailslotA",
+    "CreateMailslotW", "CreateConsoleScreenBuffer", "GetStdHandle", "IcmpCreateFile",
+    "Icmp6CreateFile",
+}  # fmt: skip
+WINSOCK_MODULES = {"ws2_32.dll", "wsock32.dll"}
+# Winsock's int functions fail with SOCKET_ERROR, except these:
+WINSOCK_ERROR_CODES = {
+    "WSAStartup", "getaddrinfo", "getnameinfo", "GetAddrInfoW", "GetNameInfoW", "GetAddrInfoExA",
+    "GetAddrInfoExW", "GetAddrInfoExCancel", "GetAddrInfoExOverlappedResult", "SetAddrInfoExA",
+    "SetAddrInfoExW",
+}  # fmt: skip  # 0 or a WSA error code: lstatus
+WINSOCK_PLAIN_INTS = {"WSAGetLastError", "__WSAFDIsSet"}  # no failure value
+
+
+def import_kind(module: str, name: str, declared: dict[str, str]) -> str:
+    """An import's return kind: its declaration's, then the rules above."""
+    kind = declared.get(name, "unknown")
+    if kind == "handle" and name in INVALID_HANDLE_RETURNS:
+        return "handle_invalid"
+    if module == "advapi32.dll" and name.startswith("Reg") and kind in ("int", "dword"):
+        return "lstatus"  # the registry's LONG is an error code: 0 is ERROR_SUCCESS
+    if module in WINSOCK_MODULES and kind == "int":
+        if name in WINSOCK_ERROR_CODES:
+            return "lstatus"
+        return kind if name in WINSOCK_PLAIN_INTS else "socket_error"
+    return kind
 
 
 def imports_table(
     lib_dir: Path, dll_dir: Path | None, extra: list[Path], include: Path | None
 ) -> dict:
-    """The Win32 imports table: `module!Name` -> args, conv, returns_float; each named export
-    also as `module!#ordinal` where the DLL is at hand."""
-    floats = float_returns(include)
+    """The Win32 imports table: `module!Name` -> args, conv, returns_float, return_kind; each
+    named export also as `module!#ordinal` where the DLL is at hand."""
+    declared = census_returns.header_kinds(include)[1] if include else {}
     functions: dict[str, dict] = {}
     sources: dict[str, str] = {}
 
-    def add(module: str, name: str, args: int | None, conv: str) -> None:
+    def add(module: str, name: str, args: int | None, conv: str, kind: str) -> None:
         row: dict = {"module": module, "args": args, "conv": conv}
-        if name in floats:
+        if kind == "float":
             row["returns_float"] = True
+        row["return_kind"] = kind
         functions[f"{module}!{name}"] = row
 
     for stem in IMPORT_MODULES:
@@ -571,13 +602,13 @@ def imports_table(
         known = import_library(lib)
         sources[module] = f"{lib.name} {sha256(lib)[:16]}"
         for name, (args, conv) in sorted(known.items()):
-            add(module, name, args, conv)
+            add(module, name, args, conv, import_kind(module, name, declared))
         dll = dll_dir / module if dll_dir else None
         if dll and dll.exists():
             for ordinal, name in dll_exports(dll):
                 if name and name in known:
                     args, conv = known[name]
-                    add(module, f"#{ordinal}", args, conv)
+                    add(module, f"#{ordinal}", args, conv, import_kind(module, name, declared))
             sources[module] += f"; ordinals from {dll.name} {sha256(dll)[:16]}"
     for dll in extra:
         module = dll.name.lower()
@@ -585,15 +616,19 @@ def imports_table(
         for ordinal, name in dll_exports(dll):
             match = re.fullmatch(r"_?(\w+?)@(\d+)", name or "")
             if match:
-                add(module, match.group(1), int(match.group(2)) // 4, "stdcall")
-                add(module, name, int(match.group(2)) // 4, "stdcall")  # as imported, decorated
-                add(module, f"#{ordinal}", int(match.group(2)) // 4, "stdcall")
+                args, kind = int(match.group(2)) // 4, import_kind(module, match.group(1), declared)
+                add(module, match.group(1), args, "stdcall", kind)
+                add(module, name, args, "stdcall", kind)  # as imported, decorated
+                add(module, f"#{ordinal}", args, "stdcall", kind)
     return {
         "schema": SCHEMA,
         "kind": "imports",
         "sdk": "win32",
         "source": {"note": "args and conv from MinGW-w64's i686 import libraries (_Name@N: stdcall, N/4 "
-                   "arguments; undecorated: cdecl, args null); #ordinals from the DLLs named", "files": sources},
+                   "arguments; undecorated: cdecl, args null); #ordinals from the DLLs named; "
+                   "return_kind from the MinGW-w64 headers' declarations, and the rules in "
+                   "census_slots.py", "files": sources},
+        "return_kinds": census_returns.vocabulary(),
         "interfaces": {},
         "functions": dict(sorted(functions.items())),
         "iids": {},
@@ -615,7 +650,7 @@ def main(argv: list[str] | None = None) -> int:
     px = sub.add_parser("physx", help="a PhysX 2.x table from the SDK's headers")
     px.add_argument("sdks", type=Path, help="the SDK's SDKs/ directory")
     px.add_argument("--sdk", required=True, help="the table's name, as physx-2.6.4")
-    im = sub.add_parser("imports", help="the Win32 imports' argument counts and conventions")
+    im = sub.add_parser("imports", help="the Win32 imports' counts, conventions, return kinds")
     im.add_argument("lib_dir", type=Path, help="MinGW-w64's i686 lib directory (lib<dll>.a)")
     im.add_argument("--dlls", type=Path, help="a folder of the 32-bit DLLs (SysWOW64): ordinals")
     im.add_argument(
@@ -625,7 +660,7 @@ def main(argv: list[str] | None = None) -> int:
         default=[],
         help="a DLL with decorated exports (mss32.dll)",
     )
-    im.add_argument("--include", type=Path, help="MinGW-w64's include directory: float returns")
+    im.add_argument("--include", type=Path, help="MinGW-w64's include directory: return kinds")
     for c in (com, px, im):
         c.add_argument("--out", type=Path, default=OUT)
     args = p.parse_args(argv)

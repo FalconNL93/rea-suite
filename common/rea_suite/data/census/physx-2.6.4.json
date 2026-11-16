@@ -158,397 +158,553 @@
   }
  },
  "conv": "thiscall",
+ "return_kinds": {
+  "hresult": {
+   "failure": 2147500037,
+   "means": "HRESULT: failure E_FAIL; 0 is S_OK"
+  },
+  "ntstatus": {
+   "failure": 3221225473,
+   "means": "NTSTATUS: failure STATUS_UNSUCCESSFUL; 0 is STATUS_SUCCESS"
+  },
+  "lstatus": {
+   "failure": 2,
+   "means": "a Win32 or C error code (LSTATUS, the registry's LONG, errno_t, WSAStartup, getaddrinfo): 0 is success, failure ERROR_FILE_NOT_FOUND (2, ENOENT for errno_t)"
+  },
+  "mmresult": {
+   "failure": 1,
+   "means": "MMRESULT or MCIERROR: 0 is MMSYSERR_NOERROR, failure MMSYSERR_ERROR"
+  },
+  "bool": {
+   "failure": 0,
+   "means": "BOOL, BOOLEAN or C++ bool: failure FALSE"
+  },
+  "handle": {
+   "failure": 0,
+   "means": "a handle whose failure is NULL"
+  },
+  "handle_invalid": {
+   "failure": 4294967295,
+   "means": "a handle whose failure is INVALID_HANDLE_VALUE (-1): CreateFile, FindFirstFile, a SOCKET (INVALID_SOCKET), HFILE_ERROR"
+  },
+  "socket_error": {
+   "failure": 4294967295,
+   "means": "Winsock's int: failure SOCKET_ERROR (-1)"
+  },
+  "pointer": {
+   "failure": 0,
+   "means": "a pointer (a string, a function, an object, a reference): failure NULL"
+  },
+  "int": {
+   "failure": 0,
+   "means": "a signed integer; the type alone does not say which value fails"
+  },
+  "dword": {
+   "failure": 0,
+   "means": "an unsigned 32-bit integer; the type alone does not say which value fails"
+  },
+  "qword": {
+   "failure": 0,
+   "means": "a 64-bit integer in EDX:EAX; the type alone does not say which value fails"
+  },
+  "float": {
+   "failure": 0.0,
+   "means": "float or double in ST(0), as returns_float"
+  },
+  "void": {
+   "failure": null,
+   "means": "nothing returned"
+  },
+  "unknown": {
+   "failure": null,
+   "means": "the headers do not say (no declaration, a structure by value, declarations that disagree)"
+  }
+ },
  "interfaces": {
   "NxActor": {
    "base": null,
    "methods": [
     {
      "name": "~NxActor",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "getScene",
      "args": 0,
-     "returns": "NxScene"
+     "returns": "NxScene",
+     "return_kind": "pointer"
     },
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setName",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getName",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "setGlobalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalOrientationQuat",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGlobalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalOrientationQuat",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "moveGlobalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "moveGlobalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "moveGlobalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "moveGlobalOrientationQuat",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "createShape",
      "args": 1,
-     "returns": "NxShape"
+     "returns": "NxShape",
+     "return_kind": "pointer"
     },
     {
      "name": "releaseShape",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getNbShapes",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getShapes",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "setGroup",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGroup",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "raiseActorFlag",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "clearActorFlag",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "readActorFlag",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "isDynamic",
-     "args": 0
+     "args": 0,
+     "return_kind": "bool"
     },
     {
      "name": "setCMassOffsetLocalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setCMassOffsetLocalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setCMassOffsetLocalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setCMassOffsetGlobalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setCMassOffsetGlobalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setCMassOffsetGlobalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setCMassGlobalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setCMassGlobalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setCMassGlobalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getCMassLocalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getCMassLocalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getCMassLocalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getCMassGlobalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getCMassGlobalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getCMassGlobalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setMass",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getMass",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setMassSpaceInertiaTensor",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getMassSpaceInertiaTensor",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalInertiaTensor",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalInertiaTensorInverse",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "updateMassFromShapes",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "setLinearDamping",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getLinearDamping",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setAngularDamping",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getAngularDamping",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setLinearVelocity",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setAngularVelocity",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getLinearVelocity",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getAngularVelocity",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setMaxAngularVelocity",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getMaxAngularVelocity",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setCCDMotionThreshold",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getCCDMotionThreshold",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setLinearMomentum",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setAngularMomentum",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getLinearMomentum",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getAngularMomentum",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "addForceAtPos",
-     "args": 4
+     "args": 4,
+     "return_kind": "void"
     },
     {
      "name": "addForceAtLocalPos",
-     "args": 4
+     "args": 4,
+     "return_kind": "void"
     },
     {
      "name": "addLocalForceAtPos",
-     "args": 4
+     "args": 4,
+     "return_kind": "void"
     },
     {
      "name": "addLocalForceAtLocalPos",
-     "args": 4
+     "args": 4,
+     "return_kind": "void"
     },
     {
      "name": "addForce",
-     "args": 3
+     "args": 3,
+     "return_kind": "void"
     },
     {
      "name": "addLocalForce",
-     "args": 3
+     "args": 3,
+     "return_kind": "void"
     },
     {
      "name": "addTorque",
-     "args": 3
+     "args": 3,
+     "return_kind": "void"
     },
     {
      "name": "addLocalTorque",
-     "args": 3
+     "args": 3,
+     "return_kind": "void"
     },
     {
      "name": "computeKineticEnergy",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getPointVelocity",
-     "args": 2
+     "args": 2,
+     "return_kind": "unknown"
     },
     {
      "name": "getLocalPointVelocity",
-     "args": 2
+     "args": 2,
+     "return_kind": "unknown"
     },
     {
      "name": "isGroupSleeping",
-     "args": 0
+     "args": 0,
+     "return_kind": "bool"
     },
     {
      "name": "isSleeping",
-     "args": 0
+     "args": 0,
+     "return_kind": "bool"
     },
     {
      "name": "getSleepLinearVelocity",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setSleepLinearVelocity",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getSleepAngularVelocity",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setSleepAngularVelocity",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getSleepEnergyThreshold",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setSleepEnergyThreshold",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "wakeUp",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "putToSleep",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "raiseBodyFlag",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "clearBodyFlag",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "readBodyFlag",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "saveBodyToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "setSolverIterationCount",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getSolverIterationCount",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "linearSweep",
-     "args": 7
+     "args": 7,
+     "return_kind": "dword"
     },
     {
      "name": "getCompartment",
      "args": 0,
-     "returns": "NxCompartment"
+     "returns": "NxCompartment",
+     "return_kind": "pointer"
     }
    ]
   },
@@ -557,64 +713,79 @@
    "methods": [
     {
      "name": "~NxBoxController",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "move",
-     "args": 6
+     "args": 6,
+     "return_kind": "void"
     },
     {
      "name": "setPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "getPosition",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getFilteredPosition",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getDebugPosition",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getActor",
      "args": 0,
-     "returns": "NxActor"
+     "returns": "NxActor",
+     "return_kind": "pointer"
     },
     {
      "name": "setStepOffset",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setCollision",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setInteraction",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getInteraction",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "reportSceneChanged",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "getUserData",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getExtents",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "setExtents",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     }
    ]
   },
@@ -623,162 +794,201 @@
    "methods": [
     {
      "name": "~NxShape",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "getActor",
      "args": 0,
-     "returns": "NxActor"
+     "returns": "NxActor",
+     "return_kind": "pointer"
     },
     {
      "name": "setGroup",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGroup",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getWorldBounds",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setFlag",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getFlag",
-     "args": 1
+     "args": 1,
+     "return_kind": "int"
     },
     {
      "name": "setLocalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setLocalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setLocalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getLocalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getLocalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getLocalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setGlobalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGlobalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setMaterial",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getMaterial",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "setSkinWidth",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getSkinWidth",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setCCDSkeleton",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getCCDSkeleton",
      "args": 0,
-     "returns": "NxCCDSkeleton"
+     "returns": "NxCCDSkeleton",
+     "return_kind": "pointer"
     },
     {
      "name": "setName",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getName",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "raycast",
-     "args": 5
+     "args": 5,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapSphere",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapOBB",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapAABB",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapCapsule",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "setGroupsMask",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGroupsMask",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setDimensions",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getDimensions",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getWorldOBB",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     }
    ]
   },
@@ -787,23 +997,28 @@
    "methods": [
     {
      "name": "save",
-     "args": 2
+     "args": 2,
+     "return_kind": "dword"
     },
     {
      "name": "getDataSize",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getReferenceCount",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "dword"
     },
     {
      "name": "~NxCCDSkeleton",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     }
    ]
   },
@@ -812,74 +1027,91 @@
    "methods": [
     {
      "name": "~NxCapsuleController",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "move",
-     "args": 6
+     "args": 6,
+     "return_kind": "void"
     },
     {
      "name": "setPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "getPosition",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getFilteredPosition",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getDebugPosition",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getActor",
      "args": 0,
-     "returns": "NxActor"
+     "returns": "NxActor",
+     "return_kind": "pointer"
     },
     {
      "name": "setStepOffset",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setCollision",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setInteraction",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getInteraction",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "reportSceneChanged",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "getUserData",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getRadius",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setRadius",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "getHeight",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setHeight",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     }
    ]
   },
@@ -888,176 +1120,218 @@
    "methods": [
     {
      "name": "~NxShape",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "getActor",
      "args": 0,
-     "returns": "NxActor"
+     "returns": "NxActor",
+     "return_kind": "pointer"
     },
     {
      "name": "setGroup",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGroup",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getWorldBounds",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setFlag",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getFlag",
-     "args": 1
+     "args": 1,
+     "return_kind": "int"
     },
     {
      "name": "setLocalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setLocalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setLocalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getLocalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getLocalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getLocalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setGlobalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGlobalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setMaterial",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getMaterial",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "setSkinWidth",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getSkinWidth",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setCCDSkeleton",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getCCDSkeleton",
      "args": 0,
-     "returns": "NxCCDSkeleton"
+     "returns": "NxCCDSkeleton",
+     "return_kind": "pointer"
     },
     {
      "name": "setName",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getName",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "raycast",
-     "args": 5
+     "args": 5,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapSphere",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapOBB",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapAABB",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapCapsule",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "setGroupsMask",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGroupsMask",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setDimensions",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "setRadius",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getRadius",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setHeight",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getHeight",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getWorldCapsule",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     }
    ]
   },
@@ -1066,205 +1340,253 @@
    "methods": [
     {
      "name": "~NxCloth",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "getClothMesh",
      "args": 0,
-     "returns": "NxClothMesh"
+     "returns": "NxClothMesh",
+     "return_kind": "pointer"
     },
     {
      "name": "setBendingStiffness",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getBendingStiffness",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setStretchingStiffness",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getStretchingStiffness",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setDampingCoefficient",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getDampingCoefficient",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setFriction",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getFriction",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setPressure",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getPressure",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setTearFactor",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getTearFactor",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setAttachmentTearFactor",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getAttachmentTearFactor",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setThickness",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getThickness",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getDensity",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getSolverIterations",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "setSolverIterations",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getWorldBounds",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "attachToShape",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "attachToCollidingShapes",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "detachFromShape",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "attachVertexToShape",
-     "args": 4
+     "args": 4,
+     "return_kind": "void"
     },
     {
      "name": "attachVertexToGlobalPosition",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "freeVertex",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "attachToCore",
-     "args": 3
+     "args": 3,
+     "return_kind": "void"
     },
     {
      "name": "tearVertex",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "raycast",
-     "args": 3
+     "args": 3,
+     "return_kind": "bool"
     },
     {
      "name": "setGroup",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGroup",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "setGroupsMask",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGroupsMask",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setMeshData",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getMeshData",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setValidBounds",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getValidBounds",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setPositions",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getPositions",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "setVelocities",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getVelocities",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getNumberOfParticles",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "queryShapePointers",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getStateByteSize",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getShapePointers",
      "args": 1,
+     "return_kind": "void",
      "out": [
       {
        "stack": 0,
@@ -1275,6 +1597,7 @@
     {
      "name": "setShapePointers",
      "args": 2,
+     "return_kind": "void",
      "out": [
       {
        "stack": 0,
@@ -1284,96 +1607,118 @@
     },
     {
      "name": "saveStateToStream",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "loadStateFromStream",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setCollisionResponseCoefficient",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getCollisionResponseCoefficient",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setAttachmentResponseCoefficient",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getAttachmentResponseCoefficient",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setExternalAcceleration",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getExternalAcceleration",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "isSleeping",
-     "args": 0
+     "args": 0,
+     "return_kind": "bool"
     },
     {
      "name": "getSleepLinearVelocity",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setSleepLinearVelocity",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "wakeUp",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "putToSleep",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "setFlags",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getFlags",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "setName",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "addForceAtVertex",
-     "args": 3
+     "args": 3,
+     "return_kind": "void"
     },
     {
      "name": "addForceAtPos",
-     "args": 4
+     "args": 4,
+     "return_kind": "void"
     },
     {
      "name": "overlapAABBTriangles",
-     "args": 3
+     "args": 3,
+     "return_kind": "bool"
     },
     {
      "name": "getScene",
      "args": 0,
-     "returns": "NxScene"
+     "returns": "NxScene",
+     "return_kind": "pointer"
     },
     {
      "name": "getName",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getCompartment",
      "args": 0,
-     "returns": "NxCompartment"
+     "returns": "NxCompartment",
+     "return_kind": "pointer"
     }
    ]
   },
@@ -1382,15 +1727,18 @@
    "methods": [
     {
      "name": "~NxClothMesh",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "getReferenceCount",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     }
    ]
   },
@@ -1399,24 +1747,29 @@
    "methods": [
     {
      "name": "getType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "getDeviceCode",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getGridHashCellSize",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "gridHashTablePower",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     }
    ]
   },
@@ -1425,56 +1778,69 @@
    "methods": [
     {
      "name": "~NxController",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "move",
-     "args": 6
+     "args": 6,
+     "return_kind": "void"
     },
     {
      "name": "setPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "getPosition",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getFilteredPosition",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getDebugPosition",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getActor",
      "args": 0,
-     "returns": "NxActor"
+     "returns": "NxActor",
+     "return_kind": "pointer"
     },
     {
      "name": "setStepOffset",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setCollision",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setInteraction",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getInteraction",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "reportSceneChanged",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "getUserData",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     }
    ]
   },
@@ -1483,43 +1849,53 @@
    "methods": [
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "getSubmeshCount",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getCount",
-     "args": 2
+     "args": 2,
+     "return_kind": "dword"
     },
     {
      "name": "getFormat",
-     "args": 2
+     "args": 2,
+     "return_kind": "int"
     },
     {
      "name": "getBase",
-     "args": 2
+     "args": 2,
+     "return_kind": "pointer"
     },
     {
      "name": "getStride",
-     "args": 2
+     "args": 2,
+     "return_kind": "dword"
     },
     {
      "name": "load",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "getReferenceCount",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getInternal",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "~NxConvexMesh",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     }
    ]
   },
@@ -1528,160 +1904,198 @@
    "methods": [
     {
      "name": "~NxShape",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "getActor",
      "args": 0,
-     "returns": "NxActor"
+     "returns": "NxActor",
+     "return_kind": "pointer"
     },
     {
      "name": "setGroup",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGroup",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getWorldBounds",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setFlag",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getFlag",
-     "args": 1
+     "args": 1,
+     "return_kind": "int"
     },
     {
      "name": "setLocalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setLocalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setLocalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getLocalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getLocalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getLocalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setGlobalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGlobalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setMaterial",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getMaterial",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "setSkinWidth",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getSkinWidth",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setCCDSkeleton",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getCCDSkeleton",
      "args": 0,
-     "returns": "NxCCDSkeleton"
+     "returns": "NxCCDSkeleton",
+     "return_kind": "pointer"
     },
     {
      "name": "setName",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getName",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "raycast",
-     "args": 5
+     "args": 5,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapSphere",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapOBB",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapAABB",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapCapsule",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "setGroupsMask",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGroupsMask",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getConvexMesh",
      "args": 0,
-     "returns": "NxConvexMesh"
+     "returns": "NxConvexMesh",
+     "return_kind": "pointer"
     },
     {
      "name": "getConvexMesh",
      "args": 0,
-     "returns": "NxConvexMesh"
+     "returns": "NxConvexMesh",
+     "return_kind": "pointer"
     }
    ]
   },
@@ -1690,47 +2104,58 @@
    "methods": [
     {
      "name": "NxSetCookingParams",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "NxGetCookingParams",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "NxPlatformMismatch",
-     "args": 0
+     "args": 0,
+     "return_kind": "bool"
     },
     {
      "name": "NxInitCooking",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "NxCloseCooking",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "NxCookTriangleMesh",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "NxCookConvexMesh",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "NxCookClothMesh",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "NxCreatePMap",
-     "args": 4
+     "args": 4,
+     "return_kind": "bool"
     },
     {
      "name": "NxReleasePMap",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "~NxCookingInterface",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     }
    ]
   },
@@ -1739,11 +2164,13 @@
    "methods": [
     {
      "name": "~NxJoint",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "getActors",
      "args": 2,
+     "return_kind": "void",
      "out": [
       {
        "stack": 0,
@@ -1757,84 +2184,104 @@
     },
     {
      "name": "setGlobalAnchor",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalAxis",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGlobalAnchor",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalAxis",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getState",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setBreakable",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getBreakable",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "setLimitPoint",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getLimitPoint",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "addLimitPlane",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "purgeLimitPlanes",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "resetLimitPlaneIterator",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "hasMoreLimitPlanes",
-     "args": 0
+     "args": 0,
+     "return_kind": "bool"
     },
     {
      "name": "getNextLimitPlane",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "getType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setName",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getName",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getScene",
      "args": 0,
-     "returns": "NxScene"
+     "returns": "NxScene",
+     "return_kind": "pointer"
     },
     {
      "name": "loadFromDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     }
    ]
   },
@@ -1843,11 +2290,13 @@
    "methods": [
     {
      "name": "~NxJoint",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "getActors",
      "args": 2,
+     "return_kind": "void",
      "out": [
       {
        "stack": 0,
@@ -1861,100 +2310,124 @@
     },
     {
      "name": "setGlobalAnchor",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalAxis",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGlobalAnchor",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalAxis",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getState",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setBreakable",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getBreakable",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "setLimitPoint",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getLimitPoint",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "addLimitPlane",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "purgeLimitPlanes",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "resetLimitPlaneIterator",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "hasMoreLimitPlanes",
-     "args": 0
+     "args": 0,
+     "return_kind": "bool"
     },
     {
      "name": "getNextLimitPlane",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "getType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setName",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getName",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getScene",
      "args": 0,
-     "returns": "NxScene"
+     "returns": "NxScene",
+     "return_kind": "pointer"
     },
     {
      "name": "loadFromDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setDrivePosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setDriveOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setDriveLinearVelocity",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setDriveAngularVelocity",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     }
    ]
   },
@@ -1963,11 +2436,13 @@
    "methods": [
     {
      "name": "~NxJoint",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "getActors",
      "args": 2,
+     "return_kind": "void",
      "out": [
       {
        "stack": 0,
@@ -1981,84 +2456,104 @@
     },
     {
      "name": "setGlobalAnchor",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalAxis",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGlobalAnchor",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalAxis",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getState",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setBreakable",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getBreakable",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "setLimitPoint",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getLimitPoint",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "addLimitPlane",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "purgeLimitPlanes",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "resetLimitPlaneIterator",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "hasMoreLimitPlanes",
-     "args": 0
+     "args": 0,
+     "return_kind": "bool"
     },
     {
      "name": "getNextLimitPlane",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "getType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setName",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getName",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getScene",
      "args": 0,
-     "returns": "NxScene"
+     "returns": "NxScene",
+     "return_kind": "pointer"
     },
     {
      "name": "loadFromDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     }
    ]
   },
@@ -2068,16 +2563,19 @@
     {
      "name": "isSpringAndDamperEffector",
      "args": 0,
-     "returns": "NxSpringAndDamperEffector"
+     "returns": "NxSpringAndDamperEffector",
+     "return_kind": "pointer"
     },
     {
      "name": "getScene",
      "args": 0,
-     "returns": "NxScene"
+     "returns": "NxScene",
+     "return_kind": "pointer"
     },
     {
      "name": "~NxEffector",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     }
    ]
   },
@@ -2086,11 +2584,13 @@
    "methods": [
     {
      "name": "~NxJoint",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "getActors",
      "args": 2,
+     "return_kind": "void",
      "out": [
       {
        "stack": 0,
@@ -2104,84 +2604,104 @@
     },
     {
      "name": "setGlobalAnchor",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalAxis",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGlobalAnchor",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalAxis",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getState",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setBreakable",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getBreakable",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "setLimitPoint",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getLimitPoint",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "addLimitPlane",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "purgeLimitPlanes",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "resetLimitPlaneIterator",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "hasMoreLimitPlanes",
-     "args": 0
+     "args": 0,
+     "return_kind": "bool"
     },
     {
      "name": "getNextLimitPlane",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "getType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setName",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getName",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getScene",
      "args": 0,
-     "returns": "NxScene"
+     "returns": "NxScene",
+     "return_kind": "pointer"
     },
     {
      "name": "loadFromDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     }
    ]
   },
@@ -2190,266 +2710,327 @@
    "methods": [
     {
      "name": "~NxFluid",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "createEmitter",
      "args": 1,
-     "returns": "NxFluidEmitter"
+     "returns": "NxFluidEmitter",
+     "return_kind": "pointer"
     },
     {
      "name": "releaseEmitter",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getNbEmitters",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getEmitters",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "createScreenSurfaceMesh",
      "args": 1,
-     "returns": "NxImplicitScreenMesh"
+     "returns": "NxImplicitScreenMesh",
+     "return_kind": "pointer"
     },
     {
      "name": "releaseScreenSurfaceMesh",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getNbScreenSurfaceMeshes",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getScreenSurfaceMeshes",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "addParticles",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "removeAllParticles",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "setParticlesWriteData",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getParticlesWriteData",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setParticleDeletionIdWriteData",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getParticleDeletionIdWriteData",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setParticleCreationIdWriteData",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getParticleCreationIdWriteData",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getSimulationMethod",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "setSimulationMethod",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getStiffness",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setStiffness",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getViscosity",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setViscosity",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getDamping",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setDamping",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getExternalAcceleration",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setExternalAcceleration",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getCollisionMethod",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "setCollisionMethod",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getStaticCollisionRestitution",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setStaticCollisionRestitution",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getStaticCollisionAdhesion",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setStaticCollisionAdhesion",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getDynamicCollisionRestitution",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setDynamicCollisionRestitution",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getDynamicCollisionAdhesion",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setDynamicCollisionAdhesion",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setCollisionResponseCoefficient",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getCollisionResponseCoefficient",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setFlag",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getFlag",
-     "args": 1
+     "args": 1,
+     "return_kind": "int"
     },
     {
      "name": "getScene",
      "args": 0,
-     "returns": "NxScene"
+     "returns": "NxScene",
+     "return_kind": "pointer"
     },
     {
      "name": "getMaxParticles",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getKernelRadiusMultiplier",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getMotionLimitMultiplier",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getCollisionDistanceMultiplier",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getPacketSizeMultiplier",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getRestParticlesPerMeter",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getRestDensity",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getRestParticleDistance",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getParticleMass",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setGroup",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGroup",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "setGroupsMask",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGroupsMask",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getWorldBounds",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "loadFromDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "setName",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getName",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getCompartment",
      "args": 0,
-     "returns": "NxCompartment"
+     "returns": "NxCompartment",
+     "return_kind": "pointer"
     }
    ]
   },
@@ -2458,155 +3039,191 @@
    "methods": [
     {
      "name": "~NxFluidEmitter",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "getFluid",
      "args": 0,
-     "returns": "NxFluid"
+     "returns": "NxFluid",
+     "return_kind": "pointer"
     },
     {
      "name": "setGlobalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGlobalPoseVal",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalPositionVal",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalOrientationVal",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setLocalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setLocalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setLocalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getLocalPoseVal",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getLocalPositionVal",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getLocalOrientationVal",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setFrameShape",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getFrameShape",
      "args": 0,
-     "returns": "NxShape"
+     "returns": "NxShape",
+     "return_kind": "pointer"
     },
     {
      "name": "getDimensionX",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getDimensionY",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setRandomPos",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getRandomPos",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setRandomAngle",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getRandomAngle",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setFluidVelocityMagnitude",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getFluidVelocityMagnitude",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setRate",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getRate",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setParticleLifetime",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getParticleLifetime",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setFlag",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getFlag",
-     "args": 1
+     "args": 1,
+     "return_kind": "int"
     },
     {
      "name": "getShape",
-     "args": 1
+     "args": 1,
+     "return_kind": "int"
     },
     {
      "name": "getType",
-     "args": 1
+     "args": 1,
+     "return_kind": "int"
     },
     {
      "name": "loadFromDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "setName",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getName",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     }
    ]
   },
@@ -2615,42 +3232,51 @@
    "methods": [
     {
      "name": "release",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "setErrorStream",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getErrorStream",
      "args": 0,
-     "returns": "NxUserOutputStream"
+     "returns": "NxUserOutputStream",
+     "return_kind": "pointer"
     },
     {
      "name": "getLastError",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "getFirstError",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "getAllocator",
      "args": 0,
-     "returns": "NxUserAllocator"
+     "returns": "NxUserAllocator",
+     "return_kind": "pointer"
     },
     {
      "name": "getRemoteDebugger",
      "args": 0,
-     "returns": "NxRemoteDebugger"
+     "returns": "NxRemoteDebugger",
+     "return_kind": "pointer"
     },
     {
      "name": "setAllocaThreshold",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "~NxFoundationSDK",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     }
    ]
   },
@@ -2659,62 +3285,76 @@
    "methods": [
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "loadFromDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "saveCells",
-     "args": 2
+     "args": 2,
+     "return_kind": "dword"
     },
     {
      "name": "getNbRows",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getNbColumns",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getFormat",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "getSampleStride",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getVerticalExtent",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getConvexEdgeThreshold",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getFlags",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getHeight",
      "args": 2,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getCells",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getReferenceCount",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "~NxHeightField",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     }
    ]
   },
@@ -2723,211 +3363,261 @@
    "methods": [
     {
      "name": "~NxShape",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "getActor",
      "args": 0,
-     "returns": "NxActor"
+     "returns": "NxActor",
+     "return_kind": "pointer"
     },
     {
      "name": "setGroup",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGroup",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getWorldBounds",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setFlag",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getFlag",
-     "args": 1
+     "args": 1,
+     "return_kind": "int"
     },
     {
      "name": "setLocalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setLocalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setLocalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getLocalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getLocalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getLocalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setGlobalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGlobalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setMaterial",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getMaterial",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "setSkinWidth",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getSkinWidth",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setCCDSkeleton",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getCCDSkeleton",
      "args": 0,
-     "returns": "NxCCDSkeleton"
+     "returns": "NxCCDSkeleton",
+     "return_kind": "pointer"
     },
     {
      "name": "setName",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getName",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "raycast",
-     "args": 5
+     "args": 5,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapSphere",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapOBB",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapAABB",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapCapsule",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "setGroupsMask",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGroupsMask",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getHeightField",
      "args": 0,
-     "returns": "NxHeightField"
+     "returns": "NxHeightField",
+     "return_kind": "pointer"
     },
     {
      "name": "getHeightScale",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getRowScale",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getColumnScale",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setHeightScale",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setRowScale",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setColumnScale",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getTriangle",
-     "args": 6
+     "args": 6,
+     "return_kind": "dword"
     },
     {
      "name": "overlapAABBTriangles",
-     "args": 4
+     "args": 4,
+     "return_kind": "bool"
     },
     {
      "name": "isShapePointOnHeightField",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "getHeightAtShapePoint",
      "args": 2,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getMaterialAtShapePoint",
-     "args": 2
+     "args": 2,
+     "return_kind": "dword"
     },
     {
      "name": "getNormalAtShapePoint",
-     "args": 3
+     "args": 3,
+     "return_kind": "unknown"
     },
     {
      "name": "getSmoothNormalAtShapePoint",
-     "args": 3
+     "args": 3,
+     "return_kind": "unknown"
     }
    ]
   },
@@ -2936,122 +3626,151 @@
    "methods": [
     {
      "name": "~NxImplicitScreenMesh",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "setParticles",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setMeshData",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getMeshData",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "generateMesh",
-     "args": 0
+     "args": 0,
+     "return_kind": "bool"
     },
     {
      "name": "getMesh",
-     "args": 0
+     "args": 0,
+     "return_kind": "bool"
     },
     {
      "name": "generateMeshIsDone",
-     "args": 0
+     "args": 0,
+     "return_kind": "bool"
     },
     {
      "name": "getScreenSpacing",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setScreenSpacing",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getThreshold",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setThreshold",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getHierarchyLevels",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "setHierarchyLevels",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getParticleRadius",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setParticleRadius",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getDepthSmoothing",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "setDepthSmoothing",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getSilhouetteSmoothing",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "setSilhouetteSmoothing",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setProjectionMatrix",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getProjectionMatrix",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "setWindowWidth",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getWindowWidth",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "setWindowHeight",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getWindowHeight",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "setTriangleWinding",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getTriangleWinding",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "setName",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getName",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     }
    ]
   },
@@ -3060,15 +3779,18 @@
    "methods": [
     {
      "name": "getVersionNumber",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "getInterfaceType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "~NxInterface",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     }
    ]
   },
@@ -3077,11 +3799,13 @@
    "methods": [
     {
      "name": "~NxJoint",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "getActors",
      "args": 2,
+     "return_kind": "void",
      "out": [
       {
        "stack": 0,
@@ -3095,76 +3819,94 @@
     },
     {
      "name": "setGlobalAnchor",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalAxis",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGlobalAnchor",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalAxis",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getState",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setBreakable",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getBreakable",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "setLimitPoint",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getLimitPoint",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "addLimitPlane",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "purgeLimitPlanes",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "resetLimitPlaneIterator",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "hasMoreLimitPlanes",
-     "args": 0
+     "args": 0,
+     "return_kind": "bool"
     },
     {
      "name": "getNextLimitPlane",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "getType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setName",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getName",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getScene",
      "args": 0,
-     "returns": "NxScene"
+     "returns": "NxScene",
+     "return_kind": "pointer"
     }
    ]
   },
@@ -3173,101 +3915,124 @@
    "methods": [
     {
      "name": "~NxMaterial",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "getMaterialIndex",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "loadFromDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getScene",
      "args": 0,
-     "returns": "NxScene"
+     "returns": "NxScene",
+     "return_kind": "pointer"
     },
     {
      "name": "setDynamicFriction",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getDynamicFriction",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setStaticFriction",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getStaticFriction",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setRestitution",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getRestitution",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setDynamicFrictionV",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getDynamicFrictionV",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setStaticFrictionV",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getStaticFrictionV",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setDirOfAnisotropy",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getDirOfAnisotropy",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setFlags",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getFlags",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "setFrictionCombineMode",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getFrictionCombineMode",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setRestitutionCombineMode",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getRestitutionCombineMode",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     }
    ]
   },
@@ -3276,118 +4041,144 @@
    "methods": [
     {
      "name": "~NxPhysicsSDK",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "release",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "setParameter",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "getParameter",
      "args": 1,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "createScene",
      "args": 1,
-     "returns": "NxScene"
+     "returns": "NxScene",
+     "return_kind": "pointer"
     },
     {
      "name": "releaseScene",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getNbScenes",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getScene",
      "args": 1,
-     "returns": "NxScene"
+     "returns": "NxScene",
+     "return_kind": "pointer"
     },
     {
      "name": "createTriangleMesh",
      "args": 1,
-     "returns": "NxTriangleMesh"
+     "returns": "NxTriangleMesh",
+     "return_kind": "pointer"
     },
     {
      "name": "releaseTriangleMesh",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "createHeightField",
      "args": 1,
-     "returns": "NxHeightField"
+     "returns": "NxHeightField",
+     "return_kind": "pointer"
     },
     {
      "name": "releaseHeightField",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "createCCDSkeleton",
      "args": 2,
-     "returns": "NxCCDSkeleton"
+     "returns": "NxCCDSkeleton",
+     "return_kind": "pointer"
     },
     {
      "name": "createCCDSkeleton",
      "args": 1,
-     "returns": "NxCCDSkeleton"
+     "returns": "NxCCDSkeleton",
+     "return_kind": "pointer"
     },
     {
      "name": "releaseCCDSkeleton",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "createConvexMesh",
      "args": 1,
-     "returns": "NxConvexMesh"
+     "returns": "NxConvexMesh",
+     "return_kind": "pointer"
     },
     {
      "name": "releaseConvexMesh",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "createClothMesh",
      "args": 1,
-     "returns": "NxClothMesh"
+     "returns": "NxClothMesh",
+     "return_kind": "pointer"
     },
     {
      "name": "releaseClothMesh",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getNbClothMeshes",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getClothMeshes",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getInternalVersion",
-     "args": 3
+     "args": 3,
+     "return_kind": "dword"
     },
     {
      "name": "getInterface",
      "args": 2,
-     "returns": "NxInterface"
+     "returns": "NxInterface",
+     "return_kind": "pointer"
     },
     {
      "name": "getHWVersion",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "getNbPPUs",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getFoundationSDK",
      "args": 0,
-     "returns": "NxFoundationSDK"
+     "returns": "NxFoundationSDK",
+     "return_kind": "pointer"
     }
    ]
   },
@@ -3396,158 +4187,196 @@
    "methods": [
     {
      "name": "~NxShape",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "getActor",
      "args": 0,
-     "returns": "NxActor"
+     "returns": "NxActor",
+     "return_kind": "pointer"
     },
     {
      "name": "setGroup",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGroup",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getWorldBounds",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setFlag",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getFlag",
-     "args": 1
+     "args": 1,
+     "return_kind": "int"
     },
     {
      "name": "setLocalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setLocalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setLocalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getLocalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getLocalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getLocalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setGlobalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGlobalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setMaterial",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getMaterial",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "setSkinWidth",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getSkinWidth",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setCCDSkeleton",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getCCDSkeleton",
      "args": 0,
-     "returns": "NxCCDSkeleton"
+     "returns": "NxCCDSkeleton",
+     "return_kind": "pointer"
     },
     {
      "name": "setName",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getName",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "raycast",
-     "args": 5
+     "args": 5,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapSphere",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapOBB",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapAABB",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapCapsule",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "setGroupsMask",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGroupsMask",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setPlane",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getPlane",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     }
    ]
   },
@@ -3556,11 +4385,13 @@
    "methods": [
     {
      "name": "~NxJoint",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "getActors",
      "args": 2,
+     "return_kind": "void",
      "out": [
       {
        "stack": 0,
@@ -3574,84 +4405,104 @@
     },
     {
      "name": "setGlobalAnchor",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalAxis",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGlobalAnchor",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalAxis",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getState",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setBreakable",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getBreakable",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "setLimitPoint",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getLimitPoint",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "addLimitPlane",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "purgeLimitPlanes",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "resetLimitPlaneIterator",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "hasMoreLimitPlanes",
-     "args": 0
+     "args": 0,
+     "return_kind": "bool"
     },
     {
      "name": "getNextLimitPlane",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "getType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setName",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getName",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getScene",
      "args": 0,
-     "returns": "NxScene"
+     "returns": "NxScene",
+     "return_kind": "pointer"
     },
     {
      "name": "loadFromDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     }
    ]
   },
@@ -3660,11 +4511,13 @@
    "methods": [
     {
      "name": "~NxJoint",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "getActors",
      "args": 2,
+     "return_kind": "void",
      "out": [
       {
        "stack": 0,
@@ -3678,84 +4531,104 @@
     },
     {
      "name": "setGlobalAnchor",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalAxis",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGlobalAnchor",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalAxis",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getState",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setBreakable",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getBreakable",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "setLimitPoint",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getLimitPoint",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "addLimitPlane",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "purgeLimitPlanes",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "resetLimitPlaneIterator",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "hasMoreLimitPlanes",
-     "args": 0
+     "args": 0,
+     "return_kind": "bool"
     },
     {
      "name": "getNextLimitPlane",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "getType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setName",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getName",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getScene",
      "args": 0,
-     "returns": "NxScene"
+     "returns": "NxScene",
+     "return_kind": "pointer"
     },
     {
      "name": "loadFromDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     }
    ]
   },
@@ -3764,11 +4637,13 @@
    "methods": [
     {
      "name": "~NxJoint",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "getActors",
      "args": 2,
+     "return_kind": "void",
      "out": [
       {
        "stack": 0,
@@ -3782,84 +4657,104 @@
     },
     {
      "name": "setGlobalAnchor",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalAxis",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGlobalAnchor",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalAxis",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getState",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setBreakable",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getBreakable",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "setLimitPoint",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getLimitPoint",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "addLimitPlane",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "purgeLimitPlanes",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "resetLimitPlaneIterator",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "hasMoreLimitPlanes",
-     "args": 0
+     "args": 0,
+     "return_kind": "bool"
     },
     {
      "name": "getNextLimitPlane",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "getType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setName",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getName",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getScene",
      "args": 0,
-     "returns": "NxScene"
+     "returns": "NxScene",
+     "return_kind": "pointer"
     },
     {
      "name": "loadFromDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     }
    ]
   },
@@ -3868,11 +4763,13 @@
    "methods": [
     {
      "name": "~NxProfileData",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "getNamedZone",
-     "args": 1
+     "args": 1,
+     "return_kind": "pointer"
     }
    ]
   },
@@ -3881,11 +4778,13 @@
    "methods": [
     {
      "name": "~NxJoint",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "getActors",
      "args": 2,
+     "return_kind": "void",
      "out": [
       {
        "stack": 0,
@@ -3899,100 +4798,124 @@
     },
     {
      "name": "setGlobalAnchor",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalAxis",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGlobalAnchor",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalAxis",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getState",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setBreakable",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getBreakable",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "setLimitPoint",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getLimitPoint",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "addLimitPlane",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "purgeLimitPlanes",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "resetLimitPlaneIterator",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "hasMoreLimitPlanes",
-     "args": 0
+     "args": 0,
+     "return_kind": "bool"
     },
     {
      "name": "getNextLimitPlane",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "getType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setName",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getName",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getScene",
      "args": 0,
-     "returns": "NxScene"
+     "returns": "NxScene",
+     "return_kind": "pointer"
     },
     {
      "name": "loadFromDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setMotor",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getMotor",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "setFlags",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getFlags",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     }
    ]
   },
@@ -4001,91 +4924,113 @@
    "methods": [
     {
      "name": "connect",
-     "args": 3
+     "args": 3,
+     "return_kind": "void"
     },
     {
      "name": "flush",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "isConnected",
-     "args": 0
+     "args": 0,
+     "return_kind": "bool"
     },
     {
      "name": "frameBreak",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "createObject",
-     "args": 4
+     "args": 4,
+     "return_kind": "void"
     },
     {
      "name": "removeObject",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "addChild",
-     "args": 3
+     "args": 3,
+     "return_kind": "void"
     },
     {
      "name": "removeChild",
-     "args": 3
+     "args": 3,
+     "return_kind": "void"
     },
     {
      "name": "writeParameter",
-     "args": 5
+     "args": 5,
+     "return_kind": "void"
     },
     {
      "name": "writeParameter",
-     "args": 5
+     "args": 5,
+     "return_kind": "void"
     },
     {
      "name": "writeParameter",
-     "args": 5
+     "args": 5,
+     "return_kind": "void"
     },
     {
      "name": "writeParameter",
-     "args": 5
+     "args": 5,
+     "return_kind": "void"
     },
     {
      "name": "writeParameter",
-     "args": 5
+     "args": 5,
+     "return_kind": "void"
     },
     {
      "name": "writeParameter",
-     "args": 5
+     "args": 5,
+     "return_kind": "void"
     },
     {
      "name": "writeParameter",
-     "args": 5
+     "args": 5,
+     "return_kind": "void"
     },
     {
      "name": "writeParameter",
-     "args": 5
+     "args": 5,
+     "return_kind": "void"
     },
     {
      "name": "writeParameter",
-     "args": 5
+     "args": 5,
+     "return_kind": "void"
     },
     {
      "name": "writeParameter",
-     "args": 5
+     "args": 5,
+     "return_kind": "void"
     },
     {
      "name": "getMask",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getPickedObject",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getPickPoint",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "~NxRemoteDebugger",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     }
    ]
   },
@@ -4094,11 +5039,13 @@
    "methods": [
     {
      "name": "~NxJoint",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "getActors",
      "args": 2,
+     "return_kind": "void",
      "out": [
       {
        "stack": 0,
@@ -4112,134 +5059,166 @@
     },
     {
      "name": "setGlobalAnchor",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalAxis",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGlobalAnchor",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalAxis",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getState",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setBreakable",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getBreakable",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "setLimitPoint",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getLimitPoint",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "addLimitPlane",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "purgeLimitPlanes",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "resetLimitPlaneIterator",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "hasMoreLimitPlanes",
-     "args": 0
+     "args": 0,
+     "return_kind": "bool"
     },
     {
      "name": "getNextLimitPlane",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "getType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setName",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getName",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getScene",
      "args": 0,
-     "returns": "NxScene"
+     "returns": "NxScene",
+     "return_kind": "pointer"
     },
     {
      "name": "loadFromDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setLimits",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getLimits",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "setMotor",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getMotor",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "setSpring",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getSpring",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "getAngle",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getVelocity",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setFlags",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getFlags",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "setProjectionMode",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getProjectionMode",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     }
    ]
   },
@@ -4248,76 +5227,93 @@
    "methods": [
     {
      "name": "~NxScene",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "getSimType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "getInternal",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "setGravity",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGravity",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "createActor",
      "args": 1,
-     "returns": "NxActor"
+     "returns": "NxActor",
+     "return_kind": "pointer"
     },
     {
      "name": "releaseActor",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "createJoint",
      "args": 1,
-     "returns": "NxJoint"
+     "returns": "NxJoint",
+     "return_kind": "pointer"
     },
     {
      "name": "releaseJoint",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "createSpringAndDamperEffector",
      "args": 1,
-     "returns": "NxSpringAndDamperEffector"
+     "returns": "NxSpringAndDamperEffector",
+     "return_kind": "pointer"
     },
     {
      "name": "releaseEffector",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "createMaterial",
      "args": 1,
-     "returns": "NxMaterial"
+     "returns": "NxMaterial",
+     "return_kind": "pointer"
     },
     {
      "name": "releaseMaterial",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "createCompartment",
      "args": 1,
-     "returns": "NxCompartment"
+     "returns": "NxCompartment",
+     "return_kind": "pointer"
     },
     {
      "name": "getNbCompartments",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getCompartmentArray",
      "args": 3,
+     "return_kind": "dword",
      "out": [
       {
        "stack": 0,
@@ -4327,141 +5323,175 @@
     },
     {
      "name": "setActorPairFlags",
-     "args": 3
+     "args": 3,
+     "return_kind": "void"
     },
     {
      "name": "getActorPairFlags",
-     "args": 2
+     "args": 2,
+     "return_kind": "dword"
     },
     {
      "name": "setShapePairFlags",
-     "args": 3
+     "args": 3,
+     "return_kind": "void"
     },
     {
      "name": "getShapePairFlags",
-     "args": 2
+     "args": 2,
+     "return_kind": "dword"
     },
     {
      "name": "getNbPairs",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getPairFlagArray",
-     "args": 2
+     "args": 2,
+     "return_kind": "dword"
     },
     {
      "name": "setGroupCollisionFlag",
-     "args": 3
+     "args": 3,
+     "return_kind": "void"
     },
     {
      "name": "getGroupCollisionFlag",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "setActorGroupPairFlags",
-     "args": 3
+     "args": 3,
+     "return_kind": "void"
     },
     {
      "name": "getActorGroupPairFlags",
-     "args": 2
+     "args": 2,
+     "return_kind": "dword"
     },
     {
      "name": "getNbActorGroupPairs",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getActorGroupPairArray",
-     "args": 3
+     "args": 3,
+     "return_kind": "dword"
     },
     {
      "name": "setFilterOps",
-     "args": 3
+     "args": 3,
+     "return_kind": "void"
     },
     {
      "name": "setFilterBool",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setFilterConstant0",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setFilterConstant1",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getFilterOps",
-     "args": 3
+     "args": 3,
+     "return_kind": "void"
     },
     {
      "name": "getFilterBool",
-     "args": 0
+     "args": 0,
+     "return_kind": "bool"
     },
     {
      "name": "getFilterConstant0",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getFilterConstant1",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getNbActors",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getActors",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getActiveTransforms",
-     "args": 1
+     "args": 1,
+     "return_kind": "pointer"
     },
     {
      "name": "getNbStaticShapes",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getNbDynamicShapes",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getTotalNbShapes",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getNbJoints",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "resetJointIterator",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "getNextJoint",
      "args": 0,
-     "returns": "NxJoint"
+     "returns": "NxJoint",
+     "return_kind": "pointer"
     },
     {
      "name": "getNbEffectors",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "resetEffectorIterator",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "getNextEffector",
      "args": 0,
-     "returns": "NxEffector"
+     "returns": "NxEffector",
+     "return_kind": "pointer"
     },
     {
      "name": "getBoundForIslandSize",
-     "args": 1
+     "args": 1,
+     "return_kind": "dword"
     },
     {
      "name": "getIslandArrayFromActor",
      "args": 4,
+     "return_kind": "dword",
      "out": [
       {
        "stack": 1,
@@ -4471,11 +5501,13 @@
     },
     {
      "name": "getNbMaterials",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getMaterialArray",
      "args": 3,
+     "return_kind": "dword",
      "out": [
       {
        "stack": 0,
@@ -4485,89 +5517,109 @@
     },
     {
      "name": "getHighestMaterialIndex",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getMaterialFromIndex",
      "args": 1,
-     "returns": "NxMaterial"
+     "returns": "NxMaterial",
+     "return_kind": "pointer"
     },
     {
      "name": "flushStream",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "setTiming",
-     "args": 3
+     "args": 3,
+     "return_kind": "void"
     },
     {
      "name": "getTiming",
-     "args": 4
+     "args": 4,
+     "return_kind": "void"
     },
     {
      "name": "getDebugRenderable",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getPhysicsSDK",
      "args": 0,
-     "returns": "NxPhysicsSDK"
+     "returns": "NxPhysicsSDK",
+     "return_kind": "pointer"
     },
     {
      "name": "getStats",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getStats2",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getLimits",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setUserNotify",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setUserContactModify",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getUserNotify",
      "args": 0,
-     "returns": "NxUserNotify"
+     "returns": "NxUserNotify",
+     "return_kind": "pointer"
     },
     {
      "name": "getUserContactModify",
      "args": 0,
-     "returns": "NxUserContactModify"
+     "returns": "NxUserContactModify",
+     "return_kind": "pointer"
     },
     {
      "name": "setUserTriggerReport",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getUserTriggerReport",
      "args": 0,
-     "returns": "NxUserTriggerReport"
+     "returns": "NxUserTriggerReport",
+     "return_kind": "pointer"
     },
     {
      "name": "setUserContactReport",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getUserContactReport",
      "args": 0,
-     "returns": "NxUserContactReport"
+     "returns": "NxUserContactReport",
+     "return_kind": "pointer"
     },
     {
      "name": "raycastAnyBounds",
-     "args": 5
+     "args": 5,
+     "return_kind": "bool"
     },
     {
      "name": "raycastAnyShape",
      "args": 6,
+     "return_kind": "bool",
      "out": [
       {
        "stack": 5,
@@ -4577,21 +5629,25 @@
     },
     {
      "name": "raycastAllBounds",
-     "args": 7
+     "args": 7,
+     "return_kind": "dword"
     },
     {
      "name": "raycastAllShapes",
-     "args": 7
+     "args": 7,
+     "return_kind": "dword"
     },
     {
      "name": "raycastClosestBounds",
      "args": 7,
-     "returns": "NxShape"
+     "returns": "NxShape",
+     "return_kind": "pointer"
     },
     {
      "name": "raycastClosestShape",
      "args": 8,
      "returns": "NxShape",
+     "return_kind": "pointer",
      "out": [
       {
        "stack": 7,
@@ -4602,6 +5658,7 @@
     {
      "name": "overlapSphereShapes",
      "args": 8,
+     "return_kind": "dword",
      "out": [
       {
        "stack": 3,
@@ -4616,6 +5673,7 @@
     {
      "name": "overlapAABBShapes",
      "args": 8,
+     "return_kind": "dword",
      "out": [
       {
        "stack": 3,
@@ -4630,6 +5688,7 @@
     {
      "name": "overlapOBBShapes",
      "args": 8,
+     "return_kind": "dword",
      "out": [
       {
        "stack": 3,
@@ -4644,6 +5703,7 @@
     {
      "name": "overlapCapsuleShapes",
      "args": 8,
+     "return_kind": "dword",
      "out": [
       {
        "stack": 3,
@@ -4658,23 +5718,28 @@
     {
      "name": "createSweepCache",
      "args": 0,
-     "returns": "NxSweepCache"
+     "returns": "NxSweepCache",
+     "return_kind": "pointer"
     },
     {
      "name": "releaseSweepCache",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "linearOBBSweep",
-     "args": 9
+     "args": 9,
+     "return_kind": "dword"
     },
     {
      "name": "linearCapsuleSweep",
-     "args": 9
+     "args": 9,
+     "return_kind": "dword"
     },
     {
      "name": "cullShapes",
      "args": 8,
+     "return_kind": "dword",
      "out": [
       {
        "stack": 4,
@@ -4688,123 +5753,152 @@
     },
     {
      "name": "checkOverlapSphere",
-     "args": 4
+     "args": 4,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapAABB",
-     "args": 4
+     "args": 4,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapOBB",
-     "args": 4
+     "args": 4,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapCapsule",
-     "args": 4
+     "args": 4,
+     "return_kind": "bool"
     },
     {
      "name": "createFluid",
      "args": 1,
-     "returns": "NxFluid"
+     "returns": "NxFluid",
+     "return_kind": "pointer"
     },
     {
      "name": "releaseFluid",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getNbFluids",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getFluids",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "cookFluidMeshHotspot",
-     "args": 6
+     "args": 6,
+     "return_kind": "bool"
     },
     {
      "name": "createImplicitScreenMesh",
      "args": 1,
-     "returns": "NxImplicitScreenMesh"
+     "returns": "NxImplicitScreenMesh",
+     "return_kind": "pointer"
     },
     {
      "name": "releaseImplicitScreenMesh",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getNbImplicitScreenMeshes",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getImplicitScreenMeshes",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "createCloth",
      "args": 1,
-     "returns": "NxCloth"
+     "returns": "NxCloth",
+     "return_kind": "pointer"
     },
     {
      "name": "releaseCloth",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getNbCloths",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getCloths",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "isWritable",
-     "args": 0
+     "args": 0,
+     "return_kind": "bool"
     },
     {
      "name": "simulate",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "checkResults",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "fetchResults",
-     "args": 3
+     "args": 3,
+     "return_kind": "bool"
     },
     {
      "name": "flushCaches",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "readProfileData",
      "args": 1,
-     "returns": "NxProfileData"
+     "returns": "NxProfileData",
+     "return_kind": "pointer"
     },
     {
      "name": "pollForWork",
-     "args": 1
+     "args": 1,
+     "return_kind": "int"
     },
     {
      "name": "resetPollForWork",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "pollForBackgroundWork",
-     "args": 1
+     "args": 1,
+     "return_kind": "int"
     },
     {
      "name": "shutdownWorkerThreads",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "lockQueries",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "unlockQueries",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     }
    ]
   },
@@ -4813,146 +5907,181 @@
    "methods": [
     {
      "name": "~NxShape",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "getActor",
      "args": 0,
-     "returns": "NxActor"
+     "returns": "NxActor",
+     "return_kind": "pointer"
     },
     {
      "name": "setGroup",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGroup",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getWorldBounds",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setFlag",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getFlag",
-     "args": 1
+     "args": 1,
+     "return_kind": "int"
     },
     {
      "name": "setLocalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setLocalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setLocalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getLocalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getLocalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getLocalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setGlobalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGlobalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setMaterial",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getMaterial",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "setSkinWidth",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getSkinWidth",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setCCDSkeleton",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getCCDSkeleton",
      "args": 0,
-     "returns": "NxCCDSkeleton"
+     "returns": "NxCCDSkeleton",
+     "return_kind": "pointer"
     },
     {
      "name": "setName",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getName",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "raycast",
-     "args": 5
+     "args": 5,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapSphere",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapOBB",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapAABB",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapCapsule",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "setGroupsMask",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGroupsMask",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     }
    ]
   },
@@ -4961,163 +6090,202 @@
    "methods": [
     {
      "name": "~NxShape",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "getActor",
      "args": 0,
-     "returns": "NxActor"
+     "returns": "NxActor",
+     "return_kind": "pointer"
     },
     {
      "name": "setGroup",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGroup",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getWorldBounds",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setFlag",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getFlag",
-     "args": 1
+     "args": 1,
+     "return_kind": "int"
     },
     {
      "name": "setLocalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setLocalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setLocalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getLocalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getLocalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getLocalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setGlobalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGlobalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setMaterial",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getMaterial",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "setSkinWidth",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getSkinWidth",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setCCDSkeleton",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getCCDSkeleton",
      "args": 0,
-     "returns": "NxCCDSkeleton"
+     "returns": "NxCCDSkeleton",
+     "return_kind": "pointer"
     },
     {
      "name": "setName",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getName",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "raycast",
-     "args": 5
+     "args": 5,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapSphere",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapOBB",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapAABB",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapCapsule",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "setGroupsMask",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGroupsMask",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setRadius",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getRadius",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getWorldSphere",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     }
    ]
   },
@@ -5126,11 +6294,13 @@
    "methods": [
     {
      "name": "~NxJoint",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "getActors",
      "args": 2,
+     "return_kind": "void",
      "out": [
       {
        "stack": 0,
@@ -5144,100 +6314,124 @@
     },
     {
      "name": "setGlobalAnchor",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalAxis",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGlobalAnchor",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalAxis",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getState",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setBreakable",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getBreakable",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "setLimitPoint",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getLimitPoint",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "addLimitPlane",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "purgeLimitPlanes",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "resetLimitPlaneIterator",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "hasMoreLimitPlanes",
-     "args": 0
+     "args": 0,
+     "return_kind": "bool"
     },
     {
      "name": "getNextLimitPlane",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "getType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setName",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getName",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "getScene",
      "args": 0,
-     "returns": "NxScene"
+     "returns": "NxScene",
+     "return_kind": "pointer"
     },
     {
      "name": "loadFromDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setFlags",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getFlags",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "setProjectionMode",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getProjectionMode",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     }
    ]
   },
@@ -5247,40 +6441,49 @@
     {
      "name": "isSpringAndDamperEffector",
      "args": 0,
-     "returns": "NxSpringAndDamperEffector"
+     "returns": "NxSpringAndDamperEffector",
+     "return_kind": "pointer"
     },
     {
      "name": "getScene",
      "args": 0,
-     "returns": "NxScene"
+     "returns": "NxScene",
+     "return_kind": "pointer"
     },
     {
      "name": "~NxSpringAndDamperEffector",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setBodies",
-     "args": 4
+     "args": 4,
+     "return_kind": "void"
     },
     {
      "name": "setLinearSpring",
-     "args": 5
+     "args": 5,
+     "return_kind": "void"
     },
     {
      "name": "getLinearSpring",
-     "args": 5
+     "args": 5,
+     "return_kind": "void"
     },
     {
      "name": "setLinearDamper",
-     "args": 4
+     "args": 4,
+     "return_kind": "void"
     },
     {
      "name": "getLinearDamper",
-     "args": 4
+     "args": 4,
+     "return_kind": "void"
     }
    ]
   },
@@ -5289,11 +6492,13 @@
    "methods": [
     {
      "name": "~NxSweepCache",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "setVolume",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     }
    ]
   },
@@ -5302,11 +6507,13 @@
    "methods": [
     {
      "name": "~NxTask",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "execute",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     }
    ]
   },
@@ -5315,7 +6522,8 @@
    "methods": [
     {
      "name": "~NxTireFunctionDesc",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     }
    ]
   },
@@ -5324,71 +6532,88 @@
    "methods": [
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "getSubmeshCount",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getCount",
-     "args": 2
+     "args": 2,
+     "return_kind": "dword"
     },
     {
      "name": "getFormat",
-     "args": 2
+     "args": 2,
+     "return_kind": "int"
     },
     {
      "name": "getBase",
-     "args": 2
+     "args": 2,
+     "return_kind": "pointer"
     },
     {
      "name": "getStride",
-     "args": 2
+     "args": 2,
+     "return_kind": "dword"
     },
     {
      "name": "getPageCount",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getPageBBox",
-     "args": 2
+     "args": 2,
+     "return_kind": "unknown"
     },
     {
      "name": "loadPMap",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "hasPMap",
-     "args": 0
+     "args": 0,
+     "return_kind": "bool"
     },
     {
      "name": "getPMapSize",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getPMapData",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "getPMapDensity",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "load",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "getTriangleMaterial",
-     "args": 1
+     "args": 1,
+     "return_kind": "dword"
     },
     {
      "name": "getReferenceCount",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "~NxTriangleMesh",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     }
    ]
   },
@@ -5397,180 +6622,223 @@
    "methods": [
     {
      "name": "~NxShape",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "getActor",
      "args": 0,
-     "returns": "NxActor"
+     "returns": "NxActor",
+     "return_kind": "pointer"
     },
     {
      "name": "setGroup",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGroup",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getWorldBounds",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setFlag",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getFlag",
-     "args": 1
+     "args": 1,
+     "return_kind": "int"
     },
     {
      "name": "setLocalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setLocalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setLocalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getLocalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getLocalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getLocalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setGlobalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGlobalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setMaterial",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getMaterial",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "setSkinWidth",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getSkinWidth",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setCCDSkeleton",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getCCDSkeleton",
      "args": 0,
-     "returns": "NxCCDSkeleton"
+     "returns": "NxCCDSkeleton",
+     "return_kind": "pointer"
     },
     {
      "name": "setName",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getName",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "raycast",
-     "args": 5
+     "args": 5,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapSphere",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapOBB",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapAABB",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapCapsule",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "setGroupsMask",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGroupsMask",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getTriangleMesh",
      "args": 0,
-     "returns": "NxTriangleMesh"
+     "returns": "NxTriangleMesh",
+     "return_kind": "pointer"
     },
     {
      "name": "getTriangleMesh",
      "args": 0,
-     "returns": "NxTriangleMesh"
+     "returns": "NxTriangleMesh",
+     "return_kind": "pointer"
     },
     {
      "name": "getTriangle",
-     "args": 6
+     "args": 6,
+     "return_kind": "dword"
     },
     {
      "name": "overlapAABBTriangles",
-     "args": 4
+     "args": 4,
+     "return_kind": "bool"
     },
     {
      "name": "mapPageInstance",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "unmapPageInstance",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "isPageInstanceMapped",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     }
    ]
   },
@@ -5579,35 +6847,43 @@
    "methods": [
     {
      "name": "mallocDEBUG",
-     "args": 5
+     "args": 5,
+     "return_kind": "pointer"
     },
     {
      "name": "mallocDEBUG",
-     "args": 3
+     "args": 3,
+     "return_kind": "pointer"
     },
     {
      "name": "malloc",
-     "args": 2
+     "args": 2,
+     "return_kind": "pointer"
     },
     {
      "name": "malloc",
-     "args": 1
+     "args": 1,
+     "return_kind": "pointer"
     },
     {
      "name": "realloc",
-     "args": 2
+     "args": 2,
+     "return_kind": "pointer"
     },
     {
      "name": "free",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "checkDEBUG",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "~NxUserAllocator",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     }
    ]
   },
@@ -5616,11 +6892,13 @@
    "methods": [
     {
      "name": "onContactConstraint",
-     "args": 6
+     "args": 6,
+     "return_kind": "bool"
     },
     {
      "name": "~NxUserContactModify",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     }
    ]
   },
@@ -5629,11 +6907,13 @@
    "methods": [
     {
      "name": "onContactNotify",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "~NxUserContactReport",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     }
    ]
   },
@@ -5642,15 +6922,18 @@
    "methods": [
     {
      "name": "onShapeHit",
-     "args": 1
+     "args": 1,
+     "return_kind": "int"
     },
     {
      "name": "onControllerHit",
-     "args": 1
+     "args": 1,
+     "return_kind": "int"
     },
     {
      "name": "~NxUserControllerHitReport",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     }
    ]
   },
@@ -5659,11 +6942,13 @@
    "methods": [
     {
      "name": "onJointBreak",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "onWake",
      "args": 2,
+     "return_kind": "void",
      "out": [
       {
        "stack": 0,
@@ -5674,6 +6959,7 @@
     {
      "name": "onSleep",
      "args": 2,
+     "return_kind": "void",
      "out": [
       {
        "stack": 0,
@@ -5683,7 +6969,8 @@
     },
     {
      "name": "~NxUserNotify",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     }
    ]
   },
@@ -5692,19 +6979,23 @@
    "methods": [
     {
      "name": "reportError",
-     "args": 4
+     "args": 4,
+     "return_kind": "void"
     },
     {
      "name": "reportAssertViolation",
-     "args": 3
+     "args": 3,
+     "return_kind": "int"
     },
     {
      "name": "print",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "~NxUserOutputStream",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     }
    ]
   },
@@ -5713,11 +7004,13 @@
    "methods": [
     {
      "name": "onHit",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "~NxUserRaycastReport",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     }
    ]
   },
@@ -5726,19 +7019,23 @@
    "methods": [
     {
      "name": "addTask",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "addBackgroundTask",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "waitTasksComplete",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "~NxUserScheduler",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     }
    ]
   },
@@ -5747,11 +7044,13 @@
    "methods": [
     {
      "name": "onTrigger",
-     "args": 3
+     "args": 3,
+     "return_kind": "void"
     },
     {
      "name": "~NxUserTriggerReport",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     }
    ]
   },
@@ -5760,11 +7059,13 @@
    "methods": [
     {
      "name": "onWheelContact",
-     "args": 8
+     "args": 8,
+     "return_kind": "bool"
     },
     {
      "name": "~NxUserWheelContactModify",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     }
    ]
   },
@@ -5773,283 +7074,350 @@
    "methods": [
     {
      "name": "NxBoxContainsPoint",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "NxCreateBox",
-     "args": 3
+     "args": 3,
+     "return_kind": "void"
     },
     {
      "name": "NxComputeBoxPlanes",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "NxComputeBoxPoints",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "NxComputeBoxVertexNormals",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "NxGetBoxEdges",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "NxGetBoxEdgesAxes",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "NxGetBoxTriangles",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "NxGetBoxLocalEdgeNormals",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "NxComputeBoxWorldEdgeNormal",
-     "args": 3
+     "args": 3,
+     "return_kind": "void"
     },
     {
      "name": "NxComputeCapsuleAroundBox",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "NxIsBoxAInsideBoxB",
-     "args": 2
+     "args": 2,
+     "return_kind": "bool"
     },
     {
      "name": "NxGetBoxQuads",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "NxBoxVertexToQuad",
-     "args": 1
+     "args": 1,
+     "return_kind": "pointer"
     },
     {
      "name": "NxComputeBoxAroundCapsule",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "NxSetFPUPrecision24",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "NxSetFPUPrecision53",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "NxSetFPUPrecision64",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "NxSetFPURoundingChop",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "NxSetFPURoundingUp",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "NxSetFPURoundingDown",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "NxSetFPURoundingNear",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "NxSetFPUExceptions",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "NxIntChop",
-     "args": 1
+     "args": 1,
+     "return_kind": "int"
     },
     {
      "name": "NxIntFloor",
-     "args": 1
+     "args": 1,
+     "return_kind": "int"
     },
     {
      "name": "NxIntCeil",
-     "args": 1
+     "args": 1,
+     "return_kind": "int"
     },
     {
      "name": "NxComputeDistanceSquared",
      "args": 3,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "NxComputeSquareDistance",
      "args": 3,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "NxComputeSphere",
-     "args": 3
+     "args": 3,
+     "return_kind": "int"
     },
     {
      "name": "NxFastComputeSphere",
-     "args": 3
+     "args": 3,
+     "return_kind": "bool"
     },
     {
      "name": "NxMergeSpheres",
-     "args": 3
+     "args": 3,
+     "return_kind": "void"
     },
     {
      "name": "NxNormalToTangents",
-     "args": 3
+     "args": 3,
+     "return_kind": "void"
     },
     {
      "name": "NxDiagonalizeInertiaTensor",
-     "args": 3
+     "args": 3,
+     "return_kind": "bool"
     },
     {
      "name": "NxFindRotationMatrix",
-     "args": 3
+     "args": 3,
+     "return_kind": "void"
     },
     {
      "name": "NxComputeBounds",
-     "args": 4
+     "args": 4,
+     "return_kind": "void"
     },
     {
      "name": "NxCrc32",
-     "args": 2
+     "args": 2,
+     "return_kind": "dword"
     },
     {
      "name": "NxComputeSphereMass",
      "args": 2,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "NxComputeSphereDensity",
      "args": 2,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "NxComputeBoxMass",
      "args": 2,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "NxComputeBoxDensity",
      "args": 2,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "NxComputeEllipsoidMass",
      "args": 2,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "NxComputeEllipsoidDensity",
      "args": 2,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "NxComputeCylinderMass",
      "args": 3,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "NxComputeCylinderDensity",
      "args": 3,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "NxComputeConeMass",
      "args": 3,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "NxComputeConeDensity",
      "args": 3,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "NxComputeBoxInertiaTensor",
-     "args": 5
+     "args": 5,
+     "return_kind": "void"
     },
     {
      "name": "NxComputeSphereInertiaTensor",
-     "args": 4
+     "args": 4,
+     "return_kind": "void"
     },
     {
      "name": "NxJointDesc_SetGlobalAnchor",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "NxJointDesc_SetGlobalAxis",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "NxBoxBoxIntersect",
-     "args": 7
+     "args": 7,
+     "return_kind": "bool"
     },
     {
      "name": "NxTriBoxIntersect",
-     "args": 5
+     "args": 5,
+     "return_kind": "bool"
     },
     {
      "name": "NxSeparatingAxis",
-     "args": 7
+     "args": 7,
+     "return_kind": "int"
     },
     {
      "name": "NxSegmentPlaneIntersect",
-     "args": 5
+     "args": 5,
+     "return_kind": "void"
     },
     {
      "name": "NxRayPlaneIntersect",
-     "args": 4
+     "args": 4,
+     "return_kind": "bool"
     },
     {
      "name": "NxRaySphereIntersect",
-     "args": 7
+     "args": 7,
+     "return_kind": "bool"
     },
     {
      "name": "NxSegmentBoxIntersect",
-     "args": 5
+     "args": 5,
+     "return_kind": "bool"
     },
     {
      "name": "NxRayAABBIntersect",
-     "args": 5
+     "args": 5,
+     "return_kind": "bool"
     },
     {
      "name": "NxRayAABBIntersect2",
-     "args": 6
+     "args": 6,
+     "return_kind": "dword"
     },
     {
      "name": "NxSegmentOBBIntersect",
-     "args": 5
+     "args": 5,
+     "return_kind": "bool"
     },
     {
      "name": "NxSegmentAABBIntersect",
-     "args": 4
+     "args": 4,
+     "return_kind": "bool"
     },
     {
      "name": "NxRayOBBIntersect",
-     "args": 4
+     "args": 4,
+     "return_kind": "bool"
     },
     {
      "name": "NxRayCapsuleIntersect",
-     "args": 4
+     "args": 4,
+     "return_kind": "dword"
     },
     {
      "name": "NxSweptSpheresIntersect",
-     "args": 4
+     "args": 4,
+     "return_kind": "bool"
     },
     {
      "name": "NxRayTriIntersect",
-     "args": 9
+     "args": 9,
+     "return_kind": "bool"
     },
     {
      "name": "NxBuildSmoothNormals",
-     "args": 7
+     "args": 7,
+     "return_kind": "bool"
     },
     {
      "name": "~NxUtilLib",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     }
    ]
   },
@@ -6058,259 +7426,320 @@
    "methods": [
     {
      "name": "~NxShape",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "getActor",
      "args": 0,
-     "returns": "NxActor"
+     "returns": "NxActor",
+     "return_kind": "pointer"
     },
     {
      "name": "setGroup",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGroup",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "getWorldBounds",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setFlag",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "getFlag",
-     "args": 1
+     "args": 1,
+     "return_kind": "int"
     },
     {
      "name": "setLocalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setLocalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setLocalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getLocalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getLocalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getLocalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setGlobalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setGlobalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGlobalPose",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getGlobalOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "setMaterial",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getMaterial",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "setSkinWidth",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getSkinWidth",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "setCCDSkeleton",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getCCDSkeleton",
      "args": 0,
-     "returns": "NxCCDSkeleton"
+     "returns": "NxCCDSkeleton",
+     "return_kind": "pointer"
     },
     {
      "name": "setName",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getName",
-     "args": 0
+     "args": 0,
+     "return_kind": "pointer"
     },
     {
      "name": "raycast",
-     "args": 5
+     "args": 5,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapSphere",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapOBB",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapAABB",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "checkOverlapCapsule",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "setGroupsMask",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getGroupsMask",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "saveToDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setRadius",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setSuspensionTravel",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getRadius",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getSuspensionTravel",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setSuspension",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setLongitudalTireForceFunction",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setLateralTireForceFunction",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setInverseWheelMass",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setWheelFlags",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getSuspension",
-     "args": 1
+     "args": 1,
+     "return_kind": "unknown"
     },
     {
      "name": "getLongitudalTireForceFunction",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "getLateralTireForceFunction",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     },
     {
      "name": "getInverseWheelMass",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getWheelFlags",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "setMotorTorque",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setBrakeTorque",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "setSteerAngle",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getMotorTorque",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getBrakeTorque",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getSteerAngle",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "setAxleSpeed",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getAxleSpeed",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "getContact",
      "args": 1,
-     "returns": "NxShape"
+     "returns": "NxShape",
+     "return_kind": "pointer"
     },
     {
      "name": "setUserWheelContactModify",
-     "args": 1
+     "args": 1,
+     "return_kind": "void"
     },
     {
      "name": "getUserWheelContactModify",
      "args": 0,
-     "returns": "NxUserWheelContactModify"
+     "returns": "NxUserWheelContactModify",
+     "return_kind": "pointer"
     }
    ]
   },
@@ -6319,7 +7748,8 @@
    "methods": [
     {
      "name": "~NxWheelShapeDesc",
-     "args": 0
+     "args": 0,
+     "return_kind": "unknown"
     }
    ]
   }
@@ -6328,48 +7758,56 @@
   "NxCreatePhysicsSDK": {
    "args": 5,
    "returns": "NxPhysicsSDK",
+   "return_kind": "pointer",
    "module": "physxloader.dll",
    "out": []
   },
   "NxCreatePhysicsSDKWithID": {
    "args": 9,
    "returns": "NxPhysicsSDK",
+   "return_kind": "pointer",
    "module": "physxloader.dll",
    "out": []
   },
   "NxGetPhysicsSDKAllocator": {
    "args": 0,
    "returns": "NxUserAllocator",
+   "return_kind": "pointer",
    "module": "physxloader.dll",
    "out": []
   },
   "NxGetFoundationSDK": {
    "args": 0,
    "returns": "NxFoundationSDK",
+   "return_kind": "pointer",
    "module": "physxloader.dll",
    "out": []
   },
   "NxGetPhysicsSDK": {
    "args": 0,
    "returns": "NxPhysicsSDK",
+   "return_kind": "pointer",
    "module": "physxloader.dll",
    "out": []
   },
   "NxGetUtilLib": {
    "args": 0,
    "returns": "NxUtilLib",
+   "return_kind": "pointer",
    "module": "physxloader.dll",
    "out": []
   },
   "NxGetCookingLib": {
    "args": 1,
    "returns": "NxCookingInterface",
+   "return_kind": "pointer",
    "module": "physxloader.dll",
    "out": []
   },
   "NxGetCookingLibWithID": {
    "args": 5,
    "returns": "NxCookingInterface",
+   "return_kind": "pointer",
    "module": "physxloader.dll",
    "out": []
   }

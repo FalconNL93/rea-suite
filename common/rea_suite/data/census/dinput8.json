@@ -8,6 +8,68 @@
   }
  },
  "conv": "stdcall",
+ "return_kinds": {
+  "hresult": {
+   "failure": 2147500037,
+   "means": "HRESULT: failure E_FAIL; 0 is S_OK"
+  },
+  "ntstatus": {
+   "failure": 3221225473,
+   "means": "NTSTATUS: failure STATUS_UNSUCCESSFUL; 0 is STATUS_SUCCESS"
+  },
+  "lstatus": {
+   "failure": 2,
+   "means": "a Win32 or C error code (LSTATUS, the registry's LONG, errno_t, WSAStartup, getaddrinfo): 0 is success, failure ERROR_FILE_NOT_FOUND (2, ENOENT for errno_t)"
+  },
+  "mmresult": {
+   "failure": 1,
+   "means": "MMRESULT or MCIERROR: 0 is MMSYSERR_NOERROR, failure MMSYSERR_ERROR"
+  },
+  "bool": {
+   "failure": 0,
+   "means": "BOOL, BOOLEAN or C++ bool: failure FALSE"
+  },
+  "handle": {
+   "failure": 0,
+   "means": "a handle whose failure is NULL"
+  },
+  "handle_invalid": {
+   "failure": 4294967295,
+   "means": "a handle whose failure is INVALID_HANDLE_VALUE (-1): CreateFile, FindFirstFile, a SOCKET (INVALID_SOCKET), HFILE_ERROR"
+  },
+  "socket_error": {
+   "failure": 4294967295,
+   "means": "Winsock's int: failure SOCKET_ERROR (-1)"
+  },
+  "pointer": {
+   "failure": 0,
+   "means": "a pointer (a string, a function, an object, a reference): failure NULL"
+  },
+  "int": {
+   "failure": 0,
+   "means": "a signed integer; the type alone does not say which value fails"
+  },
+  "dword": {
+   "failure": 0,
+   "means": "an unsigned 32-bit integer; the type alone does not say which value fails"
+  },
+  "qword": {
+   "failure": 0,
+   "means": "a 64-bit integer in EDX:EAX; the type alone does not say which value fails"
+  },
+  "float": {
+   "failure": 0.0,
+   "means": "float or double in ST(0), as returns_float"
+  },
+  "void": {
+   "failure": null,
+   "means": "nothing returned"
+  },
+  "unknown": {
+   "failure": null,
+   "means": "the headers do not say (no declaration, a structure by value, declarations that disagree)"
+  }
+ },
  "interfaces": {
   "IDirectInputEffect": {
    "base": "IUnknown",
@@ -15,6 +77,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -22,51 +85,63 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Initialize",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetEffectGuid",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetParameters",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetParameters",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Start",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Stop",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "GetEffectStatus",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "Download",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "Unload",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "Escape",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -76,6 +151,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -83,19 +159,23 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetCapabilities",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "EnumObjects",
      "args": 3,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 1,
@@ -106,55 +186,68 @@
     },
     {
      "name": "GetProperty",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetProperty",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Acquire",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "Unacquire",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDeviceState",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDeviceData",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "SetDataFormat",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetEventNotification",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetCooperativeLevel",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetObjectInfo",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDeviceInfo",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "RunControlPanel",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Initialize",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -164,6 +257,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -171,19 +265,23 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetCapabilities",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "EnumObjects",
      "args": 3,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 1,
@@ -194,55 +292,68 @@
     },
     {
      "name": "GetProperty",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetProperty",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Acquire",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "Unacquire",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDeviceState",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDeviceData",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "SetDataFormat",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetEventNotification",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetCooperativeLevel",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetObjectInfo",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDeviceInfo",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "RunControlPanel",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Initialize",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -252,6 +363,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -259,19 +371,23 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetCapabilities",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "EnumObjects",
      "args": 3,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 1,
@@ -282,59 +398,73 @@
     },
     {
      "name": "GetProperty",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetProperty",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Acquire",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "Unacquire",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDeviceState",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDeviceData",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "SetDataFormat",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetEventNotification",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetCooperativeLevel",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetObjectInfo",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDeviceInfo",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "RunControlPanel",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Initialize",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "CreateEffect",
      "args": 4,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 3,
@@ -345,6 +475,7 @@
     {
      "name": "EnumEffects",
      "args": 3,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 1,
@@ -355,19 +486,23 @@
     },
     {
      "name": "GetEffectInfo",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetForceFeedbackState",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SendForceFeedbackCommand",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "EnumCreatedEffectObjects",
      "args": 3,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 1,
@@ -378,15 +513,18 @@
     },
     {
      "name": "Escape",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "Poll",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "SendDeviceData",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -396,6 +534,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -403,19 +542,23 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetCapabilities",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "EnumObjects",
      "args": 3,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 1,
@@ -426,59 +569,73 @@
     },
     {
      "name": "GetProperty",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetProperty",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Acquire",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "Unacquire",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDeviceState",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDeviceData",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "SetDataFormat",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetEventNotification",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetCooperativeLevel",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetObjectInfo",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDeviceInfo",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "RunControlPanel",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Initialize",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "CreateEffect",
      "args": 4,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 3,
@@ -489,6 +646,7 @@
     {
      "name": "EnumEffects",
      "args": 3,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 1,
@@ -499,19 +657,23 @@
     },
     {
      "name": "GetEffectInfo",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetForceFeedbackState",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SendForceFeedbackCommand",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "EnumCreatedEffectObjects",
      "args": 3,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 1,
@@ -522,15 +684,18 @@
     },
     {
      "name": "Escape",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "Poll",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "SendDeviceData",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -540,6 +705,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -547,19 +713,23 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetCapabilities",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "EnumObjects",
      "args": 3,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 1,
@@ -570,59 +740,73 @@
     },
     {
      "name": "GetProperty",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetProperty",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Acquire",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "Unacquire",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDeviceState",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDeviceData",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "SetDataFormat",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetEventNotification",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetCooperativeLevel",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetObjectInfo",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDeviceInfo",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "RunControlPanel",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Initialize",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "CreateEffect",
      "args": 4,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 3,
@@ -633,6 +817,7 @@
     {
      "name": "EnumEffects",
      "args": 3,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 1,
@@ -643,19 +828,23 @@
     },
     {
      "name": "GetEffectInfo",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetForceFeedbackState",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SendForceFeedbackCommand",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "EnumCreatedEffectObjects",
      "args": 3,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 1,
@@ -666,19 +855,23 @@
     },
     {
      "name": "Escape",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "Poll",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "SendDeviceData",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "EnumEffectsInFile",
      "args": 4,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 2,
@@ -689,7 +882,8 @@
     },
     {
      "name": "WriteEffectToFile",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -699,6 +893,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -706,19 +901,23 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetCapabilities",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "EnumObjects",
      "args": 3,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 1,
@@ -729,59 +928,73 @@
     },
     {
      "name": "GetProperty",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetProperty",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Acquire",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "Unacquire",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDeviceState",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDeviceData",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "SetDataFormat",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetEventNotification",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetCooperativeLevel",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetObjectInfo",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDeviceInfo",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "RunControlPanel",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Initialize",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "CreateEffect",
      "args": 4,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 3,
@@ -792,6 +1005,7 @@
     {
      "name": "EnumEffects",
      "args": 3,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 1,
@@ -802,19 +1016,23 @@
     },
     {
      "name": "GetEffectInfo",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetForceFeedbackState",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SendForceFeedbackCommand",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "EnumCreatedEffectObjects",
      "args": 3,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 1,
@@ -825,19 +1043,23 @@
     },
     {
      "name": "Escape",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "Poll",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "SendDeviceData",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "EnumEffectsInFile",
      "args": 4,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 2,
@@ -848,7 +1070,8 @@
     },
     {
      "name": "WriteEffectToFile",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -858,6 +1081,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -865,19 +1089,23 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetCapabilities",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "EnumObjects",
      "args": 3,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 1,
@@ -888,59 +1116,73 @@
     },
     {
      "name": "GetProperty",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetProperty",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Acquire",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "Unacquire",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDeviceState",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDeviceData",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "SetDataFormat",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetEventNotification",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetCooperativeLevel",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetObjectInfo",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDeviceInfo",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "RunControlPanel",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Initialize",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "CreateEffect",
      "args": 4,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 3,
@@ -951,6 +1193,7 @@
     {
      "name": "EnumEffects",
      "args": 3,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 1,
@@ -961,19 +1204,23 @@
     },
     {
      "name": "GetEffectInfo",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetForceFeedbackState",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SendForceFeedbackCommand",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "EnumCreatedEffectObjects",
      "args": 3,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 1,
@@ -984,19 +1231,23 @@
     },
     {
      "name": "Escape",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "Poll",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "SendDeviceData",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "EnumEffectsInFile",
      "args": 4,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 2,
@@ -1007,19 +1258,23 @@
     },
     {
      "name": "WriteEffectToFile",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "BuildActionMap",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "SetActionMap",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetImageInfo",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -1029,6 +1284,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -1036,19 +1292,23 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetCapabilities",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "EnumObjects",
      "args": 3,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 1,
@@ -1059,59 +1319,73 @@
     },
     {
      "name": "GetProperty",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetProperty",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Acquire",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "Unacquire",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDeviceState",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDeviceData",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "SetDataFormat",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetEventNotification",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetCooperativeLevel",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetObjectInfo",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDeviceInfo",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "RunControlPanel",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Initialize",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "CreateEffect",
      "args": 4,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 3,
@@ -1122,6 +1396,7 @@
     {
      "name": "EnumEffects",
      "args": 3,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 1,
@@ -1132,19 +1407,23 @@
     },
     {
      "name": "GetEffectInfo",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetForceFeedbackState",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SendForceFeedbackCommand",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "EnumCreatedEffectObjects",
      "args": 3,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 1,
@@ -1155,19 +1434,23 @@
     },
     {
      "name": "Escape",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "Poll",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "SendDeviceData",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "EnumEffectsInFile",
      "args": 4,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 2,
@@ -1178,19 +1461,23 @@
     },
     {
      "name": "WriteEffectToFile",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "BuildActionMap",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "SetActionMap",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetImageInfo",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -1200,6 +1487,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -1207,15 +1495,18 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "CreateDevice",
      "args": 3,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -1226,6 +1517,7 @@
     {
      "name": "EnumDevices",
      "args": 4,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 2,
@@ -1236,15 +1528,18 @@
     },
     {
      "name": "GetDeviceStatus",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "RunControlPanel",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Initialize",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -1254,6 +1549,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -1261,15 +1557,18 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "CreateDevice",
      "args": 3,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -1280,6 +1579,7 @@
     {
      "name": "EnumDevices",
      "args": 4,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 2,
@@ -1290,15 +1590,18 @@
     },
     {
      "name": "GetDeviceStatus",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "RunControlPanel",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Initialize",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -1308,6 +1611,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -1315,15 +1619,18 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "CreateDevice",
      "args": 3,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -1334,6 +1641,7 @@
     {
      "name": "EnumDevices",
      "args": 4,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 2,
@@ -1344,19 +1652,23 @@
     },
     {
      "name": "GetDeviceStatus",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "RunControlPanel",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Initialize",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "FindDevice",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -1366,6 +1678,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -1373,15 +1686,18 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "CreateDevice",
      "args": 3,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -1392,6 +1708,7 @@
     {
      "name": "EnumDevices",
      "args": 4,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 2,
@@ -1402,19 +1719,23 @@
     },
     {
      "name": "GetDeviceStatus",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "RunControlPanel",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Initialize",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "FindDevice",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -1424,6 +1745,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -1431,15 +1753,18 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "CreateDevice",
      "args": 3,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -1450,6 +1775,7 @@
     {
      "name": "EnumDevices",
      "args": 4,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 2,
@@ -1460,23 +1786,28 @@
     },
     {
      "name": "GetDeviceStatus",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "RunControlPanel",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Initialize",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "FindDevice",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "CreateDeviceEx",
      "args": 4,
+     "return_kind": "hresult",
      "riid": {
       "iid": 2,
       "out": 3
@@ -1490,6 +1821,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -1497,15 +1829,18 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "CreateDevice",
      "args": 3,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -1516,6 +1851,7 @@
     {
      "name": "EnumDevices",
      "args": 4,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 2,
@@ -1526,23 +1862,28 @@
     },
     {
      "name": "GetDeviceStatus",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "RunControlPanel",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Initialize",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "FindDevice",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "CreateDeviceEx",
      "args": 4,
+     "return_kind": "hresult",
      "riid": {
       "iid": 2,
       "out": 3
@@ -1556,6 +1897,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -1563,15 +1905,18 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "CreateDevice",
      "args": 3,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -1582,6 +1927,7 @@
     {
      "name": "EnumDevices",
      "args": 4,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 2,
@@ -1592,23 +1938,28 @@
     },
     {
      "name": "GetDeviceStatus",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "RunControlPanel",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Initialize",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "FindDevice",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "EnumDevicesBySemantics",
      "args": 5,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 3,
@@ -1620,6 +1971,7 @@
     {
      "name": "ConfigureDevices",
      "args": 4,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 1,
@@ -1636,6 +1988,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -1643,15 +1996,18 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "CreateDevice",
      "args": 3,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -1662,6 +2018,7 @@
     {
      "name": "EnumDevices",
      "args": 4,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 2,
@@ -1672,23 +2029,28 @@
     },
     {
      "name": "GetDeviceStatus",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "RunControlPanel",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Initialize",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "FindDevice",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "EnumDevicesBySemantics",
      "args": 5,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 3,
@@ -1700,6 +2062,7 @@
     {
      "name": "ConfigureDevices",
      "args": 4,
+     "return_kind": "hresult",
      "callbacks": [
       {
        "function": 1,
@@ -1714,6 +2077,7 @@
  "functions": {
   "DirectInput8Create": {
    "args": 5,
+   "return_kind": "hresult",
    "riid": {
     "iid": 2,
     "out": 3
@@ -1724,6 +2088,7 @@
   },
   "DirectInputCreateA": {
    "args": 4,
+   "return_kind": "hresult",
    "out": [
     {
      "stack": 2,
@@ -1735,6 +2100,7 @@
   },
   "DirectInputCreateW": {
    "args": 4,
+   "return_kind": "hresult",
    "out": [
     {
      "stack": 2,
@@ -1746,6 +2112,7 @@
   },
   "DirectInputCreateEx": {
    "args": 5,
+   "return_kind": "hresult",
    "riid": {
     "iid": 2,
     "out": 3

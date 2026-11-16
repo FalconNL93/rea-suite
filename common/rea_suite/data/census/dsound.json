@@ -8,6 +8,68 @@
   }
  },
  "conv": "stdcall",
+ "return_kinds": {
+  "hresult": {
+   "failure": 2147500037,
+   "means": "HRESULT: failure E_FAIL; 0 is S_OK"
+  },
+  "ntstatus": {
+   "failure": 3221225473,
+   "means": "NTSTATUS: failure STATUS_UNSUCCESSFUL; 0 is STATUS_SUCCESS"
+  },
+  "lstatus": {
+   "failure": 2,
+   "means": "a Win32 or C error code (LSTATUS, the registry's LONG, errno_t, WSAStartup, getaddrinfo): 0 is success, failure ERROR_FILE_NOT_FOUND (2, ENOENT for errno_t)"
+  },
+  "mmresult": {
+   "failure": 1,
+   "means": "MMRESULT or MCIERROR: 0 is MMSYSERR_NOERROR, failure MMSYSERR_ERROR"
+  },
+  "bool": {
+   "failure": 0,
+   "means": "BOOL, BOOLEAN or C++ bool: failure FALSE"
+  },
+  "handle": {
+   "failure": 0,
+   "means": "a handle whose failure is NULL"
+  },
+  "handle_invalid": {
+   "failure": 4294967295,
+   "means": "a handle whose failure is INVALID_HANDLE_VALUE (-1): CreateFile, FindFirstFile, a SOCKET (INVALID_SOCKET), HFILE_ERROR"
+  },
+  "socket_error": {
+   "failure": 4294967295,
+   "means": "Winsock's int: failure SOCKET_ERROR (-1)"
+  },
+  "pointer": {
+   "failure": 0,
+   "means": "a pointer (a string, a function, an object, a reference): failure NULL"
+  },
+  "int": {
+   "failure": 0,
+   "means": "a signed integer; the type alone does not say which value fails"
+  },
+  "dword": {
+   "failure": 0,
+   "means": "an unsigned 32-bit integer; the type alone does not say which value fails"
+  },
+  "qword": {
+   "failure": 0,
+   "means": "a 64-bit integer in EDX:EAX; the type alone does not say which value fails"
+  },
+  "float": {
+   "failure": 0.0,
+   "means": "float or double in ST(0), as returns_float"
+  },
+  "void": {
+   "failure": null,
+   "means": "nothing returned"
+  },
+  "unknown": {
+   "failure": null,
+   "means": "the headers do not say (no declaration, a structure by value, declarations that disagree)"
+  }
+ },
  "interfaces": {
   "IDirectSound": {
    "base": "IUnknown",
@@ -15,6 +77,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -22,15 +85,18 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "CreateSoundBuffer",
      "args": 3,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -40,11 +106,13 @@
     },
     {
      "name": "GetCaps",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "DuplicateSoundBuffer",
      "args": 2,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -54,23 +122,28 @@
     },
     {
      "name": "SetCooperativeLevel",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Compact",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "GetSpeakerConfig",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetSpeakerConfig",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "Initialize",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -80,6 +153,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -87,15 +161,18 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "CreateSoundBuffer",
      "args": 3,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -105,11 +182,13 @@
     },
     {
      "name": "GetCaps",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "DuplicateSoundBuffer",
      "args": 2,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -119,27 +198,33 @@
     },
     {
      "name": "SetCooperativeLevel",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Compact",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "GetSpeakerConfig",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetSpeakerConfig",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "Initialize",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "VerifyCertification",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -149,6 +234,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -156,83 +242,103 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetCaps",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetCurrentPosition",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetFormat",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetVolume",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetPan",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetFrequency",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetStatus",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "Initialize",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Lock",
-     "args": 7
+     "args": 7,
+     "return_kind": "hresult"
     },
     {
      "name": "Play",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "SetCurrentPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetFormat",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetVolume",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetPan",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetFrequency",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "Stop",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "Unlock",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "Restore",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -242,6 +348,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -249,95 +356,118 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetCaps",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetCurrentPosition",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetFormat",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetVolume",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetPan",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetFrequency",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetStatus",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "Initialize",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Lock",
-     "args": 7
+     "args": 7,
+     "return_kind": "hresult"
     },
     {
      "name": "Play",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "SetCurrentPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetFormat",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetVolume",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetPan",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetFrequency",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "Stop",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "Unlock",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "Restore",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "SetFX",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "AcquireResources",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetObjectInPath",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -347,6 +477,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -354,15 +485,18 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "CreateCaptureBuffer",
      "args": 3,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -372,11 +506,13 @@
     },
     {
      "name": "GetCaps",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "Initialize",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -386,6 +522,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -393,47 +530,58 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetCaps",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetCurrentPosition",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetFormat",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetStatus",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "Initialize",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Lock",
-     "args": 7
+     "args": 7,
+     "return_kind": "hresult"
     },
     {
      "name": "Start",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "Stop",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "Unlock",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -443,6 +591,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -450,55 +599,68 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetCaps",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetCurrentPosition",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetFormat",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetStatus",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "Initialize",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "Lock",
-     "args": 7
+     "args": 7,
+     "return_kind": "hresult"
     },
     {
      "name": "Start",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "Stop",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "Unlock",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "GetObjectInPath",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "GetFXStatus",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -508,6 +670,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -515,15 +678,18 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "SetNotificationPositions",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -533,6 +699,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -540,71 +707,88 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetAllParameters",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDistanceFactor",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDopplerFactor",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetOrientation",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetRolloffFactor",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetVelocity",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetAllParameters",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetDistanceFactor",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetDopplerFactor",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetOrientation",
-     "args": 7
+     "args": 7,
+     "return_kind": "hresult"
     },
     {
      "name": "SetPosition",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "SetRolloffFactor",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetVelocity",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "CommitDeferredSettings",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -614,6 +798,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -621,83 +806,103 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetAllParameters",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetConeAngles",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetConeOrientation",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetConeOutsideVolume",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetMaxDistance",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetMinDistance",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetMode",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetPosition",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetVelocity",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetAllParameters",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetConeAngles",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "SetConeOrientation",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "SetConeOutsideVolume",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetMaxDistance",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetMinDistance",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetMode",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetPosition",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "SetVelocity",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -707,6 +912,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -714,23 +920,28 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Get",
-     "args": 7
+     "args": 7,
+     "return_kind": "hresult"
     },
     {
      "name": "Set",
-     "args": 6
+     "args": 6,
+     "return_kind": "hresult"
     },
     {
      "name": "QuerySupport",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -740,6 +951,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -747,15 +959,18 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Initialize",
      "args": 8,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 7,
@@ -775,6 +990,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -782,35 +998,43 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "SetAllParameters",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetAllParameters",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetPreset",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetPreset",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetQuality",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetQuality",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -820,6 +1044,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -827,19 +1052,23 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "SetAllParameters",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetAllParameters",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -849,6 +1078,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -856,19 +1086,23 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "SetAllParameters",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetAllParameters",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -878,6 +1112,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -885,19 +1120,23 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "SetAllParameters",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetAllParameters",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -907,6 +1146,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -914,19 +1154,23 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "SetAllParameters",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetAllParameters",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -936,6 +1180,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -943,19 +1188,23 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "SetAllParameters",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetAllParameters",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -965,6 +1214,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -972,19 +1222,23 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "SetAllParameters",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetAllParameters",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -994,6 +1248,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -1001,19 +1256,23 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "SetAllParameters",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetAllParameters",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -1023,6 +1282,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -1030,19 +1290,23 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "SetAllParameters",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetAllParameters",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     }
    ]
   }
@@ -1050,6 +1314,7 @@
  "functions": {
   "DirectSoundCreate": {
    "args": 3,
+   "return_kind": "hresult",
    "out": [
     {
      "stack": 1,
@@ -1061,6 +1326,7 @@
   },
   "DirectSoundCaptureCreate": {
    "args": 3,
+   "return_kind": "hresult",
    "out": [
     {
      "stack": 1,
@@ -1072,6 +1338,7 @@
   },
   "DirectSoundCreate8": {
    "args": 3,
+   "return_kind": "hresult",
    "out": [
     {
      "stack": 1,
@@ -1083,6 +1350,7 @@
   },
   "DirectSoundCaptureCreate8": {
    "args": 3,
+   "return_kind": "hresult",
    "out": [
     {
      "stack": 1,
@@ -1094,6 +1362,7 @@
   },
   "DirectSoundFullDuplexCreate": {
    "args": 10,
+   "return_kind": "hresult",
    "out": [
     {
      "stack": 6,

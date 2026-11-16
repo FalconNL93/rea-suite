@@ -8,6 +8,68 @@
   }
  },
  "conv": "stdcall",
+ "return_kinds": {
+  "hresult": {
+   "failure": 2147500037,
+   "means": "HRESULT: failure E_FAIL; 0 is S_OK"
+  },
+  "ntstatus": {
+   "failure": 3221225473,
+   "means": "NTSTATUS: failure STATUS_UNSUCCESSFUL; 0 is STATUS_SUCCESS"
+  },
+  "lstatus": {
+   "failure": 2,
+   "means": "a Win32 or C error code (LSTATUS, the registry's LONG, errno_t, WSAStartup, getaddrinfo): 0 is success, failure ERROR_FILE_NOT_FOUND (2, ENOENT for errno_t)"
+  },
+  "mmresult": {
+   "failure": 1,
+   "means": "MMRESULT or MCIERROR: 0 is MMSYSERR_NOERROR, failure MMSYSERR_ERROR"
+  },
+  "bool": {
+   "failure": 0,
+   "means": "BOOL, BOOLEAN or C++ bool: failure FALSE"
+  },
+  "handle": {
+   "failure": 0,
+   "means": "a handle whose failure is NULL"
+  },
+  "handle_invalid": {
+   "failure": 4294967295,
+   "means": "a handle whose failure is INVALID_HANDLE_VALUE (-1): CreateFile, FindFirstFile, a SOCKET (INVALID_SOCKET), HFILE_ERROR"
+  },
+  "socket_error": {
+   "failure": 4294967295,
+   "means": "Winsock's int: failure SOCKET_ERROR (-1)"
+  },
+  "pointer": {
+   "failure": 0,
+   "means": "a pointer (a string, a function, an object, a reference): failure NULL"
+  },
+  "int": {
+   "failure": 0,
+   "means": "a signed integer; the type alone does not say which value fails"
+  },
+  "dword": {
+   "failure": 0,
+   "means": "an unsigned 32-bit integer; the type alone does not say which value fails"
+  },
+  "qword": {
+   "failure": 0,
+   "means": "a 64-bit integer in EDX:EAX; the type alone does not say which value fails"
+  },
+  "float": {
+   "failure": 0.0,
+   "means": "float or double in ST(0), as returns_float"
+  },
+  "void": {
+   "failure": null,
+   "means": "nothing returned"
+  },
+  "unknown": {
+   "failure": null,
+   "means": "the headers do not say (no declaration, a structure by value, declarations that disagree)"
+  }
+ },
  "interfaces": {
   "IDirect3D9": {
    "base": "IUnknown",
@@ -15,6 +77,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -22,67 +85,83 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "RegisterSoftwareDevice",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetAdapterCount",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetAdapterIdentifier",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetAdapterModeCount",
-     "args": 2
+     "args": 2,
+     "return_kind": "dword"
     },
     {
      "name": "EnumAdapterModes",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "GetAdapterDisplayMode",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "CheckDeviceType",
-     "args": 5
+     "args": 5,
+     "return_kind": "hresult"
     },
     {
      "name": "CheckDeviceFormat",
-     "args": 6
+     "args": 6,
+     "return_kind": "hresult"
     },
     {
      "name": "CheckDeviceMultiSampleType",
-     "args": 6
+     "args": 6,
+     "return_kind": "hresult"
     },
     {
      "name": "CheckDepthStencilMatch",
-     "args": 5
+     "args": 5,
+     "return_kind": "hresult"
     },
     {
      "name": "CheckDeviceFormatConversion",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDeviceCaps",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetAdapterMonitor",
-     "args": 1
+     "args": 1,
+     "return_kind": "handle"
     },
     {
      "name": "CreateDevice",
      "args": 6,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 6,
@@ -98,6 +177,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -105,15 +185,18 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetDevice",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -123,19 +206,23 @@
     },
     {
      "name": "SetPrivateData",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "GetPrivateData",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "FreePrivateData",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetContainer",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -143,15 +230,18 @@
     },
     {
      "name": "GetDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "LockBox",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "UnlockBox",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -161,6 +251,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -168,23 +259,28 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Present",
-     "args": 5
+     "args": 5,
+     "return_kind": "hresult"
     },
     {
      "name": "GetFrontBufferData",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetBackBuffer",
      "args": 3,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 3,
@@ -194,15 +290,18 @@
     },
     {
      "name": "GetRasterStatus",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDisplayMode",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDevice",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -212,7 +311,8 @@
     },
     {
      "name": "GetPresentParameters",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -222,6 +322,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -229,15 +330,18 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetDevice",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -247,31 +351,38 @@
     },
     {
      "name": "SetPrivateData",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "GetPrivateData",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "FreePrivateData",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetPriority",
-     "args": 1
+     "args": 1,
+     "return_kind": "dword"
     },
     {
      "name": "GetPriority",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "PreLoad",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "GetType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     }
    ]
   },
@@ -281,6 +392,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -288,15 +400,18 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetDevice",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -306,35 +421,43 @@
     },
     {
      "name": "SetPrivateData",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "GetPrivateData",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "FreePrivateData",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetPriority",
-     "args": 1
+     "args": 1,
+     "return_kind": "dword"
     },
     {
      "name": "GetPriority",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "PreLoad",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "GetType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "GetContainer",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -342,23 +465,28 @@
     },
     {
      "name": "GetDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "LockRect",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "UnlockRect",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDC",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "ReleaseDC",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -368,6 +496,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -375,15 +504,18 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetDevice",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -393,43 +525,53 @@
     },
     {
      "name": "SetPrivateData",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "GetPrivateData",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "FreePrivateData",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetPriority",
-     "args": 1
+     "args": 1,
+     "return_kind": "dword"
     },
     {
      "name": "GetPriority",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "PreLoad",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "GetType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "Lock",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "Unlock",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -439,6 +581,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -446,15 +589,18 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetDevice",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -464,43 +610,53 @@
     },
     {
      "name": "SetPrivateData",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "GetPrivateData",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "FreePrivateData",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetPriority",
-     "args": 1
+     "args": 1,
+     "return_kind": "dword"
     },
     {
      "name": "GetPriority",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "PreLoad",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "GetType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "Lock",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "Unlock",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDesc",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -510,6 +666,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -517,15 +674,18 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetDevice",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -535,55 +695,68 @@
     },
     {
      "name": "SetPrivateData",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "GetPrivateData",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "FreePrivateData",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetPriority",
-     "args": 1
+     "args": 1,
+     "return_kind": "dword"
     },
     {
      "name": "GetPriority",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "PreLoad",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "GetType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "SetLOD",
-     "args": 1
+     "args": 1,
+     "return_kind": "dword"
     },
     {
      "name": "GetLOD",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetLevelCount",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "SetAutoGenFilterType",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetAutoGenFilterType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "GenerateMipSubLevels",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     }
    ]
   },
@@ -593,6 +766,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -600,15 +774,18 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetDevice",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -618,63 +795,78 @@
     },
     {
      "name": "SetPrivateData",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "GetPrivateData",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "FreePrivateData",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetPriority",
-     "args": 1
+     "args": 1,
+     "return_kind": "dword"
     },
     {
      "name": "GetPriority",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "PreLoad",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "GetType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "SetLOD",
-     "args": 1
+     "args": 1,
+     "return_kind": "dword"
     },
     {
      "name": "GetLOD",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetLevelCount",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "SetAutoGenFilterType",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetAutoGenFilterType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "GenerateMipSubLevels",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "GetLevelDesc",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetCubeMapSurface",
      "args": 3,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 3,
@@ -684,15 +876,18 @@
     },
     {
      "name": "LockRect",
-     "args": 5
+     "args": 5,
+     "return_kind": "hresult"
     },
     {
      "name": "UnlockRect",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "AddDirtyRect",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -702,6 +897,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -709,15 +905,18 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetDevice",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -727,63 +926,78 @@
     },
     {
      "name": "SetPrivateData",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "GetPrivateData",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "FreePrivateData",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetPriority",
-     "args": 1
+     "args": 1,
+     "return_kind": "dword"
     },
     {
      "name": "GetPriority",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "PreLoad",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "GetType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "SetLOD",
-     "args": 1
+     "args": 1,
+     "return_kind": "dword"
     },
     {
      "name": "GetLOD",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetLevelCount",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "SetAutoGenFilterType",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetAutoGenFilterType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "GenerateMipSubLevels",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "GetLevelDesc",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetSurfaceLevel",
      "args": 2,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -793,15 +1007,18 @@
     },
     {
      "name": "LockRect",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "UnlockRect",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "AddDirtyRect",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -811,6 +1028,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -818,15 +1036,18 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetDevice",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -836,63 +1057,78 @@
     },
     {
      "name": "SetPrivateData",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "GetPrivateData",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "FreePrivateData",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetPriority",
-     "args": 1
+     "args": 1,
+     "return_kind": "dword"
     },
     {
      "name": "GetPriority",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "PreLoad",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "GetType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "SetLOD",
-     "args": 1
+     "args": 1,
+     "return_kind": "dword"
     },
     {
      "name": "GetLOD",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetLevelCount",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "SetAutoGenFilterType",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetAutoGenFilterType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "GenerateMipSubLevels",
-     "args": 0
+     "args": 0,
+     "return_kind": "void"
     },
     {
      "name": "GetLevelDesc",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetVolumeLevel",
      "args": 2,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -902,15 +1138,18 @@
     },
     {
      "name": "LockBox",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "UnlockBox",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "AddDirtyBox",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -920,6 +1159,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -927,15 +1167,18 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetDevice",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -945,7 +1188,8 @@
     },
     {
      "name": "GetDeclaration",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -955,6 +1199,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -962,15 +1207,18 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetDevice",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -980,7 +1228,8 @@
     },
     {
      "name": "GetFunction",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -990,6 +1239,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -997,15 +1247,18 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetDevice",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -1015,7 +1268,8 @@
     },
     {
      "name": "GetFunction",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -1025,6 +1279,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -1032,15 +1287,18 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetDevice",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -1050,11 +1308,13 @@
     },
     {
      "name": "Capture",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "Apply",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -1064,6 +1324,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -1071,15 +1332,18 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetDevice",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -1089,19 +1353,23 @@
     },
     {
      "name": "GetType",
-     "args": 0
+     "args": 0,
+     "return_kind": "int"
     },
     {
      "name": "GetDataSize",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Issue",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetData",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -1111,6 +1379,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -1118,27 +1387,33 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "TestCooperativeLevel",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "GetAvailableTextureMem",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "EvictManagedResources",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDirect3D",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -1148,31 +1423,38 @@
     },
     {
      "name": "GetDeviceCaps",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDisplayMode",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetCreationParameters",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetCursorProperties",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "SetCursorPosition",
-     "args": 3
+     "args": 3,
+     "return_kind": "void"
     },
     {
      "name": "ShowCursor",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "CreateAdditionalSwapChain",
      "args": 2,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -1183,6 +1465,7 @@
     {
      "name": "GetSwapChain",
      "args": 2,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -1192,19 +1475,23 @@
     },
     {
      "name": "GetNumberOfSwapChains",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Reset",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "Present",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "GetBackBuffer",
      "args": 4,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 4,
@@ -1214,23 +1501,28 @@
     },
     {
      "name": "GetRasterStatus",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetDialogBoxMode",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetGammaRamp",
-     "args": 3
+     "args": 3,
+     "return_kind": "void"
     },
     {
      "name": "GetGammaRamp",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "CreateTexture",
      "args": 8,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 7,
@@ -1241,6 +1533,7 @@
     {
      "name": "CreateVolumeTexture",
      "args": 9,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 8,
@@ -1251,6 +1544,7 @@
     {
      "name": "CreateCubeTexture",
      "args": 7,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 6,
@@ -1261,6 +1555,7 @@
     {
      "name": "CreateVertexBuffer",
      "args": 6,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 5,
@@ -1271,6 +1566,7 @@
     {
      "name": "CreateIndexBuffer",
      "args": 6,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 5,
@@ -1281,6 +1577,7 @@
     {
      "name": "CreateRenderTarget",
      "args": 8,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 7,
@@ -1291,6 +1588,7 @@
     {
      "name": "CreateDepthStencilSurface",
      "args": 8,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 7,
@@ -1300,31 +1598,38 @@
     },
     {
      "name": "UpdateSurface",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "UpdateTexture",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetRenderTargetData",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetFrontBufferData",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "StretchRect",
-     "args": 5
+     "args": 5,
+     "return_kind": "hresult"
     },
     {
      "name": "ColorFill",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "CreateOffscreenPlainSurface",
      "args": 6,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 5,
@@ -1334,11 +1639,13 @@
     },
     {
      "name": "SetRenderTarget",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetRenderTarget",
      "args": 2,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -1348,11 +1655,13 @@
     },
     {
      "name": "SetDepthStencilSurface",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDepthStencilSurface",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -1362,79 +1671,98 @@
     },
     {
      "name": "BeginScene",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "EndScene",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "Clear",
-     "args": 6
+     "args": 6,
+     "return_kind": "hresult"
     },
     {
      "name": "SetTransform",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetTransform",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "MultiplyTransform",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetViewport",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetViewport",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetMaterial",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetMaterial",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetLight",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetLight",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "LightEnable",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetLightEnable",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetClipPlane",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetClipPlane",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetRenderState",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetRenderState",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "CreateStateBlock",
      "args": 2,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -1444,11 +1772,13 @@
     },
     {
      "name": "BeginStateBlock",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "EndStateBlock",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -1458,15 +1788,18 @@
     },
     {
      "name": "SetClipStatus",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetClipStatus",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetTexture",
      "args": 2,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -1476,92 +1809,114 @@
     },
     {
      "name": "SetTexture",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetTextureStageState",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "SetTextureStageState",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetSamplerState",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "SetSamplerState",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "ValidateDevice",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetPaletteEntries",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetPaletteEntries",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetCurrentTexturePalette",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetCurrentTexturePalette",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetScissorRect",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetScissorRect",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetSoftwareVertexProcessing",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetSoftwareVertexProcessing",
-     "args": 0
+     "args": 0,
+     "return_kind": "bool"
     },
     {
      "name": "SetNPatchMode",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetNPatchMode",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "DrawPrimitive",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "DrawIndexedPrimitive",
-     "args": 6
+     "args": 6,
+     "return_kind": "hresult"
     },
     {
      "name": "DrawPrimitiveUP",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "DrawIndexedPrimitiveUP",
-     "args": 8
+     "args": 8,
+     "return_kind": "hresult"
     },
     {
      "name": "ProcessVertices",
-     "args": 6
+     "args": 6,
+     "return_kind": "hresult"
     },
     {
      "name": "CreateVertexDeclaration",
      "args": 2,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -1571,11 +1926,13 @@
     },
     {
      "name": "SetVertexDeclaration",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetVertexDeclaration",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -1585,15 +1942,18 @@
     },
     {
      "name": "SetFVF",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetFVF",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "CreateVertexShader",
      "args": 2,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -1603,11 +1963,13 @@
     },
     {
      "name": "SetVertexShader",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetVertexShader",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -1617,35 +1979,43 @@
     },
     {
      "name": "SetVertexShaderConstantF",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetVertexShaderConstantF",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "SetVertexShaderConstantI",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetVertexShaderConstantI",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "SetVertexShaderConstantB",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetVertexShaderConstantB",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "SetStreamSource",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "GetStreamSource",
      "args": 4,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -1655,19 +2025,23 @@
     },
     {
      "name": "SetStreamSourceFreq",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetStreamSourceFreq",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetIndices",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetIndices",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -1678,6 +2052,7 @@
     {
      "name": "CreatePixelShader",
      "args": 2,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -1687,11 +2062,13 @@
     },
     {
      "name": "SetPixelShader",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetPixelShader",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -1701,43 +2078,53 @@
     },
     {
      "name": "SetPixelShaderConstantF",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetPixelShaderConstantF",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "SetPixelShaderConstantI",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetPixelShaderConstantI",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "SetPixelShaderConstantB",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetPixelShaderConstantB",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "DrawRectPatch",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "DrawTriPatch",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "DeletePatch",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "CreateQuery",
      "args": 2,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -1753,6 +2140,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -1760,67 +2148,83 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "RegisterSoftwareDevice",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetAdapterCount",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "GetAdapterIdentifier",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetAdapterModeCount",
-     "args": 2
+     "args": 2,
+     "return_kind": "dword"
     },
     {
      "name": "EnumAdapterModes",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "GetAdapterDisplayMode",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "CheckDeviceType",
-     "args": 5
+     "args": 5,
+     "return_kind": "hresult"
     },
     {
      "name": "CheckDeviceFormat",
-     "args": 6
+     "args": 6,
+     "return_kind": "hresult"
     },
     {
      "name": "CheckDeviceMultiSampleType",
-     "args": 6
+     "args": 6,
+     "return_kind": "hresult"
     },
     {
      "name": "CheckDepthStencilMatch",
-     "args": 5
+     "args": 5,
+     "return_kind": "hresult"
     },
     {
      "name": "CheckDeviceFormatConversion",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDeviceCaps",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetAdapterMonitor",
-     "args": 1
+     "args": 1,
+     "return_kind": "handle"
     },
     {
      "name": "CreateDevice",
      "args": 6,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 6,
@@ -1830,19 +2234,23 @@
     },
     {
      "name": "GetAdapterModeCountEx",
-     "args": 2
+     "args": 2,
+     "return_kind": "dword"
     },
     {
      "name": "EnumAdapterModesEx",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "GetAdapterDisplayModeEx",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "CreateDeviceEx",
      "args": 7,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 7,
@@ -1852,7 +2260,8 @@
     },
     {
      "name": "GetAdapterLUID",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -1862,6 +2271,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -1869,23 +2279,28 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Present",
-     "args": 5
+     "args": 5,
+     "return_kind": "hresult"
     },
     {
      "name": "GetFrontBufferData",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetBackBuffer",
      "args": 3,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 3,
@@ -1895,15 +2310,18 @@
     },
     {
      "name": "GetRasterStatus",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDisplayMode",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDevice",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -1913,19 +2331,23 @@
     },
     {
      "name": "GetPresentParameters",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetLastPresentCount",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetPresentStats",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDisplayModeEx",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     }
    ]
   },
@@ -1935,6 +2357,7 @@
     {
      "name": "QueryInterface",
      "args": 2,
+     "return_kind": "hresult",
      "riid": {
       "iid": 1,
       "out": 2
@@ -1942,27 +2365,33 @@
     },
     {
      "name": "AddRef",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Release",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "TestCooperativeLevel",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "GetAvailableTextureMem",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "EvictManagedResources",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDirect3D",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -1972,31 +2401,38 @@
     },
     {
      "name": "GetDeviceCaps",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDisplayMode",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetCreationParameters",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetCursorProperties",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "SetCursorPosition",
-     "args": 3
+     "args": 3,
+     "return_kind": "void"
     },
     {
      "name": "ShowCursor",
-     "args": 1
+     "args": 1,
+     "return_kind": "bool"
     },
     {
      "name": "CreateAdditionalSwapChain",
      "args": 2,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -2007,6 +2443,7 @@
     {
      "name": "GetSwapChain",
      "args": 2,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -2016,19 +2453,23 @@
     },
     {
      "name": "GetNumberOfSwapChains",
-     "args": 0
+     "args": 0,
+     "return_kind": "dword"
     },
     {
      "name": "Reset",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "Present",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "GetBackBuffer",
      "args": 4,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 4,
@@ -2038,23 +2479,28 @@
     },
     {
      "name": "GetRasterStatus",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetDialogBoxMode",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetGammaRamp",
-     "args": 3
+     "args": 3,
+     "return_kind": "void"
     },
     {
      "name": "GetGammaRamp",
-     "args": 2
+     "args": 2,
+     "return_kind": "void"
     },
     {
      "name": "CreateTexture",
      "args": 8,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 7,
@@ -2065,6 +2511,7 @@
     {
      "name": "CreateVolumeTexture",
      "args": 9,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 8,
@@ -2075,6 +2522,7 @@
     {
      "name": "CreateCubeTexture",
      "args": 7,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 6,
@@ -2085,6 +2533,7 @@
     {
      "name": "CreateVertexBuffer",
      "args": 6,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 5,
@@ -2095,6 +2544,7 @@
     {
      "name": "CreateIndexBuffer",
      "args": 6,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 5,
@@ -2105,6 +2555,7 @@
     {
      "name": "CreateRenderTarget",
      "args": 8,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 7,
@@ -2115,6 +2566,7 @@
     {
      "name": "CreateDepthStencilSurface",
      "args": 8,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 7,
@@ -2124,31 +2576,38 @@
     },
     {
      "name": "UpdateSurface",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "UpdateTexture",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetRenderTargetData",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetFrontBufferData",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "StretchRect",
-     "args": 5
+     "args": 5,
+     "return_kind": "hresult"
     },
     {
      "name": "ColorFill",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "CreateOffscreenPlainSurface",
      "args": 6,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 5,
@@ -2158,11 +2617,13 @@
     },
     {
      "name": "SetRenderTarget",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetRenderTarget",
      "args": 2,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -2172,11 +2633,13 @@
     },
     {
      "name": "SetDepthStencilSurface",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDepthStencilSurface",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -2186,79 +2649,98 @@
     },
     {
      "name": "BeginScene",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "EndScene",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "Clear",
-     "args": 6
+     "args": 6,
+     "return_kind": "hresult"
     },
     {
      "name": "SetTransform",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetTransform",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "MultiplyTransform",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetViewport",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetViewport",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetMaterial",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetMaterial",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetLight",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetLight",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "LightEnable",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetLightEnable",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetClipPlane",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetClipPlane",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetRenderState",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetRenderState",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "CreateStateBlock",
      "args": 2,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -2268,11 +2750,13 @@
     },
     {
      "name": "BeginStateBlock",
-     "args": 0
+     "args": 0,
+     "return_kind": "hresult"
     },
     {
      "name": "EndStateBlock",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -2282,15 +2766,18 @@
     },
     {
      "name": "SetClipStatus",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetClipStatus",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetTexture",
      "args": 2,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -2300,92 +2787,114 @@
     },
     {
      "name": "SetTexture",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetTextureStageState",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "SetTextureStageState",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetSamplerState",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "SetSamplerState",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "ValidateDevice",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetPaletteEntries",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetPaletteEntries",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetCurrentTexturePalette",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetCurrentTexturePalette",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetScissorRect",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetScissorRect",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetSoftwareVertexProcessing",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetSoftwareVertexProcessing",
-     "args": 0
+     "args": 0,
+     "return_kind": "bool"
     },
     {
      "name": "SetNPatchMode",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetNPatchMode",
      "args": 0,
-     "returns_float": true
+     "returns_float": true,
+     "return_kind": "float"
     },
     {
      "name": "DrawPrimitive",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "DrawIndexedPrimitive",
-     "args": 6
+     "args": 6,
+     "return_kind": "hresult"
     },
     {
      "name": "DrawPrimitiveUP",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "DrawIndexedPrimitiveUP",
-     "args": 8
+     "args": 8,
+     "return_kind": "hresult"
     },
     {
      "name": "ProcessVertices",
-     "args": 6
+     "args": 6,
+     "return_kind": "hresult"
     },
     {
      "name": "CreateVertexDeclaration",
      "args": 2,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -2395,11 +2904,13 @@
     },
     {
      "name": "SetVertexDeclaration",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetVertexDeclaration",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -2409,15 +2920,18 @@
     },
     {
      "name": "SetFVF",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetFVF",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "CreateVertexShader",
      "args": 2,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -2427,11 +2941,13 @@
     },
     {
      "name": "SetVertexShader",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetVertexShader",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -2441,35 +2957,43 @@
     },
     {
      "name": "SetVertexShaderConstantF",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetVertexShaderConstantF",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "SetVertexShaderConstantI",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetVertexShaderConstantI",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "SetVertexShaderConstantB",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetVertexShaderConstantB",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "SetStreamSource",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "GetStreamSource",
      "args": 4,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -2479,19 +3003,23 @@
     },
     {
      "name": "SetStreamSourceFreq",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetStreamSourceFreq",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "SetIndices",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetIndices",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -2502,6 +3030,7 @@
     {
      "name": "CreatePixelShader",
      "args": 2,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -2511,11 +3040,13 @@
     },
     {
      "name": "SetPixelShader",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetPixelShader",
      "args": 1,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -2525,43 +3056,53 @@
     },
     {
      "name": "SetPixelShaderConstantF",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetPixelShaderConstantF",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "SetPixelShaderConstantI",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetPixelShaderConstantI",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "SetPixelShaderConstantB",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "GetPixelShaderConstantB",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "DrawRectPatch",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "DrawTriPatch",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     },
     {
      "name": "DeletePatch",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "CreateQuery",
      "args": 2,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 2,
@@ -2571,31 +3112,38 @@
     },
     {
      "name": "SetConvolutionMonoKernel",
-     "args": 4
+     "args": 4,
+     "return_kind": "hresult"
     },
     {
      "name": "ComposeRects",
-     "args": 8
+     "args": 8,
+     "return_kind": "hresult"
     },
     {
      "name": "PresentEx",
-     "args": 5
+     "args": 5,
+     "return_kind": "hresult"
     },
     {
      "name": "GetGPUThreadPriority",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "SetGPUThreadPriority",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "WaitForVBlank",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "CheckResourceResidency",
      "args": 2,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 1,
@@ -2605,19 +3153,23 @@
     },
     {
      "name": "SetMaximumFrameLatency",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "GetMaximumFrameLatency",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "CheckDeviceState",
-     "args": 1
+     "args": 1,
+     "return_kind": "hresult"
     },
     {
      "name": "CreateRenderTargetEx",
      "args": 9,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 7,
@@ -2628,6 +3180,7 @@
     {
      "name": "CreateOffscreenPlainSurfaceEx",
      "args": 7,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 5,
@@ -2638,6 +3191,7 @@
     {
      "name": "CreateDepthStencilSurfaceEx",
      "args": 9,
+     "return_kind": "hresult",
      "out": [
       {
        "stack": 7,
@@ -2647,11 +3201,13 @@
     },
     {
      "name": "ResetEx",
-     "args": 2
+     "args": 2,
+     "return_kind": "hresult"
     },
     {
      "name": "GetDisplayModeEx",
-     "args": 3
+     "args": 3,
+     "return_kind": "hresult"
     }
    ]
   }
@@ -2660,11 +3216,13 @@
   "Direct3DCreate9": {
    "args": 1,
    "returns": "IDirect3D9",
+   "return_kind": "pointer",
    "module": "d3d9.dll",
    "out": []
   },
   "Direct3DCreate9Ex": {
    "args": 2,
+   "return_kind": "hresult",
    "out": [
     {
      "stack": 1,
