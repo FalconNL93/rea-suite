@@ -9,6 +9,7 @@
     .\platforms\windows\rea-suite.ps1 update --ai    # an agent checks compatibility, proposes the plan, applies it
     .\platforms\windows\rea-suite.ps1 agents [agent...]  # rea MCP + REA skill for every detected agent
     .\platforms\windows\rea-suite.ps1 playstation [options]  # prepare PS1/PS2 projects
+    .\platforms\windows\rea-suite.ps1 playstation drive <script> --port N  # drive a PSXRecomp game through its debug server
     .\platforms\windows\rea-suite.ps1 xbox360 <command> [options]  # Xbox 360 XEX/PE in your Ghidra project; spa: achievements, presence; disc: a .zar or disc image
     .\platforms\windows\rea-suite.ps1 xbox info|imports|image|symbols|check <xbe>  # original Xbox XBE without Ghidra
     .\platforms\windows\rea-suite.ps1 ps3 info|imports|nids|census|decrypt|analyze|check ...  # PS3 SELF/ELF/PRX, NIDs, your RPCS3, Ghidra

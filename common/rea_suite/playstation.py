@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib
 import json
 import os
 import re
 import shutil
 import struct
 import subprocess
+import sys
 from pathlib import Path, PurePosixPath
 
 from rea_suite import bounded, ghidra_headless
@@ -417,8 +419,20 @@ def prepare(args: argparse.Namespace) -> dict:
     return state
 
 
+# Tools of their own under `rea-suite playstation <name>`: their modules, loaded when asked for.
+TOOLS = {"drive": "psx_drive"}
+
+
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(description=__doc__)
+    argv = list(argv) if argv is not None else sys.argv[1:]
+    at = 2 if argv[:1] == ["--caller-cwd"] else 0  # bin/rea-suite puts it first
+    if len(argv) > at and argv[at] in TOOLS:
+        tool = argv.pop(at)
+        return importlib.import_module(f"rea_suite.{TOOLS[tool]}").main(argv)
+    p = argparse.ArgumentParser(
+        description=__doc__
+        + " Also: playstation drive (a PSXRecomp game driven from a script), with --help."
+    )
     p.add_argument(
         "input", type=Path, help="ISO, BIN/CUE, extracted directory, PS-X EXE or MIPS ELF"
     )

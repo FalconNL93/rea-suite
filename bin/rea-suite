@@ -20,6 +20,9 @@
 #                                            bin/rea and install/refresh the REA skill;
 #                                            default: every agent rea-agents detects
 #   rea-suite playstation [options]         prepare PS1/PS2 disc images or extracted trees
+#   rea-suite playstation drive <script>    drive a PSXRecomp game from a script through its debug
+#                                            server: pad, host keys, RAM reads, writes, waits
+#                                            (--port or REA_PSXRECOMP_PORT; --help)
 #   rea-suite xbox360 <command> [options]   Xbox 360 XEX or PE image in a Ghidra project of yours:
 #                                            analyze, decomp, xrefs, functions, check, and
 #                                            Ghidra-free info, extract, imports, refs, spa

@@ -261,6 +261,8 @@ benchmarked. `update --ai` reviews them on every run.
 PlayStation: `rea-suite playstation game.cue --project work/game --ghidra` extracts the image, resolves
 its boot program and creates an editable Ghidra project with initial exports. Enable the optional
 `playstation` component first. This uses Ghidra directly; REA's console profiles remain limited.
+`rea-suite playstation drive` runs a scripted session of a PSXRecomp port through its debug
+server; it needs no component.
 The routes from a disc to a port, a decompilation or a recompilation are [PS1](docs/PS1.md) and
 [PS2](docs/PS2.md); the tools and what the communities use that the suite lacks are in
 [PLAYSTATION.md](docs/PLAYSTATION.md). [Game archive tools](docs/GAME-ARCHIVES.md) cover Xbox images,

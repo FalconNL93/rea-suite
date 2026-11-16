@@ -182,6 +182,20 @@ first session (Time to Kill, 2026-11-14):
   without a log line), unset `DISPLAY` and `WAYLAND_DISPLAY` and give an empty `XDG_RUNTIME_DIR`.
   `<game> --help` starts the game: read the runtime's flags in its source.
 
+A paced run, past the title and into a level, is a script for `rea-suite playstation drive` (from
+duke-nukem-ttk's `tools/drive.py`, same format): one `<seconds> <step>` a line, the steps first-pad
+presses (`start 30`, `cross+square`), `host-button a` and `host-key Return` (SDL events, as a
+player's), `read <addr> <bytes>`, `write <addr> <hex byte>`, `raw <json>` and `wait <addr> <hex
+byte> [timeout]`, which polls until the game's state is reached and shifts every later step by the
+time waited, so the script keys on the game rather than the clock. The port comes from `--port`
+or `REA_PSXRECOMP_PORT`, the host from `--host` or `REA_PSXRECOMP_HOST` (127.0.0.1); `--plan`
+prints the parsed steps without connecting; every reply is logged as a `drive:` line.
+
+```sh
+PSX_DEBUG_SERVER=1 <game> --debug-port 4500 ... &
+rea-suite playstation drive work/runs/title-to-level.txt --port 4500 > work/runs/drive.log
+```
+
 The server has no breakpoints and no pause (upstream removed `pause`, `step` and `run_to_frame`;
 `host_pause` stops the server too, as the game's main thread pumps it). `rea-suite oracle run
 --target psxrecomp://127.0.0.1:PORT` reads it anyway: `frame=N` sync points from the runtime's

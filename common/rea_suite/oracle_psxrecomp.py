@@ -29,6 +29,20 @@ SNAPSHOT_SIZE = 128
 POLL = 0.2  # seconds a resume waits before it reports the frame counter
 
 
+def exchange(host: str, port: int, request: dict, timeout: float) -> bytes:
+    """One command on a connection of its own: the reply line as sent (OSError, TimeoutError).
+    The oracle and `rea-suite playstation drive` both talk to the server through this."""
+    with socket.create_connection((host, port), timeout=timeout) as sock:
+        sock.sendall((json.dumps(request) + "\n").encode())
+        buf = b""
+        while not buf.endswith(b"\n"):
+            chunk = sock.recv(1 << 20)
+            if not chunk:
+                break
+            buf += chunk
+    return buf
+
+
 class PsxRecompTarget(EmulatorTarget):
     frames = True
 
@@ -44,16 +58,7 @@ class PsxRecompTarget(EmulatorTarget):
 
     def command(self, request: dict, timeout: float | None = None) -> dict:
         try:
-            with socket.create_connection(
-                (self.host, self.port), timeout=timeout or self.timeout
-            ) as sock:
-                sock.sendall((json.dumps(request) + "\n").encode())
-                buf = b""
-                while not buf.endswith(b"\n"):
-                    chunk = sock.recv(1 << 20)
-                    if not chunk:
-                        break
-                    buf += chunk
+            buf = exchange(self.host, self.port, request, timeout or self.timeout)
         except TimeoutError:
             raise TargetError(
                 f"psxrecomp: no answer to {request['cmd']} in {timeout or self.timeout} s"
