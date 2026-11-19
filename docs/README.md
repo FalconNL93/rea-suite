@@ -21,6 +21,11 @@ From an original game to what a port, a decompilation or a recompilation needs.
 - [PSP.md](PSP.md): a PSP game (Allegrex MIPS with the VFPU, PRX modules and NIDs, EBOOT.PBP, UMD
   images), with PPSSPP as the oracle.
 
+## Documenting a game
+
+- [RE-ATLAS.md](RE-ATLAS.md): the short map of a game's engine every port keeps ahead of need (one page
+  per system, the systems ports usually touch).
+
 ## Tools
 
 - [PORT-TOOLS.md](PORT-TOOLS.md): the suite's own port commands (`pe`, `rmdp`, `yetibig`, `le`,
