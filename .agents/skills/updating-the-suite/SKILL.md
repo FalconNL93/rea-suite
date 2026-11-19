@@ -142,6 +142,27 @@ target Ghidra (prebuilt only), the XbSymbolDatabase version it bundles, xemu's r
 command line, REA's support for XBE, and the projects under "What is still missing". When behavior
 changes, run `uv run --no-sync python -m unittest rea_suite.test_xbox` and `rea-suite xbox check`.
 
+### The suite's own pages and housekeeping
+
+On every run, also these, each a line in the workflow review and a fix or an issue in the plan:
+
+- **The dated pages** in `docs/` (the routes per platform, RECOMPILATION.md, PORT-TOOLS.md): take the ones
+  whose "Checked" date is oldest (a month is due) and recheck the claims a port relies on against their
+  sources and the installed REA. Move the date only for what was rechecked. A line such as "REA 6.8.0, not
+  rechecked with 6.9.0" is due whenever rea-agents moves.
+- **REA-KNOWN-ISSUES.md** against the new rea-agents: an issue it fixes goes (say from which version); one that
+  stays keeps its workaround and, if not filed yet, an upstream report in the plan.
+- **RE-ATLAS.md** against the ports' atlases (each port's `docs/research/re/`): a system several ports had to
+  add joins the starting list; a finding that holds for a whole platform moves to that platform's page
+  (generic first, master-server's CLAUDE.md).
+- **Written for people**: the period's code and docs read as a person without an agent would. A name that
+  needs the history, a long function, a choice without its reason, generated bulk: fixed or noted.
+- **Housekeeping**: `rea-tools verify` (digests against GitHub's), `rea-suite clean` (sizes; `tools prune`
+  when old versions pile up), `git worktree list` and `git stash list` empty of finished or parked work,
+  `./ci branches --checkout <this checkout>`, `./ci skills status <this checkout>`,
+  `./ci runs last --repo FalconNL93/rea-suite` and the board (`./ci work list --repo FalconNL93/rea-suite`),
+  all from games/ci-images.
+
 ## 3. Plan
 
 Write `work/update/plan.md` and show it as a table: part, current, target, decision, reason
